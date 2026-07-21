@@ -4,7 +4,7 @@ import datetime
 import plotly.graph_objects as go
 
 # 1. CONFIGURAÇÃO DA PÁGINA
-st.set_page_config(layout="wide", page_title="Panorama de Pendências de Compras")
+st.set_page_config(layout="wide", page_title="Panorama Executivo de Suprimentos")
 
 # ==========================================
 # CSS CUSTOMIZADO (Visual Executivo Compacto)
@@ -36,25 +36,6 @@ st.markdown("""
         letter-spacing: 1px;
         margin-bottom: 10px;
         border-radius: 2px;
-    }
-    .kpi-container {
-        background-color: #f8f9fa;
-        border: 1px solid #d1d5db;
-        border-radius: 4px;
-        padding: 10px 15px;
-        text-align: center;
-        height: 95px;
-    }
-    .kpi-title {
-        font-size: 0.75rem;
-        color: #333333;
-        font-weight: bold;
-        text-transform: uppercase;
-        margin-bottom: 2px;
-    }
-    .kpi-sub {
-        font-size: 0.65rem;
-        color: #666666;
     }
     .section-header {
         background-color: #1f3b58;
@@ -97,10 +78,8 @@ if uploaded_file is not None:
         else:
             df = pd.read_excel(uploaded_file, header=1)
             
-        # Limpeza de espaços nos nomes das colunas
         df.columns = df.columns.astype(str).str.strip()
 
-        # Validação e correção das colunas essenciais baseadas no arquivo real
         col_sc = 'Numero da SC' if 'Numero da SC' in df.columns else None
         col_cc = 'C Custo' if 'C Custo' in df.columns else None
         col_dt = 'DT Emissao' if 'DT Emissao' in df.columns else None
@@ -109,16 +88,14 @@ if uploaded_file is not None:
             st.error(f"⚠️ Erro: O arquivo não contém as colunas esperadas ('Numero da SC', 'C Custo', 'DT Emissao'). Colunas encontradas: {list(df.columns)}")
             st.stop()
 
-        # Limpeza e conversões de datas e SLA
         df = df.dropna(subset=[col_sc])
         hoje = pd.to_datetime(data_base)
         df[col_dt] = pd.to_datetime(df[col_dt], errors='coerce')
         df['Days'] = (hoje - df[col_dt]).dt.days
 
-        # Métricas Consolidadas Reais
-        total_linhas = len(df) # 297 itens totais
+        total_linhas = len(df) 
         unique_scs = df.drop_duplicates(subset=[col_sc]).copy()
-        total_sc_unicas = len(unique_scs) # 103 requisições únicas
+        total_sc_unicas = len(unique_scs)
         
         criticos_df = unique_scs[unique_scs['Days'] >= 20]
         backlog_critico = len(criticos_df)
@@ -127,50 +104,59 @@ if uploaded_file is not None:
         taxa_atendimento_val = (no_prazo / total_sc_unicas * 100) if total_sc_unicas > 0 else 100
 
         # ==========================================
-        # PASSO 1: EXIBIÇÃO DO DIAGNÓSTICO NUMÉRICO
+        # PASSO 1: CABEÇALHO E VELOCÍMETROS (GAUGES)
         # ==========================================
         st.markdown(f"""
         <div class="header-box">
             <span style="font-size: 1.2rem; font-weight: bold;">PANORAMA DE PENDÊNCIAS DE REQUISIÇÕES DE COMPRA</span>
             <span style="font-size: 0.9rem;">DADOS CONSOLIDADOS | {hoje.strftime("%d/%m/%Y")}</span>
         </div>
-        <div class="resumo-bar">DIAGNÓSTICO E VALIDAÇÃO ESTRATÉGICA</div>
+        <div class="resumo-bar">DIAGNÓSTICO E VALIDAÇÃO ESTRATÉGICA (VELOCÍMETROS DE DESEMPENHO)</div>
         """, unsafe_allow_html=True)
 
-        kpi1, kpi2, kpi3 = st.columns(3)
-        
-        with kpi1:
-            st.markdown(f"""
-            <div class="kpi-container">
-                <div class="kpi-title">TOTAL DE REQUISIÇÕES (ÚNICAS / ITENS)</div>
-                <div style="font-size: 1.6rem; font-weight: bold; color: #2b6cb0; line-height: 1.1;">
-                    {total_sc_unicas} SCs <span style="font-size: 0.9rem; font-weight:normal;">({total_linhas} itens)</span>
-                </div>
-                <div class="kpi-sub">Volume consolidado sem duplicidade de cabeçalho</div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-        with kpi2:
-            st.markdown(f"""
-            <div class="kpi-container">
-                <div class="kpi-title">BACKLOG CRÍTICO (>=20 DIAS)</div>
-                <div style="font-size: 1.8rem; font-weight: bold; color: #e53e3e; line-height: 1.1;">
-                    {backlog_critico} <span style="font-size: 1.2rem;">📈 🔥</span>
-                </div>
-                <div class="kpi-sub">{(backlog_critico/total_sc_unicas*100 if total_sc_unicas > 0 else 0):.1f}% das SCs ativas</div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-        with kpi3:
-            st.markdown(f"""
-            <div class="kpi-container">
-                <div class="kpi-title">TAXA DE ATENDIMENTO / SAÚDE</div>
-                <div style="font-size: 1.8rem; font-weight: bold; color: #388e3c; line-height: 1.1;">
-                    {taxa_atendimento_val:.1f}% <span style="font-size: 1.2rem;">↗</span>
-                </div>
-                <div class="kpi-sub">Dentro do SLA padrão (<20 dias)</div>
-            </div>
-            """, unsafe_allow_html=True)
+        # Função para criar velocímetros compactos e elegantes
+        def criar_gauge(titulo, valor, max_val, cor_barra, sufixo=""):
+            fig = go.Figure(go.Indicator(
+                mode = "gauge+number",
+                value = valor,
+                number = {'suffix': sufixo, 'font': {'size': 26, 'color': '#1f3b58', 'family': 'Arial'}},
+                title = {'text': titulo, 'font': {'size': 12, 'color': '#333333', 'family': 'Arial'}},
+                gauge = {
+                    'axis': {'range': [None, max_val], 'tickwidth': 1, 'tickcolor': "#888"},
+                    'bar': {'color': cor_barra},
+                    'bgcolor': "#f8f9fa",
+                    'borderwidth': 1,
+                    'bordercolor': "#d1d5db",
+                    'steps': [
+                        {'range': [0, max_val * 0.6], 'color': '#f1f5f9'},
+                        {'range': [max_val * 0.6, max_val], 'color': '#e2e8f0'}
+                    ],
+                }
+            ))
+            fig.update_layout(height=160, margin=dict(l=25, r=25, t=35, b=10), paper_bgcolor='rgba(0,0,0,0)')
+            return fig
+
+        gauge_col1, gauge_col2, gauge_col3 = st.columns(3)
+
+        with gauge_col1:
+            # Velocímetro 1: Total de Requisições (Escala baseada no volume total + folga)
+            max_sc = max(total_sc_unicas * 1.5, 10)
+            fig1 = criar_gauge("TOTAL DE REQUISIÇÕES (ÚNICAS)", total_sc_unicas, max_sc, "#2b6cb0")
+            st.plotly_chart(fig1, use_container_width=True)
+            st.markdown(f"<p style='text-align: center; color: #666; font-size: 0.75rem; margin-top: -10px;'>Volume Bruto: <b>{total_linhas} itens</b> processados</p>", unsafe_allow_html=True)
+
+        with gauge_col2:
+            # Velocímetro 2: Backlog Crítico (Alerta em vermelho)
+            max_backlog = max(total_sc_unicas, 10)
+            fig2 = criar_gauge("BACKLOG CRÍTICO (>=20 DIAS)", backlog_critico, max_backlog, "#e53e3e")
+            st.plotly_chart(fig2, use_container_width=True)
+            st.markdown(f"<p style='text-align: center; color: #e53e3e; font-size: 0.75rem; margin-top: -10px;'><b>{(backlog_critico/total_sc_unicas*100 if total_sc_unicas > 0 else 0):.1f}%</b> das SCs ativas</p>", unsafe_allow_html=True)
+
+        with gauge_col3:
+            # Velocímetro 3: Taxa de Atendimento / Saúde (Escala fixa de 0 a 100%)
+            fig3 = criar_gauge("TAXA DE ATENDIMENTO / SAÚDE", round(taxa_atendimento_val, 1), 100, "#388e3c", sufixo="%")
+            st.plotly_chart(fig3, use_container_width=True)
+            st.markdown(f"<p style='text-align: center; color: #388e3c; font-size: 0.75rem; margin-top: -10px;'>Dentro do SLA padrão (&lt;20 dias)</p>", unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
 
@@ -178,7 +164,7 @@ if uploaded_file is not None:
         col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
         with col_btn2:
             if not st.session_state['executar_analise']:
-                if st.button("🚀 Gerar Gráficos e Detalhamento Analítico", type="primary", use_container_width=True):
+                if st.button("🚀 Gerar Detalhamento Analítico e Gráfico", type="primary", use_container_width=True):
                     st.session_state['executar_analise'] = True
                     st.rerun()
             else:
@@ -196,13 +182,11 @@ if uploaded_file is not None:
             with col_grafico:
                 st.markdown('<div class="section-header">TOP 10 CENTROS DE CUSTO (VOLUME DE PENDÊNCIAS)</div>', unsafe_allow_html=True)
                 
-                # Agrupamento rigoroso do Top 10 Centros de Custo baseado na coluna 'C Custo'
                 cc_volume = df.groupby(col_cc).size().reset_index(name='Quantidade').sort_values(by='Quantidade', ascending=False).head(10)
                 cc_volume[col_cc] = cc_volume[col_cc].astype(str)
                 
-                # Cores padrão: 1º Azul Escuro, demais Laranja Operacional
                 cores_barras = ['#3273a8'] + ['#ed8034'] * (len(cc_volume) - 1)
-                cc_volume = cc_volume.sort_values(by='Quantidade', ascending=True) # Inverte para o maior no topo
+                cc_volume = cc_volume.sort_values(by='Quantidade', ascending=True)
                 cores_barras = cores_barras[::-1]
 
                 fig = go.Figure(go.Bar(
@@ -222,14 +206,13 @@ if uploaded_file is not None:
                     margin=dict(l=10, r=25, t=10, b=10),
                     height=360,
                     xaxis=dict(showgrid=True, gridcolor='#e2e8f0'),
-                    yaxis=dict(type='category') # Força o eixo Y a tratar os códigos como texto/categorias fixas
+                    yaxis=dict(type='category')
                 )
                 st.plotly_chart(fig, use_container_width=True)
 
             with col_tabela:
                 st.markdown('<div class="section-header">ITENS CRÍTICOS COM MAIORES SLAS EM ATRASO</div>', unsafe_allow_html=True)
                 
-                # Tabela restrita a Solicitação + Centro de Custo + Dias em Atraso (Top 10)
                 top_critical = criticos_df.sort_values(by='Days', ascending=False)[[col_sc, col_cc, 'Days']].head(10)
                 top_critical.columns = ['Nº DA SC', 'C. CUSTO', 'DIAS EM ATRASO']
                 top_critical['Nº DA SC'] = top_critical['Nº DA SC'].astype(str)
@@ -255,4 +238,4 @@ if uploaded_file is not None:
     except Exception as e:
         st.error(f"⚠️ Erro analítico no processamento do arquivo. Detalhe técnico: {e}")
 else:
-    st.info("💡 Faça o upload da planilha de pendências no topo à direita para carregar a validação analítica inicial.")
+    st.info("💡 Faça o upload da planilha de pendências no topo à direita para carregar a validação analítica com velocímetros.")
