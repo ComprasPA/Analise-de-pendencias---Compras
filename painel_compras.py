@@ -84,27 +84,27 @@ with top_c2:
 # ==========================================
 if uploaded_file is not None:
     try:
-        # Leitura segura do arquivo lendo as primeiras linhas para varredura
+        # Leitura segura lendo tudo como string pura para evitar erros de tipo
         if uploaded_file.name.endswith('.csv'):
-            df = pd.read_csv(uploaded_file, sep=None, engine='python', encoding='utf-8', header=None)
+            df = pd.read_csv(uploaded_file, sep=None, engine='python', encoding='utf-8', dtype=str, header=None)
         else:
-            df = pd.read_excel(uploaded_file, header=None)
+            df = pd.read_excel(uploaded_file, dtype=str, header=None)
             
-        # Varredura inteligente para encontrar a linha do cabeçalho real (que contenha a palavra SC ou Requisicao)
+        # Varredura inteligente blindada contra nulos/floats
         header_row_idx = 0
         for idx, row in df.iterrows():
-            row_str = row.astype(str).str.upper().values
+            row_str = row.fillna('').astype(str).str.upper().values
             if any('SC' in val or 'REQUISICAO' in val or 'CUSTO' in val for val in row_str):
                 header_row_idx = idx
                 break
 
         # Redefine o DataFrame utilizando a linha de cabeçalho correta
-        df.columns = df.iloc[header_row_idx].astype(str).str.strip()
+        df.columns = df.iloc[header_row_idx].fillna('').astype(str).str.strip()
         df = df.iloc[header_row_idx + 1:].reset_index(drop=True)
         
         # Limpeza de nomes de colunas nulos ou duplicados
         df.columns = [str(col).strip() for col in df.columns]
-        df = df.loc[:, ~df.columns.duplicated()]
+        df = df.loc[:, ~df.columns.duplicated() & (df.columns != '')]
 
         # Função flexível de mapeamento de colunas
         def achar_coluna(opcoes):
