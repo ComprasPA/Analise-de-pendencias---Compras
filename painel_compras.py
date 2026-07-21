@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 st.set_page_config(layout="wide", page_title="Panorama Executivo de Suprimentos")
 
 # ==========================================
-# CSS CUSTOMIZADO (Sem caixas nos velocímetros)
+# CSS CUSTOMIZADO (Espaçamento refinado e títulos em negrito com sombra)
 # ==========================================
 st.markdown("""
     <style>
@@ -38,10 +38,10 @@ st.markdown("""
         text-align: center;
         font-weight: bold;
         font-size: 1.15rem;
-        padding: 6px;
+        padding: 8px;
         text-transform: uppercase;
         letter-spacing: 1px;
-        margin-bottom: 10px;
+        margin-bottom: 25px; /* Afasta bem os velocímetros da barra */
         border-radius: 2px;
     }
     .section-header {
@@ -55,12 +55,14 @@ st.markdown("""
         border-radius: 2px;
         margin-bottom: 8px;
     }
+    /* Estilização avançada para os rodapés dos velocímetros: Negrito, maior e com sobreamento/sombra */
     .gauge-footer {
         text-align: center;
-        color: #475569;
-        font-size: 1.05rem;
-        margin-top: -5px;
-        font-weight: 500;
+        color: #1e293b;
+        font-size: 1.2rem;
+        font-weight: 800;
+        margin-top: 5px;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.15);
     }
     </style>
 """, unsafe_allow_html=True)
@@ -111,7 +113,7 @@ if uploaded_file is not None:
         taxa_atendimento_val = (no_prazo / total_sc_unicas * 100) if total_sc_unicas > 0 else 100
 
         # ==========================================
-        # PASSO 1: CABEÇALHO E VELOCÍMETROS (SEM CAIXAS)
+        # PASSO 1: CABEÇALHO E VELOCÍMETROS COM ESPAÇAMENTO ADEQUADO
         # ==========================================
         st.markdown(f"""
         <div class="header-box">
@@ -125,10 +127,10 @@ if uploaded_file is not None:
             fig = go.Figure(go.Indicator(
                 mode = "gauge+number",
                 value = valor,
-                number = {'suffix': sufixo, 'font': {'size': 32, 'color': '#1f3b58', 'family': 'Arial'}},
-                title = {'text': titulo, 'font': {'size': 15, 'color': '#1f2937', 'family': 'Arial'}},
+                number = {'suffix': sufixo, 'font': {'size': 34, 'color': '#1f3b58', 'family': 'Arial Black'}},
+                title = {'text': titulo, 'font': {'size': 16, 'color': '#111827', 'family': 'Arial Black'}},
                 gauge = {
-                    'axis': {'range': [None, max_val], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 12}},
+                    'axis': {'range': [None, max_val], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 13, 'family': 'Arial Black'}},
                     'bar': {'color': cor_barra},
                     'bgcolor': "rgba(0,0,0,0)",
                     'borderwidth': 0,
@@ -138,7 +140,8 @@ if uploaded_file is not None:
                     ],
                 }
             ))
-            fig.update_layout(height=160, margin=dict(l=20, r=20, t=35, b=10), paper_bgcolor='rgba(0,0,0,0)')
+            # Margem superior ajustada (t=45) para descer o título do velocídio perfeitamente
+            fig.update_layout(height=180, margin=dict(l=20, r=20, t=45, b=10), paper_bgcolor='rgba(0,0,0,0)')
             return fig
 
         gauge_col1, gauge_col2, gauge_col3 = st.columns(3)
@@ -184,21 +187,21 @@ if uploaded_file is not None:
                 orientation='h',
                 text=cc_volume['Quantidade'],
                 textposition='outside',
-                textfont=dict(size=14, color='#1f2937'),
+                textfont=dict(size=14, color='#1f2937', family='Arial Black'),
                 marker_color=cores_barras
             ))
             
             fig.update_layout(
                 xaxis_title="Volume de Requisições / Itens", 
                 yaxis_title="Centro de Custo",
-                xaxis_title_font=dict(size=14),
-                yaxis_title_font=dict(size=14),
+                xaxis_title_font=dict(size=14, family='Arial Black'),
+                yaxis_title_font=dict(size=14, family='Arial Black'),
                 plot_bgcolor="rgba(0,0,0,0)",
                 paper_bgcolor="rgba(0,0,0,0)",
                 margin=dict(l=10, r=25, t=10, b=10),
                 height=380,
                 xaxis=dict(showgrid=True, gridcolor='#e2e8f0', tickfont=dict(size=12)),
-                yaxis=dict(type='category', tickfont=dict(size=12))
+                yaxis=dict(type='category', tickfont=dict(size=12, family='Arial Black'))
             )
             st.plotly_chart(fig, use_container_width=True)
 
@@ -228,7 +231,7 @@ if uploaded_file is not None:
 
         st.markdown("""
         <hr style='margin: 15px 0px 8px 0px;'>
-        <div style="font-size: 1.05rem; color: #4a5568; display: flex; justify-content: space-between; font-weight: 500;">
+        <div style="font-size: 1.05rem; color: #4a5568; display: flex; justify-content: space-between; font-weight: 700;">
             <span><b style="color: #e53e3e;">→ Alerta Crítico:</b> Backlog com inércia superior a 20 dias</span>
             <span><b style="color: #3273a8;">→ Top 10 CC:</b> Eixo Y com os 10 principais centros de custo mapeados</span>
             <span><b style="color: #388e3c;">Metodologia:</b> Contagem consolidada de SCs e itens do Protheus</span>
