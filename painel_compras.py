@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 st.set_page_config(layout="wide", page_title="Panorama Executivo de Suprimentos")
 
 # ==========================================
-# CSS CUSTOMIZADO (Título ajustado e sem aspas)
+# CSS CUSTOMIZADO (Visual Retrátil e Refinado)
 # ==========================================
 st.markdown("""
     <style>
@@ -67,13 +67,14 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# CONTROLES SUPERIORES (Upload e Data)
+# PAINEL RETRÁTIL (Configurações e Upload)
 # ==========================================
-top_c1, top_c2 = st.columns([3, 1])
-with top_c1:
-    uploaded_file = st.file_uploader("Upload do arquivo de pendências (.xlsx/.csv)", type=["xlsx", "xls", "csv"])
-with top_c2:
-    data_base = st.date_input("Data base para cálculo de SLA:", datetime.date.today())
+with st.expander("⚙️ Abrir / Fechar Configurações (Upload de Arquivo e Data Base)", expanded=False):
+    top_c1, top_c2 = st.columns([3, 1])
+    with top_c1:
+        uploaded_file = st.file_uploader("Upload do arquivo de pendências (.xlsx/.csv)", type=["xlsx", "xls", "csv"])
+    with top_c2:
+        data_base = st.date_input("Data base para cálculo de SLA:", datetime.date.today())
 
 # ==========================================
 # PROCESSAMENTO ANALÍTICO DE DADOS
@@ -239,4 +240,4 @@ if uploaded_file is not None:
     except Exception as e:
         st.error(f"⚠️ Erro analítico no processamento do arquivo. Detalhe técnico: {e}")
 else:
-    st.info("💡 Faça o upload da planilha de pendências no topo à direita para carregar o panorama executivo.")
+    st.info("💡 Clique em **⚙️ Abrir / Fechar Configurações** no topo para anexar o arquivo de pendências e selecionar a data base.")
