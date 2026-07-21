@@ -1,29 +1,64 @@
 import streamlit as st
 import pandas as pd
 import datetime
+import plotly.express as px
 
-# 1. CONFIGURAÇÃO DA PÁGINA
-st.set_page_config(layout="wide", page_title="Painel de Compras")
-
-# ==========================================
-# INTERFACE DO USUÁRIO
-# ==========================================
-st.title("📊 Painel Interativo de Requisições de Compra")
-st.markdown("Faça o upload do arquivo Excel para visualizar o panorama consolidado diretamente na tela.")
-
-col1, col2 = st.columns([3, 1])
-with col1:
-    uploaded_file = st.file_uploader("Upload do arquivo de pendências", type=["xlsx", "xls", "csv"])
-with col2:
-    data_base = st.date_input("Data base para cálculo de SLA:", datetime.date.today())
+# 1. CONFIGURAÇÃO DA PÁGINA (Deve ser a 1ª linha)
+st.set_page_config(layout="wide", page_title="Painel Executivo de Compras")
 
 # ==========================================
-# PROCESSAMENTO E EXIBIÇÃO EM TELA
+# CSS CUSTOMIZADO (Para deixar com cara Premium)
+# ==========================================
+st.markdown("""
+    <style>
+    .kpi-card {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        border-left: 5px solid;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    .kpi-title {
+        font-size: 1.1rem;
+        color: #6c757d;
+        margin-bottom: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    .kpi-value {
+        font-size: 2.8rem;
+        font-weight: 700;
+        margin: 0;
+    }
+    .kpi-blue { border-left-color: #2b6cb0; }
+    .kpi-red { border-left-color: #e53e3e; }
+    .kpi-value-blue { color: #2b6cb0; }
+    .kpi-value-red { color: #e53e3e; }
+    </style>
+""", unsafe_allow_html=True)
+
+# ==========================================
+# CABEÇALHO DO DASHBOARD
+# ==========================================
+st.title("📊 Painel Executivo - Requisições de Compra")
+st.markdown("Monitoramento de pendências, volumes e Backlog Crítico por Centro de Custo.")
+
+with st.container():
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        uploaded_file = st.file_uploader("Upload do relatório (Excel ou CSV)", type=["xlsx", "xls", "csv"])
+    with col2:
+        data_base = st.date_input("Data base para SLA:", datetime.date.today())
+
+# ==========================================
+# PROCESSAMENTO DE DADOS
 # ==========================================
 if uploaded_file is not None:
-    with st.spinner('Processando dados e montando o painel...'):
+    with st.spinner('Consolidando dados do relatório...'):
         try:
-            # 1. Leitura do Arquivo
+            # 1. Leitura
             if uploaded_file.name.endswith('.csv'):
                 df = pd.read_csv(uploaded_file, sep=';', encoding='utf-8', header=0)
             else:
@@ -34,7 +69,7 @@ if uploaded_file is not None:
                 df = df[1:]
                 df.columns = new_header
                 
-            # 2. Cálculos de SLA e Limpeza
+            # 2. Cálculos e SLA
             hoje = pd.to_datetime(data_base)
             df['DT Emissao'] = pd.to_datetime(df['DT Emissao'], errors='coerce')
             df['Days'] = (hoje - df['DT Emissao']).dt.days
@@ -47,57 +82,109 @@ if uploaded_file is not None:
             backlog_critico = len(criticos_df)
             percentual_critico = (backlog_critico / total_sc_unicas * 100) if total_sc_unicas > 0 else 0
             
-            # 3. Preparação dos Dados para o Gráfico
-            cc_volume = df.groupby('C Custo').size().reset_index(name='Quantidade').sort_values(by='Quantidade', ascending=False)
-            top3_cc = cc_volume.head(3)
-            outros_val = cc_volume.iloc[3:]['Quantidade'].sum() if len(cc_volume) > 3 else 0
-            
-            chart_data = top3_cc.copy()
-            if outros_val > 0:
-                outros_df = pd.DataFrame({'C Custo': ['Outros'], 'Quantidade': [outros_val]})
-                chart_data = pd.concat([chart_data, outros_df], ignore_index=True)
-            
-            # Formata os dados para o st.bar_chart nativo
-            chart_data['C Custo'] = chart_data['C Custo'].astype(str)
-            chart_data_plot = chart_data.set_index('C Custo')
-            
-            # 4. Preparação dos Dados para a Tabela
+            # 3. TOP 10 Volume por CC (Para o Gráfico)
+            cc_volume = df.groupby('C Custo').size().reset_index(name='Quantidade').sort_values(by='Quantidade', ascending=False).head(10)
+            cc_volume['C Custo'] = cc_volume['C Custo'].astype(str)
+            # Inverter a ordem para o gráfico de barras horizontais ficar com o maior no topo
+            cc_volume = cc_volume.sort_values(by='Quantidade', ascending=True)
+
+            # 4. TOP 10 Críticos (Para a Tabela)
             top_critical = criticos_df.sort_values(by='Days', ascending=False)[['Numero da SC', 'C Custo', 'Days']].head(10)
-            top_critical.columns = ['Nº da SC', 'Centro de Custo', 'Dias de Atraso']
+            top_critical.columns = ['Nº da SC', 'Centro de Custo', 'Dias em Atraso']
+            top_critical['Centro de Custo'] = top_critical['Centro de Custo'].astype(str)
 
             # ==========================================
-            # RENDERIZAÇÃO NA TELA DO SITE
+            # RENDERIZAÇÃO NA TELA
             # ==========================================
-            st.divider() # Linha separadora
-            st.subheader(f"📌 DADOS CONSOLIDADOS | {hoje.strftime('%d/%m/%Y')}")
+            st.markdown("---")
+            st.markdown(f"#### 📅 DADOS CONSOLIDADOS: {hoje.strftime('%d/%m/%Y')} | Fonte: `{uploaded_file.name}`")
             
-            # --- CARDS DE INDICADORES (KPIs) ---
-            kpi1, kpi2, kpi3 = st.columns(3)
-            with kpi1:
-                st.metric(label="Total de Requisições (Únicas)", value=total_sc_unicas, delta=f"{total_linhas} linhas/itens no total", delta_color="off")
-            with kpi2:
-                # Delta negativo em vermelho automático no Streamlit se configurado
-                st.metric(label="Backlog Crítico (>= 20 dias)", value=backlog_critico, delta=f"Representa ~{percentual_critico:.1f}% do total", delta_color="inverse")
-            with kpi3:
-                alerta = "ALERTA ATIVO 🔴" if backlog_critico > 0 else "NORMAL 🟢"
-                st.metric(label="Status de Atraso", value=alerta)
-
-            st.divider()
-
-            # --- GRÁFICO E TABELA LADO A LADO ---
-            col_chart, col_table = st.columns(2)
+            # --- CARDS HTML PREMIUM ---
+            kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
             
-            with col_chart:
-                st.markdown("### 📊 Top 3 Maiores Pendências")
-                st.markdown("Distribuição por Centro de Custo")
-                # Gráfico nativo do Streamlit (Interativo, você pode passar o mouse em cima)
-                st.bar_chart(chart_data_plot, use_container_width=True)
+            with kpi_col1:
+                st.markdown(f"""
+                <div class="kpi-card kpi-blue">
+                    <div class="kpi-title">Total de Requisições (Únicas)</div>
+                    <div class="kpi-value kpi-value-blue">{total_sc_unicas}</div>
+                    <div style="color: #6c757d; font-size: 0.9rem; margin-top: 5px;">{total_linhas} linhas/itens processados</div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+            with kpi_col2:
+                st.markdown(f"""
+                <div class="kpi-card kpi-red">
+                    <div class="kpi-title">Backlog Crítico (>= 20 dias)</div>
+                    <div class="kpi-value kpi-value-red">{backlog_critico}</div>
+                    <div style="color: #6c757d; font-size: 0.9rem; margin-top: 5px;">Representa ~{percentual_critico:.1f}% do passivo total</div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+            with kpi_col3:
+                 # Simulador de status baseado no volume de atrasos
+                 status_color = "kpi-value-red" if backlog_critico > 0 else "kpi-value-blue"
+                 status_text = "ALERTA ATIVO" if backlog_critico > 0 else "NORMAL"
+                 border_color = "kpi-red" if backlog_critico > 0 else "kpi-blue"
+                 
+                 st.markdown(f"""
+                <div class="kpi-card {border_color}">
+                    <div class="kpi-title">Status da Carteira</div>
+                    <div class="kpi-value {status_color}">{status_text}</div>
+                    <div style="color: #6c757d; font-size: 0.9rem; margin-top: 5px;">Acompanhamento de SLAs em inércia</div>
+                </div>
+                """, unsafe_allow_html=True)
 
-            with col_table:
-                st.markdown("### ⚠️ Detalhamento de Itens Críticos")
-                st.markdown("Top 10 Itens com SLA >= 20 dias")
-                # Tabela nativa do Streamlit
-                st.dataframe(top_critical, use_container_width=True, hide_index=True)
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # --- GRÁFICO E TABELA (Usando Plotly Express para visual Premium) ---
+            dash_col1, dash_col2 = st.columns([1.2, 1])
+            
+            with dash_col1:
+                st.markdown("##### 📊 TOP 10 CENTROS DE CUSTO (Volume de Pendências)")
+                
+                # Criando gráfico Plotly profissional
+                fig = px.bar(
+                    cc_volume, 
+                    x='Quantidade', 
+                    y='C Custo', 
+                    orientation='h',
+                    text='Quantidade', # Mostra o número na ponta da barra
+                    color='Quantidade', # Gradiente de cor baseado no volume
+                    color_continuous_scale='Blues' # Usa paleta de azul
+                )
+                
+                # Ajustando o visual do gráfico
+                fig.update_layout(
+                    xaxis_title="", 
+                    yaxis_title="Código do CC",
+                    plot_bgcolor="rgba(0,0,0,0)", # Fundo transparente limpo
+                    coloraxis_showscale=False, # Esconde a barra de legenda lateral
+                    margin=dict(l=0, r=20, t=30, b=0),
+                    height=450
+                )
+                fig.update_traces(textposition='outside') # Coloca o número logo fora da barra
+                
+                st.plotly_chart(fig, use_container_width=True)
+
+            with dash_col2:
+                st.markdown("##### 🔥 ITENS CRÍTICOS COM MAIORES SLAs (>= 20 Dias)")
+                st.markdown("Visão detalhada das requisições com maior inércia.")
+                
+                # Aplicando um estilo na tabela para as células de atraso ficarem vermelhas
+                def color_critical(val):
+                    color = '#e53e3e' if isinstance(val, int) and val >= 20 else 'black'
+                    return f'color: {color}; font-weight: bold'
+                
+                styled_table = top_critical.style.applymap(
+                    color_critical, subset=['Dias em Atraso']
+                ).format({"Dias em Atraso": "{} dias"})
+                
+                st.dataframe(
+                    styled_table, 
+                    use_container_width=True,
+                    height=450,
+                    hide_index=True
+                )
 
         except Exception as e:
-            st.error(f"⚠️ Erro ao processar a planilha. \n\nDetalhe técnico: {e}")
+            st.error(f"⚠️ Ocorreu um erro no processamento do arquivo. \n\nDetalhe técnico: {e}")
