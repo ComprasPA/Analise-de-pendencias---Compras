@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 st.set_page_config(layout="wide", page_title="Panorama Executivo de Suprimentos")
 
 # ==========================================
-# CSS RESPONSIVO (Ajuste automático para qualquer monitor sem scroll)
+# CSS RESPONSIVO (Espaçamento e Justificativa Perfeita)
 # ==========================================
 st.markdown("""
     <style>
@@ -17,51 +17,49 @@ st.markdown("""
         display: none !important;
     }
     
-    /* Trava o container principal para preencher exatamente a tela visível, eliminando scroll */
     html, body, [data-testid="stAppViewContainer"] {
         height: 100vh;
         overflow: hidden !important;
     }
     
     .block-container {
-        padding-top: 0.3rem !important;
-        padding-bottom: 0.3rem !important;
+        padding-top: 0.2rem !important;
+        padding-bottom: 0.2rem !important;
         padding-left: 0.8rem !important;
         padding-right: 0.8rem !important;
         max-width: 100% !important;
         height: 100vh;
         display: flex;
         flex-direction: column;
-        justify-content: flex-start;
     }
 
     .header-box {
         background-color: #1f3b58;
         color: white;
-        padding: 8px 15px;
+        padding: 6px 14px;
         border-radius: 4px;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 4px;
+        margin-bottom: 3px;
     }
     .header-title {
-        font-size: 1.25rem;
+        font-size: 1.15rem;
         font-weight: bold;
     }
     .header-sub {
-        font-size: 1rem;
+        font-size: 0.95rem;
     }
     .resumo-bar {
         background-color: #2b4c7e;
         color: white;
         text-align: center;
         font-weight: bold;
-        font-size: 0.95rem;
-        padding: 4px;
+        font-size: 0.85rem;
+        padding: 3px;
         text-transform: uppercase;
         letter-spacing: 1px;
-        margin-bottom: 8px;
+        margin-bottom: 4px;
         border-radius: 2px;
     }
     .section-header {
@@ -69,8 +67,8 @@ st.markdown("""
         color: white;
         text-align: center;
         font-weight: bold;
-        font-size: 0.9rem;
-        padding: 4px;
+        font-size: 0.85rem;
+        padding: 3px;
         text-transform: uppercase;
         border-radius: 2px;
         margin-bottom: 2px;
@@ -78,16 +76,15 @@ st.markdown("""
     .gauge-footer {
         text-align: center;
         color: #1e293b;
-        font-size: 0.95rem;
+        font-size: 0.9rem;
         font-weight: 800;
-        margin-top: -2px;
+        margin-top: -4px;
         text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.15);
     }
-    /* Estilização da tabela compacta e responsiva */
     .stDataFrame td, .stDataFrame th {
-        font-size: 0.95rem !important;
+        font-size: 0.9rem !important;
         font-weight: 800 !important;
-        padding: 2px 4px !important;
+        padding: 1px 3px !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -143,7 +140,7 @@ if uploaded_file is not None:
         taxa_atendimento_val = (no_prazo / total_sc_unicas * 100) if total_sc_unicas > 0 else 100
 
         # ==========================================
-        # PASSO 1: CABEÇALHO E VELOCÍMETROS FLUIDOS
+        # PASSO 1: CABEÇALHO E VELOCÍMETROS
         # ==========================================
         st.markdown(f"""
         <div class="header-box">
@@ -157,10 +154,10 @@ if uploaded_file is not None:
             fig = go.Figure(go.Indicator(
                 mode = "gauge+number",
                 value = valor,
-                number = {'suffix': sufixo, 'font': {'size': 24, 'color': '#1f3b58', 'family': 'Arial Black'}},
-                title = {'text': titulo, 'font': {'size': 13, 'color': '#111827', 'family': 'Arial Black'}},
+                number = {'suffix': sufixo, 'font': {'size': 22, 'color': '#1f3b58', 'family': 'Arial Black'}},
+                title = {'text': titulo, 'font': {'size': 11, 'color': '#111827', 'family': 'Arial Black'}},
                 gauge = {
-                    'axis': {'range': [None, max_val], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 10, 'family': 'Arial Black'}},
+                    'axis': {'range': [None, max_val], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 9, 'family': 'Arial Black'}},
                     'bar': {'color': cor_barra},
                     'bgcolor': "rgba(0,0,0,0)",
                     'borderwidth': 0,
@@ -170,8 +167,8 @@ if uploaded_file is not None:
                     ],
                 }
             ))
-            # Altura ajustada dinamicamente para encimar perfeitamente em telas menores
-            fig.update_layout(height=110, margin=dict(l=10, r=10, t=25, b=2), paper_bgcolor='rgba(0,0,0,0)')
+            # Margem superior perfeitamente justificada para afastar o título do topo
+            fig.update_layout(height=95, margin=dict(l=10, r=10, t=18, b=0), paper_bgcolor='rgba(0,0,0,0)')
             return fig
 
         gauge_col1, gauge_col2, gauge_col3 = st.columns(3)
@@ -194,9 +191,9 @@ if uploaded_file is not None:
             st.markdown(f"<div class='gauge-footer' style='color: #388e3c;'>Dentro do SLA padrão (&lt;20 dias)</div>", unsafe_allow_html=True)
 
         # ==========================================
-        # PASSO 2: RENDERIZAÇÃO DOS GRÁFICOS E TABELA RESPONSIVOS
+        # PASSO 2: RENDERIZAÇÃO DOS GRÁFICOS E TABELA
         # ==========================================
-        st.markdown("<hr style='margin: 6px 0px;'>", unsafe_allow_html=True)
+        st.markdown("<hr style='margin: 4px 0px;'>", unsafe_allow_html=True)
         
         col_g1, col_g2, col_tabela = st.columns([1, 1, 1.1])
 
@@ -216,21 +213,21 @@ if uploaded_file is not None:
                 orientation='h',
                 text=cc_volume['Quantidade'],
                 textposition='outside',
-                textfont=dict(size=10, color='#1f2937', family='Arial Black'),
+                textfont=dict(size=9, color='#1f2937', family='Arial Black'),
                 marker_color=cores_barras
             ))
             
             fig1.update_layout(
                 xaxis_title="Qtd. Itens", 
                 yaxis_title="Centro de Custo",
-                xaxis_title_font=dict(size=10, family='Arial Black'),
-                yaxis_title_font=dict(size=10, family='Arial Black'),
+                xaxis_title_font=dict(size=9, family='Arial Black'),
+                yaxis_title_font=dict(size=9, family='Arial Black'),
                 plot_bgcolor="rgba(0,0,0,0)",
                 paper_bgcolor="rgba(0,0,0,0)",
                 margin=dict(l=2, r=15, t=2, b=2),
-                height=210, # Altura fluida otimizada para encaixar perfeitamente
-                xaxis=dict(showgrid=True, gridcolor='#e2e8f0', tickfont=dict(size=9)),
-                yaxis=dict(type='category', tickfont=dict(size=9, family='Arial Black'))
+                height=185,
+                xaxis=dict(showgrid=True, gridcolor='#e2e8f0', tickfont=dict(size=8)),
+                yaxis=dict(type='category', tickfont=dict(size=8, family='Arial Black'))
             )
             st.plotly_chart(fig1, use_container_width=True)
 
@@ -250,21 +247,21 @@ if uploaded_file is not None:
                 orientation='h',
                 text=cc_scs['Qtd_SCs'],
                 textposition='outside',
-                textfont=dict(size=10, color='#1f2937', family='Arial Black'),
+                textfont=dict(size=9, color='#1f2937', family='Arial Black'),
                 marker_color=cores_barras_sc
             ))
             
             fig2.update_layout(
                 xaxis_title="Qtd. Requisições (SCs)", 
                 yaxis_title="Centro de Custo",
-                xaxis_title_font=dict(size=10, family='Arial Black'),
-                yaxis_title_font=dict(size=10, family='Arial Black'),
+                xaxis_title_font=dict(size=9, family='Arial Black'),
+                yaxis_title_font=dict(size=9, family='Arial Black'),
                 plot_bgcolor="rgba(0,0,0,0)",
                 paper_bgcolor="rgba(0,0,0,0)",
                 margin=dict(l=2, r=15, t=2, b=2),
-                height=210,
-                xaxis=dict(showgrid=True, gridcolor='#e2e8f0', tickfont=dict(size=9)),
-                yaxis=dict(type='category', tickfont=dict(size=9, family='Arial Black'))
+                height=185,
+                xaxis=dict(showgrid=True, gridcolor='#e2e8f0', tickfont=dict(size=8)),
+                yaxis=dict(type='category', tickfont=dict(size=8, family='Arial Black'))
             )
             st.plotly_chart(fig2, use_container_width=True)
 
@@ -280,13 +277,13 @@ if uploaded_file is not None:
             st.dataframe(
                 top_critical, 
                 use_container_width=True,
-                height=210,
+                height=185,
                 hide_index=True
             )
 
         st.markdown("""
-        <hr style='margin: 4px 0px;'>
-        <div style="font-size: 0.85rem; color: #4a5568; display: flex; justify-content: space-between; font-weight: 700;">
+        <hr style='margin: 3px 0px;'>
+        <div style="font-size: 0.8rem; color: #4a5568; display: flex; justify-content: space-between; font-weight: 700;">
             <span><b style="color: #e53e3e;">→ Alerta Crítico:</b> Backlog superior a 20 dias</span>
             <span><b style="color: #3273a8;">→ Top 10 CC:</b> Comparativo de volume de itens vs. requisições</span>
             <span><b style="color: #388e3c;">Metodologia:</b> Contagem consolidada Protheus (6 dígitos)</span>
