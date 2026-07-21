@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 st.set_page_config(layout="wide", page_title="Panorama Executivo de Suprimentos")
 
 # ==========================================
-# CSS CUSTOMIZADO (Layout Compacto e Limpo)
+# CSS CUSTOMIZADO (Fonte da tabela ampliada e em negrito)
 # ==========================================
 st.markdown("""
     <style>
@@ -66,6 +66,11 @@ st.markdown("""
         font-weight: 800;
         margin-top: 5px;
         text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.15);
+    }
+    /* Estilização dedicada para deixar a tabela de críticos maior e em negrito */
+    .stDataFrame td, .stDataFrame th {
+        font-size: 1.35rem !important;
+        font-weight: 800 !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -173,7 +178,6 @@ if uploaded_file is not None:
         # ==========================================
         st.markdown("---")
         
-        # Dividimos em 3 colunas: [Gráfico 1: Itens] [Gráfico 2: Requisições Únicas] [Tabela: Críticos Compacta]
         col_g1, col_g2, col_tabela = st.columns([1, 1, 1.1])
 
         with col_g1:
@@ -213,7 +217,6 @@ if uploaded_file is not None:
         with col_g2:
             st.markdown('<div class="section-header">TOP 10 CC (QTD. REQUISIÇÕES)</div>', unsafe_allow_html=True)
             
-            # Agrupamento por Requisições únicas (Contagem distinta de SCs por Centro de Custo)
             cc_scs = unique_scs.groupby(col_cc)[col_sc].nunique().reset_index(name='Qtd_SCs').sort_values(by='Qtd_SCs', ascending=False).head(10)
             cc_scs[col_cc] = cc_scs[col_cc].astype(str)
             
@@ -253,14 +256,6 @@ if uploaded_file is not None:
             top_critical['Nº SC'] = top_critical['Nº SC'].astype(str)
             top_critical['C. CUSTO'] = top_critical['C. CUSTO'].astype(str)
             top_critical['ATRASO'] = top_critical['ATRASO'].astype(str) + " DIAS 🔥"
-
-            st.markdown("""
-                <style>
-                dataframe, th, td {
-                    font-size: 0.95rem !important;
-                }
-                </style>
-            """, unsafe_allow_html=True)
 
             st.dataframe(
                 top_critical, 
