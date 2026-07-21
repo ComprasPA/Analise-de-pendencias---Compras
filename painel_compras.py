@@ -1,19 +1,11 @@
 import streamlit as st
-import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-from datetime import datetime
-import io
-from PIL import Image
+import datetime
 
-# 1. A CONFIGURAÇÃO DA PÁGINA DEVE SER O PRIMEIRO COMANDO STREAMLIT
+# 1. CONFIGURAÇÃO BÁSICA (Única coisa que carrega no início)
 st.set_page_config(layout="wide", page_title="Painel de Compras")
 
-# 2. CORREÇÃO DE LIMITE DE IMAGEM (DECOMPRESSION BOMB)
-Image.MAX_IMAGE_PIXELS = None
-
 # ==========================================
-# TEXTOS DA INTERFACE
+# INTERFACE DO USUÁRIO
 # ==========================================
 st.title("📊 Gerador de Infográfico - Layout Atualizado")
 st.markdown("Faça o upload do arquivo Excel e clique no botão para gerar o panorama.")
@@ -22,33 +14,40 @@ col1, col2 = st.columns([3, 1])
 with col1:
     uploaded_file = st.file_uploader("Upload do arquivo de pendências", type=["xlsx", "xls"])
 with col2:
-    data_base = st.date_input("Data base para cálculo de SLA:", pd.Timestamp.today())
+    data_base = st.date_input("Data base para cálculo de SLA:", datetime.date.today())
 
 # ==========================================
-# CONTROLE DO BOTÃO E ESTADO
+# CONTROLE DO BOTÃO
 # ==========================================
-# Inicializa o estado se não existir
 if 'gerar_grafico' not in st.session_state:
     st.session_state['gerar_grafico'] = False
 
-# Botão para gerar
 if st.button("🚀 Gerar Infográfico", type="primary"):
     if uploaded_file is not None:
         st.session_state['gerar_grafico'] = True
     else:
         st.warning("⚠️ Por favor, faça o upload do arquivo antes de gerar o infográfico.")
 
-# Se o usuário remover o arquivo, reseta o estado
 if uploaded_file is None:
     st.session_state['gerar_grafico'] = False
 
 # ==========================================
-# PROCESSAMENTO DE DADOS E GRÁFICO
+# PROCESSAMENTO DE DADOS (Só roda ao clicar)
 # ==========================================
 if st.session_state['gerar_grafico'] and uploaded_file is not None:
     with st.spinner('Processando dados e gerando infográfico...'):
         try:
-            # Leitura
+            # Importações "atrasadas" para não quebrar o site na inicialização
+            import pandas as pd
+            import matplotlib.pyplot as plt
+            import matplotlib.patches as patches
+            import io
+            from PIL import Image
+            
+            # Destrava limite de imagem
+            Image.MAX_IMAGE_PIXELS = None
+
+            # Leitura do Arquivo
             df = pd.read_excel(uploaded_file, header=0)
             if 'Numero da SC' not in df.columns:
                 new_header = df.iloc[0]
@@ -86,13 +85,8 @@ if st.session_state['gerar_grafico'] and uploaded_file is not None:
             fig, ax = plt.subplots(figsize=(18, 10), facecolor='#e9eef2')
             ax.axis('off')
 
-            text_dark = '#1a202c'
-            text_gray = '#4a5568'
-            card_bg = 'white'
-            border_color = '#cbd5e0'
-            blue_highlight = '#2b6cb0'
-            red_highlight = '#e53e3e'
-            table_header = '#457b9d'
+            text_dark, text_gray, card_bg, border_color = '#1a202c', '#4a5568', 'white', '#cbd5e0'
+            blue_highlight, red_highlight, table_header = '#2b6cb0', '#e53e3e', '#457b9d'
 
             ax.text(0.02, 0.95, 'PANORAMA DE REQUISIÇÕES DE COMPRA PENDENTES', ha='left', va='center', fontsize=26, fontweight='bold', color=text_dark)
             ax.text(0.98, 0.965, f'DADOS CONSOLIDADOS | {hoje.strftime("%d DE %B DE %Y").upper()}', ha='right', va='center', fontsize=12, color=text_dark)
@@ -106,21 +100,20 @@ if st.session_state['gerar_grafico'] and uploaded_file is not None:
                     strip = patches.FancyBboxPatch((x, y), 0.005, h, boxstyle="round,pad=0.01", facecolor=left_strip_color, edgecolor='none', transform=ax.transAxes, zorder=2)
                     ax.add_patch(strip)
 
-            # CARD 1
+            # CARDS SUPERIORES
             draw_card(0.02, 0.70, 0.46, 0.18, left_strip_color=blue_highlight)
             ax.text(0.05, 0.83, 'TOTAL DE REQUISIÇÕES PENDENTES', ha='left', va='center', fontsize=16, color=text_dark)
             ax.text(0.12, 0.75, str(total_sc_unicas), ha='center', va='center', fontsize=48, fontweight='bold', color=text_dark)
             ax.plot([0.22, 0.22], [0.72, 0.78], color=border_color, lw=2, transform=ax.transAxes, zorder=3)
             ax.text(0.32, 0.75, str(total_linhas), ha='center', va='center', fontsize=48, fontweight='bold', color=text_dark)
 
-            # CARD 2
             draw_card(0.51, 0.70, 0.47, 0.18, left_strip_color=red_highlight)
             ax.text(0.54, 0.83, 'BACKLOG CRÍTICO (>= 20 dias)', ha='left', va='center', fontsize=16, color=text_dark)
             ax.text(0.57, 0.75, str(backlog_critico), ha='center', va='center', fontsize=48, fontweight='bold', color=text_dark)
             ax.text(0.75, 0.73, f'PERCENTUAL DO TOTAL: ~{percentual_critico:.1f}%', ha='center', va='center', fontsize=14, color=text_dark)
             ax.text(0.93, 0.73, 'ALERTA', ha='center', va='center', fontsize=14, fontweight='bold', color=red_highlight)
 
-            # CARD 3
+            # GRÁFICO LATERAL
             draw_card(0.02, 0.05, 0.46, 0.61)
             ax.text(0.25, 0.61, 'DISTRIBUIÇÃO POR CENTRO DE CUSTO', ha='center', va='center', fontsize=16, fontweight='bold', color=text_dark)
             ax.text(0.25, 0.58, 'TOP 3 MAIORES PENDÊNCIAS', ha='center', va='center', fontsize=14, color=text_gray)
@@ -150,7 +143,7 @@ if st.session_state['gerar_grafico'] and uploaded_file is not None:
                     if width > 0:
                         ax_bar.text(width + max(bar_vals)*0.02, bar.get_y() + bar.get_height()/2, f'{int(width)}', va='center', ha='left', fontsize=14, fontweight='bold', color=text_dark)
 
-            # CARD 4
+            # TABELA
             draw_card(0.51, 0.05, 0.47, 0.61)
             ax.text(0.745, 0.61, 'DETALHAMENTO DE ITENS CRÍTICOS (>= 20 dias)', ha='center', va='center', fontsize=16, fontweight='bold', color=text_dark)
 
@@ -184,5 +177,8 @@ if st.session_state['gerar_grafico'] and uploaded_file is not None:
             fig.savefig(buf, format="png", dpi=200)
             st.download_button(label="📥 Baixar Infográfico (PNG)", data=buf.getvalue(), file_name="infografico_painel_atualizado.png", mime="image/png")
             
+        except ImportError as e:
+            st.error(f"⚠️ Erro de Instalação: O servidor não conseguiu encontrar as bibliotecas.\n\nDetalhe: {e}")
+            st.warning("Verifique se o seu arquivo `requirements.txt` no GitHub está com este exato conteúdo (tudo minúsculo):\n\n`streamlit`\n`pandas`\n`matplotlib`\n`openpyxl`\n`pillow`")
         except Exception as e:
-            st.error(f"Erro ao processar o arquivo. Detalhe técnico: {e}")
+            st.error(f"⚠️ Erro ao processar a planilha. Detalhe técnico: {e}")
