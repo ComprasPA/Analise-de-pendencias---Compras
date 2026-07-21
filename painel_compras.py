@@ -3,7 +3,7 @@ import pandas as pd
 import datetime
 import plotly.graph_objects as go
 import matplotlib
-matplotlib.use('Agg') # Garante o processamento seguro de imagens em segundo plano na nuvem
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import io
 
@@ -11,7 +11,7 @@ import io
 st.set_page_config(layout="wide", page_title="Panorama Executivo de Suprimentos")
 
 # ==========================================
-# CSS CUSTOMIZADO (Visual Sólido e Limpo)
+# CSS CUSTOMIZADO (Fundos Sólidos e Alta Legibilidade)
 # ==========================================
 st.markdown("""
     <style>
@@ -52,15 +52,13 @@ st.markdown("""
         border-radius: 2px;
         margin-bottom: 8px;
     }
-    /* Cartões executivos com fundo sólido garantido */
-    .kpi-card-solid {
-        background-color: #ffffff;
+    .gauge-card {
+        background-color: #f8fafc;
         border: 1px solid #cbd5e1;
-        border-radius: 6px;
-        padding: 15px;
-        text-align: center;
+        border-radius: 8px;
+        padding: 10px;
         box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        margin-bottom: 10px;
+        text-align: center;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -118,44 +116,61 @@ if uploaded_file is not None:
         taxa_atendimento_val = (no_prazo / total_sc_unicas * 100) if total_sc_unicas > 0 else 100
 
         # ==========================================
-        # PASSO 1: CABEÇALHO E CARTÕES COM FUNDO SÓLIDO
+        # PASSO 1: CABEÇALHO E VELOCÍMETROS COM FUNDO SÓLIDO
         # ==========================================
         st.markdown(f"""
         <div class="header-box">
             <span style="font-size: 1.2rem; font-weight: bold;">PANORAMA DE PENDÊNCIAS DE REQUISIÇÕES DE COMPRA</span>
             <span style="font-size: 0.9rem;">DADOS CONSOLIDADOS | {hoje.strftime("%d/%m/%Y")}</span>
         </div>
-        <div class="resumo-bar">DIAGNÓSTICO E VALIDAÇÃO ESTRATÉGICA (INDICADORES EXECUTIVOS)</div>
+        <div class="resumo-bar">DIAGNÓSTICO E VALIDAÇÃO ESTRATÉGICA (VELOCÍMETROS DE DESEMPENHO)</div>
         """, unsafe_allow_html=True)
 
-        kpi_c1, kpi_c2, kpi_c3 = st.columns(3)
+        def criar_gauge(titulo, valor, max_val, cor_barra, sufixo=""):
+            fig = go.Figure(go.Indicator(
+                mode = "gauge+number",
+                value = valor,
+                number = {'suffix': sufixo, 'font': {'size': 26, 'color': '#1f3b58', 'family': 'Arial'}},
+                title = {'text': titulo, 'font': {'size': 12, 'color': '#1f2937', 'family': 'Arial'}},
+                gauge = {
+                    'axis': {'range': [None, max_val], 'tickwidth': 1, 'tickcolor': "#475569"},
+                    'bar': {'color': cor_barra},
+                    'bgcolor': "#ffffff",
+                    'borderwidth': 1,
+                    'bordercolor': "#cbd5e1",
+                    'steps': [
+                        {'range': [0, max_val * 0.6], 'color': '#f1f5f9'},
+                        {'range': [max_val * 0.6, max_val], 'color': '#e2e8f0'}
+                    ],
+                }
+            ))
+            fig.update_layout(height=150, margin=dict(l=20, r=20, t=30, b=10), paper_bgcolor='rgba(0,0,0,0)')
+            return fig
 
-        with kpi_c1:
-            st.markdown(f"""
-            <div class="kpi-card-solid">
-                <div style="font-size: 0.75rem; color: #475569; font-weight: bold; text-transform: uppercase;">TOTAL DE REQUISIÇÕES (ÚNICAS)</div>
-                <div style="font-size: 2rem; font-weight: bold; color: #2b6cb0; margin: 5px 0;">{total_sc_unicas}</div>
-                <div style="font-size: 0.75rem; color: #64748b;">Volume Bruto: <b>{total_linhas} itens</b> processados</div>
-            </div>
-            """, unsafe_allow_html=True)
+        gauge_col1, gauge_col2, gauge_col3 = st.columns(3)
 
-        with kpi_c2:
-            st.markdown(f"""
-            <div class="kpi-card-solid">
-                <div style="font-size: 0.75rem; color: #475569; font-weight: bold; text-transform: uppercase;">BACKLOG CRÍTICO (>=20 DIAS)</div>
-                <div style="font-size: 2rem; font-weight: bold; color: #e53e3e; margin: 5px 0;">{backlog_critico} 🔥</div>
-                <div style="font-size: 0.75rem; color: #64748b;"><b>{(backlog_critico/total_sc_unicas*100 if total_sc_unicas > 0 else 0):.1f}%</b> das SCs ativas</div>
-            </div>
-            """, unsafe_allow_html=True)
+        with gauge_col1:
+            max_sc = max(total_sc_unicas * 1.5, 10)
+            fig1 = criar_gauge("TOTAL DE REQUISIÇÕES (ÚNICAS)", total_sc_unicas, max_sc, "#2b6cb0")
+            st.markdown('<div class="gauge-card">', unsafe_allow_html=True)
+            st.plotly_chart(fig1, use_container_width=True)
+            st.markdown(f"<p style='text-align: center; color: #475569; font-size: 0.75rem; margin-top: -5px;'>Volume Bruto: <b>{total_linhas} itens</b></p>", unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
 
-        with kpi_c3:
-            st.markdown(f"""
-            <div class="kpi-card-solid">
-                <div style="font-size: 0.75rem; color: #475569; font-weight: bold; text-transform: uppercase;">TAXA DE ATENDIMENTO / SAÚDE</div>
-                <div style="font-size: 2rem; font-weight: bold; color: #388e3c; margin: 5px 0;">{taxa_atendimento_val:.1f}% ↗</div>
-                <div style="font-size: 0.75rem; color: #64748b;">Dentro do SLA padrão (&lt;20 dias)</div>
-            </div>
-            """, unsafe_allow_html=True)
+        with gauge_col2:
+            max_backlog = max(total_sc_unicas, 10)
+            fig2 = criar_gauge("BACKLOG CRÍTICO (>=20 DIAS)", backlog_critico, max_backlog, "#e53e3e")
+            st.markdown('<div class="gauge-card">', unsafe_allow_html=True)
+            st.plotly_chart(fig2, use_container_width=True)
+            st.markdown(f"<p style='text-align: center; color: #e53e3e; font-size: 0.75rem; margin-top: -5px;'><b>{(backlog_critico/total_sc_unicas*100 if total_sc_unicas > 0 else 0):.1f}%</b> das SCs ativas</p>", unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        with gauge_col3:
+            fig3 = criar_gauge("TAXA DE ATENDIMENTO / SAÚDE", round(taxa_atendimento_val, 1), 100, "#388e3c", sufixo="%")
+            st.markdown('<div class="gauge-card">', unsafe_allow_html=True)
+            st.plotly_chart(fig3, use_container_width=True)
+            st.markdown(f"<p style='text-align: center; color: #388e3c; font-size: 0.75rem; margin-top: -5px;'>Dentro do SLA padrão (&lt;20 dias)</p>", unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
 
@@ -172,7 +187,7 @@ if uploaded_file is not None:
                     st.rerun()
 
         # ==========================================
-        # PASSO 2: RENDERIZAÇÃO DOS GRÁFICOS + BOTÃO DE DOWNLOAD DE IMAGEM
+        # PASSO 2: RENDERIZAÇÃO DOS GRÁFICOS (TOP 10 CC + TABELA CRÍTICOS)
         # ==========================================
         if st.session_state['executar_analise']:
             st.markdown("---")
@@ -226,36 +241,58 @@ if uploaded_file is not None:
                 )
 
             # ==========================================
-            # BOTÃO DE GERAR E BAIXAR IMAGEM DOS INDICADORES
+            # BOTÃO DE GERAR E BAIXAR IMAGEM COMPLETA DO RELATÓRIO
             # ==========================================
             st.markdown("<br>", unsafe_allow_html=True)
             down_col1, down_col2, down_col3 = st.columns([1, 2, 1])
             with down_col2:
-                if st.button("📥 Baixar Relatório em Imagem (PNG)", type="secondary", use_container_width=True):
-                    # Criação da imagem consolidada via Matplotlib
-                    fig_img, ax_img = plt.subplots(figsize=(10, 5), facecolor='#ffffff')
-                    ax_img.axis('off')
+                if st.button("📥 Baixar Relatório Completo em Imagem (PNG)", type="secondary", use_container_width=True):
+                    # Criação de uma imagem executiva completa contendo todos os dados consolidados
+                    fig_full, ax_full = plt.subplots(figsize=(12, 10), facecolor='#ffffff')
+                    ax_full.axis('off')
 
-                    # Desenha um painel estilo executivo resumido
-                    ax_img.text(0.5, 0.85, 'PANORAMA DE PENDÊNCIAS DE REQUISIÇÕES DE COMPRA', ha='center', va='center', fontsize=16, fontweight='bold', color='#1f3b58')
-                    ax_img.text(0.5, 0.75, f'DADOS CONSOLIDADOS | {hoje.strftime("%d/%m/%Y")}', ha='center', va='center', fontsize=11, color='#475569')
+                    # Título do Relatório
+                    ax_full.text(0.5, 0.95, 'PANORAMA EXECUTIVO DE PENDÊNCIAS DE COMPRAS', ha='center', va='center', fontsize=18, fontweight='bold', color='#1f3b58')
+                    ax_full.text(0.5, 0.91, f'DADOS CONSOLIDADOS | {hoje.strftime("%d/%m/%Y")} | FONTE: {uploaded_file.name}', ha='center', va='center', fontsize=11, color='#475569')
+                    ax_full.plot([0.05, 0.95], [0.88, 0.88], color='#cbd5e1', lw=2, transform=ax_full.transAxes)
 
-                    # Caixas de texto simulando os KPIs
-                    ax_img.text(0.2, 0.45, f'Total de SCs (Únicas)\n{total_sc_unicas}', ha='center', va='center', fontsize=13, fontweight='bold', color='#2b6cb0', bbox=dict(boxstyle='round,pad=0.8', facecolor='#f1f5f9', edgecolor='#cbd5e1'))
-                    ax_img.text(0.5, 0.45, f'Backlog Crítico (>=20d)\n{backlog_critico}', ha='center', va='center', fontsize=13, fontweight='bold', color='#e53e3e', bbox=dict(boxstyle='round,pad=0.8', facecolor='#f1f5f9', edgecolor='#cbd5e1'))
-                    ax_img.text(0.8, 0.45, f'Taxa de Atendimento\n{taxa_atendimento_val:.1f}%', ha='center', va='center', fontsize=13, fontweight='bold', color='#388e3c', bbox=dict(boxstyle='round,pad=0.8', facecolor='#f1f5f9', edgecolor='#cbd5e1'))
+                    # Bloco 1: Indicadores / Velocímetros Simulados em Imagem
+                    ax_full.text(0.5, 0.82, '--- RESUMO DOS INDICADORES PRINCIPAIS ---', ha='center', va='center', fontsize=12, fontweight='bold', color='#2b4c7e')
+                    
+                    ax_full.text(0.2, 0.72, f'Total de SCs (Únicas):\n{total_sc_unicas} SCs\n({total_linhas} itens)', ha='center', va='center', fontsize=11, fontweight='bold', color='#2b6cb0', bbox=dict(boxstyle='round,pad=1', facecolor='#f8fafc', edgecolor='#cbd5e1'))
+                    ax_full.text(0.5, 0.72, f'Backlog Crítico (>=20d):\n{backlog_critico} SCs\n({(backlog_critico/total_sc_unicas*100 if total_sc_unicas > 0 else 0):.1f}%)', ha='center', va='center', fontsize=11, fontweight='bold', color='#e53e3e', bbox=dict(boxstyle='round,pad=1', facecolor='#f8fafc', edgecolor='#cbd5e1'))
+                    ax_full.text(0.8, 0.72, f'Taxa de Atendimento:\n{taxa_atendimento_val:.1f}%\nDentro do SLA', ha='center', va='center', fontsize=11, fontweight='bold', color='#388e3c', bbox=dict(boxstyle='round,pad=1', facecolor='#f8fafc', edgecolor='#cbd5e1'))
 
-                    ax_img.text(0.5, 0.15, f'Fonte do arquivo: {uploaded_file.name} | Total de linhas: {total_linhas}', ha='center', va='center', fontsize=9, color='#94a3b8')
+                    # Bloco 2: Top 10 Centros de Custo (Resumo em Texto Gráfico)
+                    ax_full.text(0.25, 0.55, '--- TOP CENTROS DE CUSTO ---', ha='center', va='center', fontsize=12, fontweight='bold', color='#2b4c7e')
+                    cc_resumo = df.groupby(col_cc).size().reset_index(name='Qtd').sort_values(by='Qtd', ascending=False).head(8)
+                    y_pos = 0.48
+                    for _, row in cc_resumo.iterrows():
+                        ax_full.text(0.08, y_pos, f"CC: {row[col_cc]}", fontsize=10, fontweight='bold', color='#1f2937')
+                        ax_full.text(0.38, y_pos, f"{row['Qtd']} itens", fontsize=10, color='#475569')
+                        y_pos -= 0.035
+
+                    # Bloco 3: Itens Críticos (Maiores SLAs)
+                    ax_full.text(0.75, 0.55, '--- ITENS MAIS CRÍTICOS (ATRASO) ---', ha='center', va='center', fontsize=12, fontweight='bold', color='#2b4c7e')
+                    crit_resumo = criticos_df.sort_values(by='Days', ascending=False)[[col_sc, col_cc, 'Days']].head(8)
+                    y_pos_c = 0.48
+                    for _, row in crit_resumo.iterrows():
+                        ax_full.text(0.58, y_pos_c, f"SC: {row[col_sc]} (CC: {row[col_cc]})", fontsize=10, fontweight='bold', color='#1f2937')
+                        ax_full.text(0.92, y_pos_c, f"{int(row['Days'])} dias 🔥", fontsize=10, fontweight='bold', color='#e53e3e')
+                        y_pos_c -= 0.035
+
+                    ax_full.plot([0.05, 0.95], [0.12, 0.12], color='#cbd5e1', lw=1, transform=ax_full.transAxes)
+                    ax_full.text(0.5, 0.06, 'Relatório executivo gerado automaticamente pelo Sistema de Suprimentos - Parente Andrade', ha='center', va='center', fontsize=9, color='#64748b')
 
                     # Salva em memória
-                    buf = io.BytesIO()
-                    fig_img.savefig(buf, format="png", dpi=200, bbox_inches='tight')
-                    plt.close(fig_img)
+                    buf_full = io.BytesIO()
+                    fig_full.savefig(buf_full, format="png", dpi=250, bbox_inches='tight')
+                    plt.close(fig_full)
 
                     st.download_button(
-                        label="💾 Clique aqui para salvar a Imagem PNG",
-                        data=buf.getvalue(),
-                        file_name=f"panorama_compras_{hoje.strftime('%Y%m%d')}.png",
+                        label="💾 Clique para baixar a Imagem Completa (PNG)",
+                        data=buf_full.getvalue(),
+                        file_name=f"panorama_executivo_completo_{hoje.strftime('%Y%m%d')}.png",
                         mime="image/png"
                     )
 
@@ -271,4 +308,4 @@ if uploaded_file is not None:
     except Exception as e:
         st.error(f"⚠️ Erro analítico no processamento do arquivo. Detalhe técnico: {e}")
 else:
-    st.info("💡 Faça o upload da planilha de pendências no topo à direita para carregar a validação analítica.")
+    st.info("💡 Faça o upload da planilha de pendências no topo à direita para carregar a validação analítica com velocímetros.")
