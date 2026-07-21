@@ -3,49 +3,54 @@ import pandas as pd
 import datetime
 import plotly.graph_objects as go
 
-# 1. CONFIGURAÇÃO DA PÁGINA
+# 1. CONFIGURAÇÃO DA PÁGINA (Modo Wide Compacto)
 st.set_page_config(layout="wide", page_title="Panorama Executivo de Suprimentos")
 
 # ==========================================
-# CSS CUSTOMIZADO (Fonte da tabela ampliada e em negrito)
+# CSS CUSTOMIZADO (Remoção de rolagem e otimização de tela cheia)
 # ==========================================
 st.markdown("""
     <style>
-    header[data-testid="stHeader"] {
+    /* Oculta elementos de cabeçalho, menu e botão Manage App do Streamlit */
+    header[data-testid="stHeader"], [data-testid="stDecoration"], .viewerBadge_container__1QSob, [data-testid="manage-app-button"], #MainMenu, footer {
         visibility: hidden;
-        display: none;
+        display: none !important;
     }
+    /* Remove margens excessivas da página para evitar barra de rolagem */
     .block-container {
-        padding-top: 1rem;
-        padding-bottom: 1rem;
+        padding-top: 0.4rem !important;
+        padding-bottom: 0.4rem !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+        max-width: 100% !important;
     }
     .header-box {
         background-color: #1f3b58;
         color: white;
-        padding: 14px 22px;
+        padding: 10px 18px;
         border-radius: 4px;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 10px;
+        margin-bottom: 6px;
     }
     .header-title {
-        font-size: 1.5rem;
+        font-size: 1.3rem;
         font-weight: bold;
     }
     .header-sub {
-        font-size: 1.2rem;
+        font-size: 1.05rem;
     }
     .resumo-bar {
         background-color: #2b4c7e;
         color: white;
         text-align: center;
         font-weight: bold;
-        font-size: 1.15rem;
-        padding: 8px;
+        font-size: 1rem;
+        padding: 5px;
         text-transform: uppercase;
         letter-spacing: 1px;
-        margin-bottom: 25px;
+        margin-bottom: 12px;
         border-radius: 2px;
     }
     .section-header {
@@ -53,23 +58,22 @@ st.markdown("""
         color: white;
         text-align: center;
         font-weight: bold;
-        font-size: 1.15rem;
-        padding: 8px;
+        font-size: 0.95rem;
+        padding: 5px;
         text-transform: uppercase;
         border-radius: 2px;
-        margin-bottom: 8px;
+        margin-bottom: 4px;
     }
     .gauge-footer {
         text-align: center;
         color: #1e293b;
-        font-size: 1.2rem;
+        font-size: 1.05rem;
         font-weight: 800;
-        margin-top: 5px;
+        margin-top: 0px;
         text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.15);
     }
-    /* Estilização dedicada para deixar a tabela de críticos maior e em negrito */
     .stDataFrame td, .stDataFrame th {
-        font-size: 1.35rem !important;
+        font-size: 1.1rem !important;
         font-weight: 800 !important;
     }
     </style>
@@ -107,6 +111,10 @@ if uploaded_file is not None:
             st.stop()
 
         df = df.dropna(subset=[col_sc])
+
+        # Formata o Número da SC para ter exatamente 6 dígitos, preenchendo com zeros à esquerda
+        df[col_sc] = df[col_sc].astype(str).str.split('.').str[0].str.zfill(6)
+
         hoje = pd.to_datetime(data_base)
         df[col_dt] = pd.to_datetime(df[col_dt], errors='coerce')
         df['Days'] = (hoje - df[col_dt]).dt.days
@@ -122,7 +130,7 @@ if uploaded_file is not None:
         taxa_atendimento_val = (no_prazo / total_sc_unicas * 100) if total_sc_unicas > 0 else 100
 
         # ==========================================
-        # PASSO 1: CABEÇALHO E VELOCÍMETROS
+        # PASSO 1: CABEÇALHO E VELOCÍMETROS COMPACTOS
         # ==========================================
         st.markdown(f"""
         <div class="header-box">
@@ -136,10 +144,10 @@ if uploaded_file is not None:
             fig = go.Figure(go.Indicator(
                 mode = "gauge+number",
                 value = valor,
-                number = {'suffix': sufixo, 'font': {'size': 34, 'color': '#1f3b58', 'family': 'Arial Black'}},
-                title = {'text': titulo, 'font': {'size': 16, 'color': '#111827', 'family': 'Arial Black'}},
+                number = {'suffix': sufixo, 'font': {'size': 28, 'color': '#1f3b58', 'family': 'Arial Black'}},
+                title = {'text': titulo, 'font': {'size': 14, 'color': '#111827', 'family': 'Arial Black'}},
                 gauge = {
-                    'axis': {'range': [None, max_val], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 13, 'family': 'Arial Black'}},
+                    'axis': {'range': [None, max_val], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 11, 'family': 'Arial Black'}},
                     'bar': {'color': cor_barra},
                     'bgcolor': "rgba(0,0,0,0)",
                     'borderwidth': 0,
@@ -149,7 +157,7 @@ if uploaded_file is not None:
                     ],
                 }
             ))
-            fig.update_layout(height=180, margin=dict(l=20, r=20, t=45, b=10), paper_bgcolor='rgba(0,0,0,0)')
+            fig.update_layout(height=130, margin=dict(l=15, r=15, t=30, b=5), paper_bgcolor='rgba(0,0,0,0)')
             return fig
 
         gauge_col1, gauge_col2, gauge_col3 = st.columns(3)
@@ -171,10 +179,10 @@ if uploaded_file is not None:
             st.plotly_chart(fig3, use_container_width=True)
             st.markdown(f"<div class='gauge-footer' style='color: #388e3c;'>Dentro do SLA padrão (&lt;20 dias)</div>", unsafe_allow_html=True)
 
-        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-bottom: 5px;'></div>", unsafe_allow_html=True)
 
         # ==========================================
-        # PASSO 2: RENDERIZAÇÃO DOS GRÁFICOS E TABELA COMPACTA
+        # PASSO 2: RENDERIZAÇÃO DOS GRÁFICOS E TABELA (AJUSTADOS PARA TELA ÚNICA)
         # ==========================================
         st.markdown("---")
         
@@ -196,21 +204,21 @@ if uploaded_file is not None:
                 orientation='h',
                 text=cc_volume['Quantidade'],
                 textposition='outside',
-                textfont=dict(size=12, color='#1f2937', family='Arial Black'),
+                textfont=dict(size=11, color='#1f2937', family='Arial Black'),
                 marker_color=cores_barras
             ))
             
             fig1.update_layout(
                 xaxis_title="Qtd. Itens", 
                 yaxis_title="Centro de Custo",
-                xaxis_title_font=dict(size=12, family='Arial Black'),
-                yaxis_title_font=dict(size=12, family='Arial Black'),
+                xaxis_title_font=dict(size=11, family='Arial Black'),
+                yaxis_title_font=dict(size=11, family='Arial Black'),
                 plot_bgcolor="rgba(0,0,0,0)",
                 paper_bgcolor="rgba(0,0,0,0)",
-                margin=dict(l=5, r=20, t=10, b=10),
-                height=350,
-                xaxis=dict(showgrid=True, gridcolor='#e2e8f0', tickfont=dict(size=11)),
-                yaxis=dict(type='category', tickfont=dict(size=11, family='Arial Black'))
+                margin=dict(l=5, r=20, t=5, b=5),
+                height=260,
+                xaxis=dict(showgrid=True, gridcolor='#e2e8f0', tickfont=dict(size=10)),
+                yaxis=dict(type='category', tickfont=dict(size=10, family='Arial Black'))
             )
             st.plotly_chart(fig1, use_container_width=True)
 
@@ -230,21 +238,21 @@ if uploaded_file is not None:
                 orientation='h',
                 text=cc_scs['Qtd_SCs'],
                 textposition='outside',
-                textfont=dict(size=12, color='#1f2937', family='Arial Black'),
+                textfont=dict(size=11, color='#1f2937', family='Arial Black'),
                 marker_color=cores_barras_sc
             ))
             
             fig2.update_layout(
                 xaxis_title="Qtd. Requisições (SCs)", 
                 yaxis_title="Centro de Custo",
-                xaxis_title_font=dict(size=12, family='Arial Black'),
-                yaxis_title_font=dict(size=12, family='Arial Black'),
+                xaxis_title_font=dict(size=11, family='Arial Black'),
+                yaxis_title_font=dict(size=11, family='Arial Black'),
                 plot_bgcolor="rgba(0,0,0,0)",
                 paper_bgcolor="rgba(0,0,0,0)",
-                margin=dict(l=5, r=20, t=10, b=10),
-                height=350,
-                xaxis=dict(showgrid=True, gridcolor='#e2e8f0', tickfont=dict(size=11)),
-                yaxis=dict(type='category', tickfont=dict(size=11, family='Arial Black'))
+                margin=dict(l=5, r=20, t=5, b=5),
+                height=260,
+                xaxis=dict(showgrid=True, gridcolor='#e2e8f0', tickfont=dict(size=10)),
+                yaxis=dict(type='category', tickfont=dict(size=10, family='Arial Black'))
             )
             st.plotly_chart(fig2, use_container_width=True)
 
@@ -260,16 +268,16 @@ if uploaded_file is not None:
             st.dataframe(
                 top_critical, 
                 use_container_width=True,
-                height=350,
+                height=260,
                 hide_index=True
             )
 
         st.markdown("""
-        <hr style='margin: 15px 0px 8px 0px;'>
-        <div style="font-size: 1.05rem; color: #4a5568; display: flex; justify-content: space-between; font-weight: 700;">
+        <hr style='margin: 5px 0px 4px 0px;'>
+        <div style="font-size: 0.9rem; color: #4a5568; display: flex; justify-content: space-between; font-weight: 700;">
             <span><b style="color: #e53e3e;">→ Alerta Crítico:</b> Backlog com inércia superior a 20 dias</span>
             <span><b style="color: #3273a8;">→ Top 10 CC:</b> Comparativo de volume de itens vs. quantidade de requisições</span>
-            <span><b style="color: #388e3c;">Metodologia:</b> Contagem consolidada de SCs e itens do Protheus</span>
+            <span><b style="color: #388e3c;">Metodologia:</b> Contagem consolidada de SCs com formatação de 6 dígitos</span>
         </div>
         """, unsafe_allow_html=True)
 
