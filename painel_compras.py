@@ -3,63 +3,62 @@ import pandas as pd
 import datetime
 import plotly.graph_objects as go
 
-# 1. CONFIGURAÇÃO DA PÁGINA (Wide)
+# 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(layout="wide", page_title="Panorama Executivo de Suprimentos")
 
 # ==========================================
-# CSS RESPONSIVO (Espaçamento e Justificativa Perfeita)
+# CSS CUSTOMIZADO (Remove cabeçalho, barra e o botão "Manage app")
 # ==========================================
 st.markdown("""
     <style>
-    /* Oculta elementos padrão do Streamlit */
-    header[data-testid="stHeader"], [data-testid="stDecoration"], .viewerBadge_container__1QSob, [data-testid="manage-app-button"], #MainMenu, footer {
+    /* Oculta o cabeçalho padrão do Streamlit */
+    header[data-testid="stHeader"] {
+        visibility: hidden;
+        display: none;
+    }
+    /* Oculta a faixa colorida decorativa do topo */
+    [data-testid="stDecoration"] {
+        display: none;
+    }
+    /* Oculta o botão flutuante 'Manage app' e distintivos de visualização */
+    .viewerBadge_container__1QSob, 
+    [data-testid="manage-app-button"], 
+    #MainMenu, 
+    footer {
         visibility: hidden;
         display: none !important;
     }
-    
-    html, body, [data-testid="stAppViewContainer"] {
-        height: 100vh;
-        overflow: hidden !important;
-    }
-    
     .block-container {
-        padding-top: 0.2rem !important;
-        padding-bottom: 0.2rem !important;
-        padding-left: 0.8rem !important;
-        padding-right: 0.8rem !important;
-        max-width: 100% !important;
-        height: 100vh;
-        display: flex;
-        flex-direction: column;
+        padding-top: 1rem;
+        padding-bottom: 1rem;
     }
-
     .header-box {
         background-color: #1f3b58;
         color: white;
-        padding: 6px 14px;
+        padding: 14px 22px;
         border-radius: 4px;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 3px;
+        margin-bottom: 10px;
     }
     .header-title {
-        font-size: 1.15rem;
+        font-size: 1.5rem;
         font-weight: bold;
     }
     .header-sub {
-        font-size: 0.95rem;
+        font-size: 1.2rem;
     }
     .resumo-bar {
         background-color: #2b4c7e;
         color: white;
         text-align: center;
         font-weight: bold;
-        font-size: 0.85rem;
-        padding: 3px;
+        font-size: 1.15rem;
+        padding: 8px;
         text-transform: uppercase;
         letter-spacing: 1px;
-        margin-bottom: 4px;
+        margin-bottom: 25px;
         border-radius: 2px;
     }
     .section-header {
@@ -67,24 +66,23 @@ st.markdown("""
         color: white;
         text-align: center;
         font-weight: bold;
-        font-size: 0.85rem;
-        padding: 3px;
+        font-size: 1.15rem;
+        padding: 8px;
         text-transform: uppercase;
         border-radius: 2px;
-        margin-bottom: 2px;
+        margin-bottom: 8px;
     }
     .gauge-footer {
         text-align: center;
         color: #1e293b;
-        font-size: 0.9rem;
+        font-size: 1.2rem;
         font-weight: 800;
-        margin-top: -4px;
+        margin-top: 5px;
         text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.15);
     }
     .stDataFrame td, .stDataFrame th {
-        font-size: 0.9rem !important;
+        font-size: 1.35rem !important;
         font-weight: 800 !important;
-        padding: 1px 3px !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -154,10 +152,10 @@ if uploaded_file is not None:
             fig = go.Figure(go.Indicator(
                 mode = "gauge+number",
                 value = valor,
-                number = {'suffix': sufixo, 'font': {'size': 22, 'color': '#1f3b58', 'family': 'Arial Black'}},
-                title = {'text': titulo, 'font': {'size': 11, 'color': '#111827', 'family': 'Arial Black'}},
+                number = {'suffix': sufixo, 'font': {'size': 34, 'color': '#1f3b58', 'family': 'Arial Black'}},
+                title = {'text': titulo, 'font': {'size': 16, 'color': '#111827', 'family': 'Arial Black'}},
                 gauge = {
-                    'axis': {'range': [None, max_val], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 9, 'family': 'Arial Black'}},
+                    'axis': {'range': [None, max_val], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 13, 'family': 'Arial Black'}},
                     'bar': {'color': cor_barra},
                     'bgcolor': "rgba(0,0,0,0)",
                     'borderwidth': 0,
@@ -167,8 +165,7 @@ if uploaded_file is not None:
                     ],
                 }
             ))
-            # Margem superior perfeitamente justificada para afastar o título do topo
-            fig.update_layout(height=95, margin=dict(l=10, r=10, t=18, b=0), paper_bgcolor='rgba(0,0,0,0)')
+            fig.update_layout(height=180, margin=dict(l=20, r=20, t=45, b=10), paper_bgcolor='rgba(0,0,0,0)')
             return fig
 
         gauge_col1, gauge_col2, gauge_col3 = st.columns(3)
@@ -190,10 +187,12 @@ if uploaded_file is not None:
             st.plotly_chart(fig3, use_container_width=True)
             st.markdown(f"<div class='gauge-footer' style='color: #388e3c;'>Dentro do SLA padrão (&lt;20 dias)</div>", unsafe_allow_html=True)
 
+        st.markdown("<br>", unsafe_allow_html=True)
+
         # ==========================================
-        # PASSO 2: RENDERIZAÇÃO DOS GRÁFICOS E TABELA
+        # PASSO 2: RENDERIZAÇÃO DOS GRÁFICOS E TABELA COMPACTA
         # ==========================================
-        st.markdown("<hr style='margin: 4px 0px;'>", unsafe_allow_html=True)
+        st.markdown("---")
         
         col_g1, col_g2, col_tabela = st.columns([1, 1, 1.1])
 
@@ -213,21 +212,21 @@ if uploaded_file is not None:
                 orientation='h',
                 text=cc_volume['Quantidade'],
                 textposition='outside',
-                textfont=dict(size=9, color='#1f2937', family='Arial Black'),
+                textfont=dict(size=12, color='#1f2937', family='Arial Black'),
                 marker_color=cores_barras
             ))
             
             fig1.update_layout(
                 xaxis_title="Qtd. Itens", 
                 yaxis_title="Centro de Custo",
-                xaxis_title_font=dict(size=9, family='Arial Black'),
-                yaxis_title_font=dict(size=9, family='Arial Black'),
+                xaxis_title_font=dict(size=12, family='Arial Black'),
+                yaxis_title_font=dict(size=12, family='Arial Black'),
                 plot_bgcolor="rgba(0,0,0,0)",
                 paper_bgcolor="rgba(0,0,0,0)",
-                margin=dict(l=2, r=15, t=2, b=2),
-                height=185,
-                xaxis=dict(showgrid=True, gridcolor='#e2e8f0', tickfont=dict(size=8)),
-                yaxis=dict(type='category', tickfont=dict(size=8, family='Arial Black'))
+                margin=dict(l=5, r=20, t=10, b=10),
+                height=350,
+                xaxis=dict(showgrid=True, gridcolor='#e2e8f0', tickfont=dict(size=11)),
+                yaxis=dict(type='category', tickfont=dict(size=11, family='Arial Black'))
             )
             st.plotly_chart(fig1, use_container_width=True)
 
@@ -247,21 +246,21 @@ if uploaded_file is not None:
                 orientation='h',
                 text=cc_scs['Qtd_SCs'],
                 textposition='outside',
-                textfont=dict(size=9, color='#1f2937', family='Arial Black'),
+                textfont=dict(size=12, color='#1f2937', family='Arial Black'),
                 marker_color=cores_barras_sc
             ))
             
             fig2.update_layout(
                 xaxis_title="Qtd. Requisições (SCs)", 
                 yaxis_title="Centro de Custo",
-                xaxis_title_font=dict(size=9, family='Arial Black'),
-                yaxis_title_font=dict(size=9, family='Arial Black'),
+                xaxis_title_font=dict(size=12, family='Arial Black'),
+                yaxis_title_font=dict(size=12, family='Arial Black'),
                 plot_bgcolor="rgba(0,0,0,0)",
                 paper_bgcolor="rgba(0,0,0,0)",
-                margin=dict(l=2, r=15, t=2, b=2),
-                height=185,
-                xaxis=dict(showgrid=True, gridcolor='#e2e8f0', tickfont=dict(size=8)),
-                yaxis=dict(type='category', tickfont=dict(size=8, family='Arial Black'))
+                margin=dict(l=5, r=20, t=10, b=10),
+                height=350,
+                xaxis=dict(showgrid=True, gridcolor='#e2e8f0', tickfont=dict(size=11)),
+                yaxis=dict(type='category', tickfont=dict(size=11, family='Arial Black'))
             )
             st.plotly_chart(fig2, use_container_width=True)
 
@@ -277,16 +276,16 @@ if uploaded_file is not None:
             st.dataframe(
                 top_critical, 
                 use_container_width=True,
-                height=185,
+                height=350,
                 hide_index=True
             )
 
         st.markdown("""
-        <hr style='margin: 3px 0px;'>
-        <div style="font-size: 0.8rem; color: #4a5568; display: flex; justify-content: space-between; font-weight: 700;">
-            <span><b style="color: #e53e3e;">→ Alerta Crítico:</b> Backlog superior a 20 dias</span>
-            <span><b style="color: #3273a8;">→ Top 10 CC:</b> Comparativo de volume de itens vs. requisições</span>
-            <span><b style="color: #388e3c;">Metodologia:</b> Contagem consolidada Protheus (6 dígitos)</span>
+        <hr style='margin: 15px 0px 8px 0px;'>
+        <div style="font-size: 1.05rem; color: #4a5568; display: flex; justify-content: space-between; font-weight: 700;">
+            <span><b style="color: #e53e3e;">→ Alerta Crítico:</b> Backlog com inércia superior a 20 dias</span>
+            <span><b style="color: #3273a8;">→ Top 10 CC:</b> Comparativo de volume de itens vs. quantidade de requisições</span>
+            <span><b style="color: #388e3c;">Metodologia:</b> Contagem consolidada de SCs com formatação de 6 dígitos</span>
         </div>
         """, unsafe_allow_html=True)
 
