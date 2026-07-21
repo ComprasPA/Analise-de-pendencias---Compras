@@ -15,7 +15,6 @@ st.markdown("""
         padding-top: 1rem;
         padding-bottom: 1rem;
     }
-    /* Estilo do Cabeçalho Geral */
     .header-box {
         background-color: #1f3b58;
         color: white;
@@ -26,7 +25,6 @@ st.markdown("""
         align-items: center;
         margin-bottom: 10px;
     }
-    /* Faixa de Resumo Estratégico */
     .resumo-bar {
         background-color: #2b4c7e;
         color: white;
@@ -39,7 +37,6 @@ st.markdown("""
         margin-bottom: 10px;
         border-radius: 2px;
     }
-    /* Cards de KPI */
     .kpi-container {
         background-color: #f8f9fa;
         border: 1px solid #d1d5db;
@@ -59,7 +56,6 @@ st.markdown("""
         font-size: 0.65rem;
         color: #666666;
     }
-    /* Títulos das Seções (Gráfico / Tabela) */
     .section-header {
         background-color: #1f3b58;
         color: white;
@@ -88,19 +84,47 @@ with top_c2:
 # ==========================================
 if uploaded_file is not None:
     try:
+        # Leitura flexível
         if uploaded_file.name.endswith('.csv'):
-            df = pd.read_csv(uploaded_file, sep=';', encoding='utf-8', header=0)
+            df = pd.read_csv(uploaded_file, sep=None, engine='python', encoding='utf-8', header=0)
         else:
             df = pd.read_excel(uploaded_file, header=0)
             
-        if 'Numero da SC' not in df.columns:
-            new_header = df.iloc[0]
+        # Tratamento caso a primeira linha seja o cabeçalho real da tabela ERP
+        # Remove espaços em branco dos nomes das colunas existentes
+        df.columns = df.columns.astype(str).str.strip()
+        
+        # Se a coluna principal não estiver no topo, tenta achar nas primeiras linhas
+        if not any('SC' in col.upper() for col in df.columns):
+            new_header = df.iloc[0].astype(str).str.strip()
             df = df[1:]
             df.columns = new_header
-            
+
+        df.columns = df.columns.astype(str).str.strip()
+
+        # Função inteligente para mapear nomes de colunas variantes do Totvs/Protheus ou planilhas corporativas
+        def achar_coluna(opcoes):
+            for col in df.columns:
+                for op in opcoes:
+                    if op.lower() in col.lower():
+                        return col
+            return None
+
+        col_sc = achar_coluna(['numero da sc', 'num sc', 'sc', 'requisiçã', 'requisicao'])
+        col_cc = achar_coluna(['c custo', 'centro de custo', 'custo', 'cc'])
+        col_dt = achar_coluna(['dt emissao', 'data emissao', 'emissao', 'data'])
+
+        if not col_sc or not col_cc or not col_dt:
+            st.error(f"⚠️ O sistema não conseguiu identificar automaticamente as colunas essenciais na planilha. \n\nColunas encontradas no arquivo: {list(df.columns)}")
+            st.stop()
+
+        # Renomeia para padrão interno do sistema
+        df = df.rename(columns={col_sc: 'Numero da SC', col_cc: 'C_Custo', col_dt: 'DT_Emissao'})
+
+        # Conversões de dados
         hoje = pd.to_datetime(data_base)
-        df['DT Emissao'] = pd.to_datetime(df['DT Emissao'], errors='coerce')
-        df['Days'] = (hoje - df['DT Emissao']).dt.days
+        df['DT_Emissao'] = pd.to_datetime(df['DT_Emissao'], errors='coerce')
+        df['Days'] = (hoje - df['DT_Emissao']).dt.days
         
         unique_scs = df.drop_duplicates(subset=['Numero da SC'])
         total_linhas = len(df) 
@@ -108,8 +132,6 @@ if uploaded_file is not None:
         
         criticos_df = unique_scs[unique_scs['Days'] >= 20]
         backlog_critico = len(criticos_df)
-        
-        # Taxa de atendimento simulada ou padrão de mercado (ex: 88,5%)
         taxa_atendimento = "88,5%"
 
         # ==========================================
@@ -171,20 +193,18 @@ if uploaded_file is not None:
         with col_grafico:
             st.markdown('<div class="section-header">TOP 10 CENTROS DE CUSTO (VOLUME DE PENDÊNCIAS)</div>', unsafe_allow_html=True)
             
-            # Preparando Top 10 CC
-            cc_volume = df.groupby('C Custo').size().reset_index(name='Quantidade').sort_values(by='Quantidade', ascending=False).head(10)
-            cc_volume['C Custo'] = cc_volume['C Custo'].astype(str)
+            # Agrupamento Top 10 CC flexível
+            cc_volume = df.groupby('C_Custo').size().reset_index(name='Quantidade').sort_values(by='Quantidade', ascending=False).head(10)
+            cc_volume['C_Custo'] = cc_volume['C_Custo'].astype(str)
             
-            # Lógica exata da imagem: O 1º é Azul (#3273a8), os demais são Laranja (#ed8034)
+            # Cores padrão do template: 1º Azul, demais Laranja
             cores_barras = ['#3273a8'] + ['#ed8034'] * (len(cc_volume) - 1)
-            
-            # Inverte para o maior ficar no topo no gráfico de barras horizontais do Plotly
             cc_volume = cc_volume.sort_values(by='Quantidade', ascending=True)
             cores_barras = cores_barras[::-1]
 
             fig = go.Figure(go.Bar(
                 x=cc_volume['Quantidade'],
-                y=cc_volume['C Custo'],
+                y=cc_volume['C_Custo'],
                 orientation='h',
                 text=cc_volume['Quantidade'],
                 textposition='outside',
@@ -205,14 +225,13 @@ if uploaded_file is not None:
         with col_tabela:
             st.markdown('<div class="section-header">ITENS CRÍTICOS COM MAIORES SLAS EM ATRASO</div>', unsafe_allow_html=True)
             
-            # Preparação da tabela exigida
-            top_critical = criticos_df.sort_values(by='Days', ascending=False)[['Numero da SC', 'C Custo', 'Days']].head(10)
+            # Preparação da tabela com Solicitação + Centro de Custo + Dias em Atraso
+            top_critical = criticos_df.sort_values(by='Days', ascending=False)[['Numero da SC', 'C_Custo', 'Days']].head(10)
             top_critical.columns = ['Nº DA SC', 'C. CUSTO', 'DIAS EM ATRASO']
             top_critical['Nº DA SC'] = top_critical['Nº DA SC'].astype(str)
-            top_critical['C. CUSTO'] = top_critical['C. Custo'].astype(str)
+            top_critical['C. CUSTO'] = top_critical['C. CUSTO'].astype(str)
             top_critical['DIAS EM ATRASO'] = top_critical['DIAS EM ATRASO'].astype(str) + " DIAS 🔥"
 
-            # Renderiza tabela limpa e compacta
             st.dataframe(
                 top_critical, 
                 use_container_width=True,
@@ -220,7 +239,7 @@ if uploaded_file is not None:
                 hide_index=True
             )
 
-        # Rodapé idêntico à legenda da imagem
+        # Rodapé corporativo
         st.markdown("""
         <hr style='margin: 5px 0px 5px 0px;'>
         <div style="font-size: 0.75rem; color: #4a5568; display: flex; justify-content: space-between;">
