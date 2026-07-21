@@ -2,12 +2,16 @@ import streamlit as st
 import pandas as pd
 import datetime
 import plotly.graph_objects as go
+import matplotlib
+matplotlib.use('Agg') # Garante o processamento seguro de imagens em segundo plano na nuvem
+import matplotlib.pyplot as plt
+import io
 
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(layout="wide", page_title="Panorama Executivo de Suprimentos")
 
 # ==========================================
-# CSS CUSTOMIZADO (Visual Executivo Compacto)
+# CSS CUSTOMIZADO (Visual Sólido e Limpo)
 # ==========================================
 st.markdown("""
     <style>
@@ -47,6 +51,16 @@ st.markdown("""
         text-transform: uppercase;
         border-radius: 2px;
         margin-bottom: 8px;
+    }
+    /* Cartões executivos com fundo sólido garantido */
+    .kpi-card-solid {
+        background-color: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        padding: 15px;
+        text-align: center;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        margin-bottom: 10px;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -104,59 +118,44 @@ if uploaded_file is not None:
         taxa_atendimento_val = (no_prazo / total_sc_unicas * 100) if total_sc_unicas > 0 else 100
 
         # ==========================================
-        # PASSO 1: CABEÇALHO E VELOCÍMETROS (GAUGES)
+        # PASSO 1: CABEÇALHO E CARTÕES COM FUNDO SÓLIDO
         # ==========================================
         st.markdown(f"""
         <div class="header-box">
             <span style="font-size: 1.2rem; font-weight: bold;">PANORAMA DE PENDÊNCIAS DE REQUISIÇÕES DE COMPRA</span>
             <span style="font-size: 0.9rem;">DADOS CONSOLIDADOS | {hoje.strftime("%d/%m/%Y")}</span>
         </div>
-        <div class="resumo-bar">DIAGNÓSTICO E VALIDAÇÃO ESTRATÉGICA (VELOCÍMETROS DE DESEMPENHO)</div>
+        <div class="resumo-bar">DIAGNÓSTICO E VALIDAÇÃO ESTRATÉGICA (INDICADORES EXECUTIVOS)</div>
         """, unsafe_allow_html=True)
 
-        # Função para criar velocímetros compactos e elegantes
-        def criar_gauge(titulo, valor, max_val, cor_barra, sufixo=""):
-            fig = go.Figure(go.Indicator(
-                mode = "gauge+number",
-                value = valor,
-                number = {'suffix': sufixo, 'font': {'size': 26, 'color': '#1f3b58', 'family': 'Arial'}},
-                title = {'text': titulo, 'font': {'size': 12, 'color': '#333333', 'family': 'Arial'}},
-                gauge = {
-                    'axis': {'range': [None, max_val], 'tickwidth': 1, 'tickcolor': "#888"},
-                    'bar': {'color': cor_barra},
-                    'bgcolor': "#f8f9fa",
-                    'borderwidth': 1,
-                    'bordercolor': "#d1d5db",
-                    'steps': [
-                        {'range': [0, max_val * 0.6], 'color': '#f1f5f9'},
-                        {'range': [max_val * 0.6, max_val], 'color': '#e2e8f0'}
-                    ],
-                }
-            ))
-            fig.update_layout(height=160, margin=dict(l=25, r=25, t=35, b=10), paper_bgcolor='rgba(0,0,0,0)')
-            return fig
+        kpi_c1, kpi_c2, kpi_c3 = st.columns(3)
 
-        gauge_col1, gauge_col2, gauge_col3 = st.columns(3)
+        with kpi_c1:
+            st.markdown(f"""
+            <div class="kpi-card-solid">
+                <div style="font-size: 0.75rem; color: #475569; font-weight: bold; text-transform: uppercase;">TOTAL DE REQUISIÇÕES (ÚNICAS)</div>
+                <div style="font-size: 2rem; font-weight: bold; color: #2b6cb0; margin: 5px 0;">{total_sc_unicas}</div>
+                <div style="font-size: 0.75rem; color: #64748b;">Volume Bruto: <b>{total_linhas} itens</b> processados</div>
+            </div>
+            """, unsafe_allow_html=True)
 
-        with gauge_col1:
-            # Velocímetro 1: Total de Requisições (Escala baseada no volume total + folga)
-            max_sc = max(total_sc_unicas * 1.5, 10)
-            fig1 = criar_gauge("TOTAL DE REQUISIÇÕES (ÚNICAS)", total_sc_unicas, max_sc, "#2b6cb0")
-            st.plotly_chart(fig1, use_container_width=True)
-            st.markdown(f"<p style='text-align: center; color: #666; font-size: 0.75rem; margin-top: -10px;'>Volume Bruto: <b>{total_linhas} itens</b> processados</p>", unsafe_allow_html=True)
+        with kpi_c2:
+            st.markdown(f"""
+            <div class="kpi-card-solid">
+                <div style="font-size: 0.75rem; color: #475569; font-weight: bold; text-transform: uppercase;">BACKLOG CRÍTICO (>=20 DIAS)</div>
+                <div style="font-size: 2rem; font-weight: bold; color: #e53e3e; margin: 5px 0;">{backlog_critico} 🔥</div>
+                <div style="font-size: 0.75rem; color: #64748b;"><b>{(backlog_critico/total_sc_unicas*100 if total_sc_unicas > 0 else 0):.1f}%</b> das SCs ativas</div>
+            </div>
+            """, unsafe_allow_html=True)
 
-        with gauge_col2:
-            # Velocímetro 2: Backlog Crítico (Alerta em vermelho)
-            max_backlog = max(total_sc_unicas, 10)
-            fig2 = criar_gauge("BACKLOG CRÍTICO (>=20 DIAS)", backlog_critico, max_backlog, "#e53e3e")
-            st.plotly_chart(fig2, use_container_width=True)
-            st.markdown(f"<p style='text-align: center; color: #e53e3e; font-size: 0.75rem; margin-top: -10px;'><b>{(backlog_critico/total_sc_unicas*100 if total_sc_unicas > 0 else 0):.1f}%</b> das SCs ativas</p>", unsafe_allow_html=True)
-
-        with gauge_col3:
-            # Velocímetro 3: Taxa de Atendimento / Saúde (Escala fixa de 0 a 100%)
-            fig3 = criar_gauge("TAXA DE ATENDIMENTO / SAÚDE", round(taxa_atendimento_val, 1), 100, "#388e3c", sufixo="%")
-            st.plotly_chart(fig3, use_container_width=True)
-            st.markdown(f"<p style='text-align: center; color: #388e3c; font-size: 0.75rem; margin-top: -10px;'>Dentro do SLA padrão (&lt;20 dias)</p>", unsafe_allow_html=True)
+        with kpi_c3:
+            st.markdown(f"""
+            <div class="kpi-card-solid">
+                <div style="font-size: 0.75rem; color: #475569; font-weight: bold; text-transform: uppercase;">TAXA DE ATENDIMENTO / SAÚDE</div>
+                <div style="font-size: 2rem; font-weight: bold; color: #388e3c; margin: 5px 0;">{taxa_atendimento_val:.1f}% ↗</div>
+                <div style="font-size: 0.75rem; color: #64748b;">Dentro do SLA padrão (&lt;20 dias)</div>
+            </div>
+            """, unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
 
@@ -173,7 +172,7 @@ if uploaded_file is not None:
                     st.rerun()
 
         # ==========================================
-        # PASSO 2: RENDERIZAÇÃO DOS GRÁFICOS (TOP 10 CC + TABELA CRÍTICOS)
+        # PASSO 2: RENDERIZAÇÃO DOS GRÁFICOS + BOTÃO DE DOWNLOAD DE IMAGEM
         # ==========================================
         if st.session_state['executar_analise']:
             st.markdown("---")
@@ -226,6 +225,40 @@ if uploaded_file is not None:
                     hide_index=True
                 )
 
+            # ==========================================
+            # BOTÃO DE GERAR E BAIXAR IMAGEM DOS INDICADORES
+            # ==========================================
+            st.markdown("<br>", unsafe_allow_html=True)
+            down_col1, down_col2, down_col3 = st.columns([1, 2, 1])
+            with down_col2:
+                if st.button("📥 Baixar Relatório em Imagem (PNG)", type="secondary", use_container_width=True):
+                    # Criação da imagem consolidada via Matplotlib
+                    fig_img, ax_img = plt.subplots(figsize=(10, 5), facecolor='#ffffff')
+                    ax_img.axis('off')
+
+                    # Desenha um painel estilo executivo resumido
+                    ax_img.text(0.5, 0.85, 'PANORAMA DE PENDÊNCIAS DE REQUISIÇÕES DE COMPRA', ha='center', va='center', fontsize=16, fontweight='bold', color='#1f3b58')
+                    ax_img.text(0.5, 0.75, f'DADOS CONSOLIDADOS | {hoje.strftime("%d/%m/%Y")}', ha='center', va='center', fontsize=11, color='#475569')
+
+                    # Caixas de texto simulando os KPIs
+                    ax_img.text(0.2, 0.45, f'Total de SCs (Únicas)\n{total_sc_unicas}', ha='center', va='center', fontsize=13, fontweight='bold', color='#2b6cb0', bbox=dict(boxstyle='round,pad=0.8', facecolor='#f1f5f9', edgecolor='#cbd5e1'))
+                    ax_img.text(0.5, 0.45, f'Backlog Crítico (>=20d)\n{backlog_critico}', ha='center', va='center', fontsize=13, fontweight='bold', color='#e53e3e', bbox=dict(boxstyle='round,pad=0.8', facecolor='#f1f5f9', edgecolor='#cbd5e1'))
+                    ax_img.text(0.8, 0.45, f'Taxa de Atendimento\n{taxa_atendimento_val:.1f}%', ha='center', va='center', fontsize=13, fontweight='bold', color='#388e3c', bbox=dict(boxstyle='round,pad=0.8', facecolor='#f1f5f9', edgecolor='#cbd5e1'))
+
+                    ax_img.text(0.5, 0.15, f'Fonte do arquivo: {uploaded_file.name} | Total de linhas: {total_linhas}', ha='center', va='center', fontsize=9, color='#94a3b8')
+
+                    # Salva em memória
+                    buf = io.BytesIO()
+                    fig_img.savefig(buf, format="png", dpi=200, bbox_inches='tight')
+                    plt.close(fig_img)
+
+                    st.download_button(
+                        label="💾 Clique aqui para salvar a Imagem PNG",
+                        data=buf.getvalue(),
+                        file_name=f"panorama_compras_{hoje.strftime('%Y%m%d')}.png",
+                        mime="image/png"
+                    )
+
             st.markdown("""
             <hr style='margin: 10px 0px 5px 0px;'>
             <div style="font-size: 0.75rem; color: #4a5568; display: flex; justify-content: space-between;">
@@ -238,4 +271,4 @@ if uploaded_file is not None:
     except Exception as e:
         st.error(f"⚠️ Erro analítico no processamento do arquivo. Detalhe técnico: {e}")
 else:
-    st.info("💡 Faça o upload da planilha de pendências no topo à direita para carregar a validação analítica com velocímetros.")
+    st.info("💡 Faça o upload da planilha de pendências no topo à direita para carregar a validação analítica.")
