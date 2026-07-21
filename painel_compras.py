@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 st.set_page_config(layout="wide", page_title="Panorama Executivo de Suprimentos")
 
 # ==========================================
-# CSS CUSTOMIZADO (Fontes ampliadas em +0.3)
+# CSS CUSTOMIZADO (Sem caixas nos velocímetros)
 # ==========================================
 st.markdown("""
     <style>
@@ -25,12 +25,10 @@ st.markdown("""
         align-items: center;
         margin-bottom: 10px;
     }
-    /* Título principal do cabeçalho (1.2rem + 0.3 = 1.5rem) */
     .header-title {
         font-size: 1.5rem;
         font-weight: bold;
     }
-    /* Data e subtítulo do cabeçalho (0.9rem + 0.3 = 1.2rem) */
     .header-sub {
         font-size: 1.2rem;
     }
@@ -39,7 +37,6 @@ st.markdown("""
         color: white;
         text-align: center;
         font-weight: bold;
-        /* 0.85rem + 0.3 = 1.15rem */
         font-size: 1.15rem;
         padding: 6px;
         text-transform: uppercase;
@@ -52,22 +49,12 @@ st.markdown("""
         color: white;
         text-align: center;
         font-weight: bold;
-        /* 0.85rem + 0.3 = 1.15rem */
         font-size: 1.15rem;
         padding: 8px;
         text-transform: uppercase;
         border-radius: 2px;
         margin-bottom: 8px;
     }
-    .gauge-card {
-        background-color: #f8fafc;
-        border: 1px solid #cbd5e1;
-        border-radius: 8px;
-        padding: 10px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        text-align: center;
-    }
-    /* Legendas e rodapés de apoio (0.75rem + 0.3 = 1.05rem) */
     .gauge-footer {
         text-align: center;
         color: #475569;
@@ -124,7 +111,7 @@ if uploaded_file is not None:
         taxa_atendimento_val = (no_prazo / total_sc_unicas * 100) if total_sc_unicas > 0 else 100
 
         # ==========================================
-        # PASSO 1: CABEÇALHO E VELOCÍMETROS
+        # PASSO 1: CABEÇALHO E VELOCÍMETROS (SEM CAIXAS)
         # ==========================================
         st.markdown(f"""
         <div class="header-box">
@@ -138,14 +125,13 @@ if uploaded_file is not None:
             fig = go.Figure(go.Indicator(
                 mode = "gauge+number",
                 value = valor,
-                number = {'suffix': sufixo, 'font': {'size': 32, 'color': '#1f3b58', 'family': 'Arial'}}, # Aumentado de 26 para 32
-                title = {'text': titulo, 'font': {'size': 15, 'color': '#1f2937', 'family': 'Arial'}}, # Aumentado de 12 para 15
+                number = {'suffix': sufixo, 'font': {'size': 32, 'color': '#1f3b58', 'family': 'Arial'}},
+                title = {'text': titulo, 'font': {'size': 15, 'color': '#1f2937', 'family': 'Arial'}},
                 gauge = {
                     'axis': {'range': [None, max_val], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 12}},
                     'bar': {'color': cor_barra},
-                    'bgcolor': "#ffffff",
-                    'borderwidth': 1,
-                    'bordercolor': "#cbd5e1",
+                    'bgcolor': "rgba(0,0,0,0)",
+                    'borderwidth': 0,
                     'steps': [
                         {'range': [0, max_val * 0.6], 'color': '#f1f5f9'},
                         {'range': [max_val * 0.6, max_val], 'color': '#e2e8f0'}
@@ -160,25 +146,19 @@ if uploaded_file is not None:
         with gauge_col1:
             max_sc = max(total_sc_unicas * 1.5, 10)
             fig1 = criar_gauge("TOTAL DE REQUISIÇÕES (ÚNICAS)", total_sc_unicas, max_sc, "#2b6cb0")
-            st.markdown('<div class="gauge-card">', unsafe_allow_html=True)
             st.plotly_chart(fig1, use_container_width=True)
             st.markdown(f"<div class='gauge-footer'>Volume Bruto: <b>{total_linhas} itens</b></div>", unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
 
         with gauge_col2:
             max_backlog = max(total_sc_unicas, 10)
             fig2 = criar_gauge("BACKLOG CRÍTICO (>=20 DIAS)", backlog_critico, max_backlog, "#e53e3e")
-            st.markdown('<div class="gauge-card">', unsafe_allow_html=True)
             st.plotly_chart(fig2, use_container_width=True)
             st.markdown(f"<div class='gauge-footer' style='color: #e53e3e;'><b>{(backlog_critico/total_sc_unicas*100 if total_sc_unicas > 0 else 0):.1f}%</b> das SCs ativas</div>", unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
 
         with gauge_col3:
             fig3 = criar_gauge("TAXA DE ATENDIMENTO / SAÚDE", round(taxa_atendimento_val, 1), 100, "#388e3c", sufixo="%")
-            st.markdown('<div class="gauge-card">', unsafe_allow_html=True)
             st.plotly_chart(fig3, use_container_width=True)
             st.markdown(f"<div class='gauge-footer' style='color: #388e3c;'>Dentro do SLA padrão (&lt;20 dias)</div>", unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
 
@@ -204,7 +184,7 @@ if uploaded_file is not None:
                 orientation='h',
                 text=cc_volume['Quantidade'],
                 textposition='outside',
-                textfont=dict(size=14, color='#1f2937'), # Números das barras maiores
+                textfont=dict(size=14, color='#1f2937'),
                 marker_color=cores_barras
             ))
             
@@ -231,7 +211,6 @@ if uploaded_file is not None:
             top_critical['C. CUSTO'] = top_critical['C. CUSTO'].astype(str)
             top_critical['DIAS EM ATRASO'] = top_critical['DIAS EM ATRASO'].astype(str) + " DIAS 🔥"
 
-            # Injeção de CSS para aumentar o tamanho da fonte dentro da tabela nativa do Streamlit
             st.markdown("""
                 <style>
                 dataframe, th, td {
