@@ -2,10 +2,6 @@ import streamlit as st
 import pandas as pd
 import datetime
 import plotly.graph_objects as go
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import io
 
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(layout="wide", page_title="Panorama Executivo de Suprimentos")
@@ -71,13 +67,6 @@ with top_c1:
     uploaded_file = st.file_uploader("Upload do arquivo de pendências (.xlsx/.csv)", type=["xlsx", "xls", "csv"])
 with top_c2:
     data_base = st.date_input("Data base para cálculo de SLA:", datetime.date.today())
-
-# Inicializa estado para controle do botão
-if 'executar_analise' not in st.session_state:
-    st.session_state['executar_analise'] = False
-
-if uploaded_file is None:
-    st.session_state['executar_analise'] = False
 
 # ==========================================
 # PROCESSAMENTO ANALÍTICO DE DADOS
@@ -174,138 +163,69 @@ if uploaded_file is not None:
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # Botão de comando para gerar os gráficos
-        col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
-        with col_btn2:
-            if not st.session_state['executar_analise']:
-                if st.button("🚀 Gerar Detalhamento Analítico e Gráfico", type="primary", use_container_width=True):
-                    st.session_state['executar_analise'] = True
-                    st.rerun()
-            else:
-                if st.button("🔄 Ocultar / Atualizar Análise", use_container_width=True):
-                    st.session_state['executar_analise'] = False
-                    st.rerun()
-
         # ==========================================
-        # PASSO 2: RENDERIZAÇÃO DOS GRÁFICOS (TOP 10 CC + TABELA CRÍTICOS)
+        # PASSO 2: RENDERIZAÇÃO DIRETA DOS GRÁFICOS (TOP 10 CC + TABELA CRÍTICOS)
         # ==========================================
-        if st.session_state['executar_analise']:
-            st.markdown("---")
-            col_grafico, col_tabela = st.columns([1.1, 1.1])
+        st.markdown("---")
+        col_grafico, col_tabela = st.columns([1.1, 1.1])
 
-            with col_grafico:
-                st.markdown('<div class="section-header">TOP 10 CENTROS DE CUSTO (VOLUME DE PENDÊNCIAS)</div>', unsafe_allow_html=True)
-                
-                cc_volume = df.groupby(col_cc).size().reset_index(name='Quantidade').sort_values(by='Quantidade', ascending=False).head(10)
-                cc_volume[col_cc] = cc_volume[col_cc].astype(str)
-                
-                cores_barras = ['#3273a8'] + ['#ed8034'] * (len(cc_volume) - 1)
-                cc_volume = cc_volume.sort_values(by='Quantidade', ascending=True)
-                cores_barras = cores_barras[::-1]
+        with col_grafico:
+            st.markdown('<div class="section-header">TOP 10 CENTROS DE CUSTO (VOLUME DE PENDÊNCIAS)</div>', unsafe_allow_html=True)
+            
+            cc_volume = df.groupby(col_cc).size().reset_index(name='Quantidade').sort_values(by='Quantidade', ascending=False).head(10)
+            cc_volume[col_cc] = cc_volume[col_cc].astype(str)
+            
+            cores_barras = ['#3273a8'] + ['#ed8034'] * (len(cc_volume) - 1)
+            cc_volume = cc_volume.sort_values(by='Quantidade', ascending=True)
+            cores_barras = cores_barras[::-1]
 
-                fig = go.Figure(go.Bar(
-                    x=cc_volume['Quantidade'],
-                    y=cc_volume[col_cc],
-                    orientation='h',
-                    text=cc_volume['Quantidade'],
-                    textposition='outside',
-                    marker_color=cores_barras
-                ))
-                
-                fig.update_layout(
-                    xaxis_title="Volume de Requisições / Itens", 
-                    yaxis_title="Centro de Custo",
-                    plot_bgcolor="rgba(0,0,0,0)",
-                    paper_bgcolor="rgba(0,0,0,0)",
-                    margin=dict(l=10, r=25, t=10, b=10),
-                    height=360,
-                    xaxis=dict(showgrid=True, gridcolor='#e2e8f0'),
-                    yaxis=dict(type='category')
-                )
-                st.plotly_chart(fig, use_container_width=True)
+            fig = go.Figure(go.Bar(
+                x=cc_volume['Quantidade'],
+                y=cc_volume[col_cc],
+                orientation='h',
+                text=cc_volume['Quantidade'],
+                textposition='outside',
+                marker_color=cores_barras
+            ))
+            
+            fig.update_layout(
+                xaxis_title="Volume de Requisições / Itens", 
+                yaxis_title="Centro de Custo",
+                plot_bgcolor="rgba(0,0,0,0)",
+                paper_bgcolor="rgba(0,0,0,0)",
+                margin=dict(l=10, r=25, t=10, b=10),
+                height=360,
+                xaxis=dict(showgrid=True, gridcolor='#e2e8f0'),
+                yaxis=dict(type='category')
+            )
+            st.plotly_chart(fig, use_container_width=True)
 
-            with col_tabela:
-                st.markdown('<div class="section-header">ITENS CRÍTICOS COM MAIORES SLAS EM ATRASO</div>', unsafe_allow_html=True)
-                
-                top_critical = criticos_df.sort_values(by='Days', ascending=False)[[col_sc, col_cc, 'Days']].head(10)
-                top_critical.columns = ['Nº DA SC', 'C. CUSTO', 'DIAS EM ATRASO']
-                top_critical['Nº DA SC'] = top_critical['Nº DA SC'].astype(str)
-                top_critical['C. CUSTO'] = top_critical['C. CUSTO'].astype(str)
-                top_critical['DIAS EM ATRASO'] = top_critical['DIAS EM ATRASO'].astype(str) + " DIAS 🔥"
+        with col_tabela:
+            st.markdown('<div class="section-header">ITENS CRÍTICOS COM MAIORES SLAS EM ATRASO</div>', unsafe_allow_html=True)
+            
+            top_critical = criticos_df.sort_values(by='Days', ascending=False)[[col_sc, col_cc, 'Days']].head(10)
+            top_critical.columns = ['Nº DA SC', 'C. CUSTO', 'DIAS EM ATRASO']
+            top_critical['Nº DA SC'] = top_critical['Nº DA SC'].astype(str)
+            top_critical['C. CUSTO'] = top_critical['C. CUSTO'].astype(str)
+            top_critical['DIAS EM ATRASO'] = top_critical['DIAS EM ATRASO'].astype(str) + " DIAS 🔥"
 
-                st.dataframe(
-                    top_critical, 
-                    use_container_width=True,
-                    height=360,
-                    hide_index=True
-                )
+            st.dataframe(
+                top_critical, 
+                use_container_width=True,
+                height=360,
+                hide_index=True
+            )
 
-            # ==========================================
-            # BOTÃO DE GERAR E BAIXAR IMAGEM COMPLETA DO RELATÓRIO
-            # ==========================================
-            st.markdown("<br>", unsafe_allow_html=True)
-            down_col1, down_col2, down_col3 = st.columns([1, 2, 1])
-            with down_col2:
-                if st.button("📥 Baixar Relatório Completo em Imagem (PNG)", type="secondary", use_container_width=True):
-                    # Criação de uma imagem executiva completa contendo todos os dados consolidados
-                    fig_full, ax_full = plt.subplots(figsize=(12, 10), facecolor='#ffffff')
-                    ax_full.axis('off')
-
-                    # Título do Relatório
-                    ax_full.text(0.5, 0.95, 'PANORAMA EXECUTIVO DE PENDÊNCIAS DE COMPRAS', ha='center', va='center', fontsize=18, fontweight='bold', color='#1f3b58')
-                    ax_full.text(0.5, 0.91, f'DADOS CONSOLIDADOS | {hoje.strftime("%d/%m/%Y")} | FONTE: {uploaded_file.name}', ha='center', va='center', fontsize=11, color='#475569')
-                    ax_full.plot([0.05, 0.95], [0.88, 0.88], color='#cbd5e1', lw=2, transform=ax_full.transAxes)
-
-                    # Bloco 1: Indicadores / Velocímetros Simulados em Imagem
-                    ax_full.text(0.5, 0.82, '--- RESUMO DOS INDICADORES PRINCIPAIS ---', ha='center', va='center', fontsize=12, fontweight='bold', color='#2b4c7e')
-                    
-                    ax_full.text(0.2, 0.72, f'Total de SCs (Únicas):\n{total_sc_unicas} SCs\n({total_linhas} itens)', ha='center', va='center', fontsize=11, fontweight='bold', color='#2b6cb0', bbox=dict(boxstyle='round,pad=1', facecolor='#f8fafc', edgecolor='#cbd5e1'))
-                    ax_full.text(0.5, 0.72, f'Backlog Crítico (>=20d):\n{backlog_critico} SCs\n({(backlog_critico/total_sc_unicas*100 if total_sc_unicas > 0 else 0):.1f}%)', ha='center', va='center', fontsize=11, fontweight='bold', color='#e53e3e', bbox=dict(boxstyle='round,pad=1', facecolor='#f8fafc', edgecolor='#cbd5e1'))
-                    ax_full.text(0.8, 0.72, f'Taxa de Atendimento:\n{taxa_atendimento_val:.1f}%\nDentro do SLA', ha='center', va='center', fontsize=11, fontweight='bold', color='#388e3c', bbox=dict(boxstyle='round,pad=1', facecolor='#f8fafc', edgecolor='#cbd5e1'))
-
-                    # Bloco 2: Top 10 Centros de Custo (Resumo em Texto Gráfico)
-                    ax_full.text(0.25, 0.55, '--- TOP CENTROS DE CUSTO ---', ha='center', va='center', fontsize=12, fontweight='bold', color='#2b4c7e')
-                    cc_resumo = df.groupby(col_cc).size().reset_index(name='Qtd').sort_values(by='Qtd', ascending=False).head(8)
-                    y_pos = 0.48
-                    for _, row in cc_resumo.iterrows():
-                        ax_full.text(0.08, y_pos, f"CC: {row[col_cc]}", fontsize=10, fontweight='bold', color='#1f2937')
-                        ax_full.text(0.38, y_pos, f"{row['Qtd']} itens", fontsize=10, color='#475569')
-                        y_pos -= 0.035
-
-                    # Bloco 3: Itens Críticos (Maiores SLAs)
-                    ax_full.text(0.75, 0.55, '--- ITENS MAIS CRÍTICOS (ATRASO) ---', ha='center', va='center', fontsize=12, fontweight='bold', color='#2b4c7e')
-                    crit_resumo = criticos_df.sort_values(by='Days', ascending=False)[[col_sc, col_cc, 'Days']].head(8)
-                    y_pos_c = 0.48
-                    for _, row in crit_resumo.iterrows():
-                        ax_full.text(0.58, y_pos_c, f"SC: {row[col_sc]} (CC: {row[col_cc]})", fontsize=10, fontweight='bold', color='#1f2937')
-                        ax_full.text(0.92, y_pos_c, f"{int(row['Days'])} dias 🔥", fontsize=10, fontweight='bold', color='#e53e3e')
-                        y_pos_c -= 0.035
-
-                    ax_full.plot([0.05, 0.95], [0.12, 0.12], color='#cbd5e1', lw=1, transform=ax_full.transAxes)
-                    ax_full.text(0.5, 0.06, 'Relatório executivo gerado automaticamente pelo Sistema de Suprimentos - Parente Andrade', ha='center', va='center', fontsize=9, color='#64748b')
-
-                    # Salva em memória
-                    buf_full = io.BytesIO()
-                    fig_full.savefig(buf_full, format="png", dpi=250, bbox_inches='tight')
-                    plt.close(fig_full)
-
-                    st.download_button(
-                        label="💾 Clique para baixar a Imagem Completa (PNG)",
-                        data=buf_full.getvalue(),
-                        file_name=f"panorama_executivo_completo_{hoje.strftime('%Y%m%d')}.png",
-                        mime="image/png"
-                    )
-
-            st.markdown("""
-            <hr style='margin: 10px 0px 5px 0px;'>
-            <div style="font-size: 0.75rem; color: #4a5568; display: flex; justify-content: space-between;">
-                <span><b style="color: #e53e3e;">→ Alerta Crítico:</b> Backlog com inércia superior a 20 dias</span>
-                <span><b style="color: #3273a8;">→ Top 10 CC:</b> Eixo Y com os 10 principais centros de custo mapeados</span>
-                <span><b style="color: #388e3c;">Metodologia:</b> Contagem consolidada de SCs e itens do Protheus</span>
-            </div>
-            """, unsafe_allow_html=True)
+        st.markdown("""
+        <hr style='margin: 10px 0px 5px 0px;'>
+        <div style="font-size: 0.75rem; color: #4a5568; display: flex; justify-content: space-between;">
+            <span><b style="color: #e53e3e;">→ Alerta Crítico:</b> Backlog com inércia superior a 20 dias</span>
+            <span><b style="color: #3273a8;">→ Top 10 CC:</b> Eixo Y com os 10 principais centros de custo mapeados</span>
+            <span><b style="color: #388e3c;">Metodologia:</b> Contagem consolidada de SCs e itens do Protheus</span>
+        </div>
+        """, unsafe_allow_html=True)
 
     except Exception as e:
         st.error(f"⚠️ Erro analítico no processamento do arquivo. Detalhe técnico: {e}")
 else:
-    st.info("💡 Faça o upload da planilha de pendências no topo à direita para carregar a validação analítica com velocímetros.")
+    st.info("💡 Faça o upload da planilha de pendências no topo à direita para carregar o panorama executivo completo.")
