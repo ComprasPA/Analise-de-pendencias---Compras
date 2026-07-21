@@ -7,10 +7,15 @@ import plotly.graph_objects as go
 st.set_page_config(layout="wide", page_title="Panorama Executivo de Suprimentos")
 
 # ==========================================
-# CSS CUSTOMIZADO (Visual Retrátil e Refinado)
+# CSS CUSTOMIZADO (Oculta a barra superior padrão do Streamlit)
 # ==========================================
 st.markdown("""
     <style>
+    /* Oculta completamente o cabeçalho/barra superior padrão do Streamlit */
+    header[data-testid="stHeader"] {
+        visibility: hidden;
+        display: none;
+    }
     .block-container {
         padding-top: 1rem;
         padding-bottom: 1rem;
