@@ -1,18 +1,18 @@
 import streamlit as st
 import datetime
 
-# 1. CONFIGURAÇÃO BÁSICA (Única coisa que carrega no início)
+# 1. CONFIGURAÇÃO BÁSICA
 st.set_page_config(layout="wide", page_title="Painel de Compras")
 
 # ==========================================
 # INTERFACE DO USUÁRIO
 # ==========================================
 st.title("📊 Gerador de Infográfico - Layout Atualizado")
-st.markdown("Faça o upload do arquivo Excel e clique no botão para gerar o panorama.")
+st.markdown("Faça o upload do arquivo Excel e clique no botão para gerar o panorama. *(Dica: Se o arquivo tiver imagens muito pesadas, salve-o sem os logos ou em formato CSV para evitar travamentos no servidor).*")
 
 col1, col2 = st.columns([3, 1])
 with col1:
-    uploaded_file = st.file_uploader("Upload do arquivo de pendências", type=["xlsx", "xls"])
+    uploaded_file = st.file_uploader("Upload do arquivo de pendências", type=["xlsx", "xls", "csv"])
 with col2:
     data_base = st.date_input("Data base para cálculo de SLA:", datetime.date.today())
 
@@ -32,23 +32,29 @@ if uploaded_file is None:
     st.session_state['gerar_grafico'] = False
 
 # ==========================================
-# PROCESSAMENTO DE DADOS (Só roda ao clicar)
+# PROCESSAMENTO DE DADOS
 # ==========================================
 if st.session_state['gerar_grafico'] and uploaded_file is not None:
-    with st.spinner('Processando dados e gerando infográfico...'):
+    with st.spinner('Processando dados e alocando memória...'):
         try:
-            # Importações "atrasadas" para não quebrar o site na inicialização
             import pandas as pd
+            
+            # Força o Matplotlib a rodar em modo "Servidor" (sem tentar abrir janelas)
+            import matplotlib
+            matplotlib.use('Agg') 
             import matplotlib.pyplot as plt
             import matplotlib.patches as patches
             import io
             from PIL import Image
             
-            # Destrava limite de imagem
             Image.MAX_IMAGE_PIXELS = None
 
-            # Leitura do Arquivo
-            df = pd.read_excel(uploaded_file, header=0)
+            # Leitura do Arquivo (Suporta Excel e CSV)
+            if uploaded_file.name.endswith('.csv'):
+                df = pd.read_csv(uploaded_file, sep=';', encoding='utf-8', header=0)
+            else:
+                df = pd.read_excel(uploaded_file, header=0)
+                
             if 'Numero da SC' not in df.columns:
                 new_header = df.iloc[0]
                 df = df[1:]
@@ -175,10 +181,11 @@ if st.session_state['gerar_grafico'] and uploaded_file is not None:
             
             buf = io.BytesIO()
             fig.savefig(buf, format="png", dpi=200)
+            
+            # Limpa a figura da memória do servidor imediatamente para não estourar a RAM
+            plt.close(fig)
+            
             st.download_button(label="📥 Baixar Infográfico (PNG)", data=buf.getvalue(), file_name="infografico_painel_atualizado.png", mime="image/png")
             
-        except ImportError as e:
-            st.error(f"⚠️ Erro de Instalação: O servidor não conseguiu encontrar as bibliotecas.\n\nDetalhe: {e}")
-            st.warning("Verifique se o seu arquivo `requirements.txt` no GitHub está com este exato conteúdo (tudo minúsculo):\n\n`streamlit`\n`pandas`\n`matplotlib`\n`openpyxl`\n`pillow`")
         except Exception as e:
             st.error(f"⚠️ Erro ao processar a planilha. Detalhe técnico: {e}")
