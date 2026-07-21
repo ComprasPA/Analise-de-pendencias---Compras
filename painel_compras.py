@@ -84,25 +84,29 @@ with top_c2:
 # ==========================================
 if uploaded_file is not None:
     try:
-        # Leitura flexível
+        # Leitura segura do arquivo lendo as primeiras linhas para varredura
         if uploaded_file.name.endswith('.csv'):
-            df = pd.read_csv(uploaded_file, sep=None, engine='python', encoding='utf-8', header=0)
+            df = pd.read_csv(uploaded_file, sep=None, engine='python', encoding='utf-8', header=None)
         else:
-            df = pd.read_excel(uploaded_file, header=0)
+            df = pd.read_excel(uploaded_file, header=None)
             
-        # Tratamento caso a primeira linha seja o cabeçalho real da tabela ERP
-        # Remove espaços em branco dos nomes das colunas existentes
-        df.columns = df.columns.astype(str).str.strip()
+        # Varredura inteligente para encontrar a linha do cabeçalho real (que contenha a palavra SC ou Requisicao)
+        header_row_idx = 0
+        for idx, row in df.iterrows():
+            row_str = row.astype(str).str.upper().values
+            if any('SC' in val or 'REQUISICAO' in val or 'CUSTO' in val for val in row_str):
+                header_row_idx = idx
+                break
+
+        # Redefine o DataFrame utilizando a linha de cabeçalho correta
+        df.columns = df.iloc[header_row_idx].astype(str).str.strip()
+        df = df.iloc[header_row_idx + 1:].reset_index(drop=True)
         
-        # Se a coluna principal não estiver no topo, tenta achar nas primeiras linhas
-        if not any('SC' in col.upper() for col in df.columns):
-            new_header = df.iloc[0].astype(str).str.strip()
-            df = df[1:]
-            df.columns = new_header
+        # Limpeza de nomes de colunas nulos ou duplicados
+        df.columns = [str(col).strip() for col in df.columns]
+        df = df.loc[:, ~df.columns.duplicated()]
 
-        df.columns = df.columns.astype(str).str.strip()
-
-        # Função inteligente para mapear nomes de colunas variantes do Totvs/Protheus ou planilhas corporativas
+        # Função flexível de mapeamento de colunas
         def achar_coluna(opcoes):
             for col in df.columns:
                 for op in opcoes:
@@ -115,13 +119,14 @@ if uploaded_file is not None:
         col_dt = achar_coluna(['dt emissao', 'data emissao', 'emissao', 'data'])
 
         if not col_sc or not col_cc or not col_dt:
-            st.error(f"⚠️ O sistema não conseguiu identificar automaticamente as colunas essenciais na planilha. \n\nColunas encontradas no arquivo: {list(df.columns)}")
+            st.error(f"⚠️ O sistema leu o arquivo, mas não identificou as colunas essenciais. \n\nColunas detectadas: {list(df.columns)}")
             st.stop()
 
-        # Renomeia para padrão interno do sistema
+        # Renomeia para padrão interno
         df = df.rename(columns={col_sc: 'Numero da SC', col_cc: 'C_Custo', col_dt: 'DT_Emissao'})
 
-        # Conversões de dados
+        # Conversões e tratamento de nulos
+        df = df.dropna(subset=['Numero da SC'])
         hoje = pd.to_datetime(data_base)
         df['DT_Emissao'] = pd.to_datetime(df['DT_Emissao'], errors='coerce')
         df['Days'] = (hoje - df['DT_Emissao']).dt.days
@@ -193,7 +198,7 @@ if uploaded_file is not None:
         with col_grafico:
             st.markdown('<div class="section-header">TOP 10 CENTROS DE CUSTO (VOLUME DE PENDÊNCIAS)</div>', unsafe_allow_html=True)
             
-            # Agrupamento Top 10 CC flexível
+            # Agrupamento Top 10 CC
             cc_volume = df.groupby('C_Custo').size().reset_index(name='Quantidade').sort_values(by='Quantidade', ascending=False).head(10)
             cc_volume['C_Custo'] = cc_volume['C_Custo'].astype(str)
             
