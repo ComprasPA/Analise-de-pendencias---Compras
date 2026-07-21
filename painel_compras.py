@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 st.set_page_config(layout="wide", page_title="Panorama Executivo de Suprimentos")
 
 # ==========================================
-# CSS CUSTOMIZADO (Visual Executivo Compacto)
+# CSS CUSTOMIZADO (Fundos Sólidos e Alta Legibilidade)
 # ==========================================
 st.markdown("""
     <style>
@@ -47,6 +47,15 @@ st.markdown("""
         text-transform: uppercase;
         border-radius: 2px;
         margin-bottom: 8px;
+    }
+    /* Retângulo com fundo sólido suave para os velocímetros */
+    .gauge-card {
+        background-color: #f8fafc;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        padding: 10px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        text-align: center;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -104,7 +113,7 @@ if uploaded_file is not None:
         taxa_atendimento_val = (no_prazo / total_sc_unicas * 100) if total_sc_unicas > 0 else 100
 
         # ==========================================
-        # PASSO 1: CABEÇALHO E VELOCÍMETROS (GAUGES)
+        # PASSO 1: CABEÇALHO E VELOCÍMETROS COM FUNDO SÓLIDO
         # ==========================================
         st.markdown(f"""
         <div class="header-box">
@@ -114,49 +123,55 @@ if uploaded_file is not None:
         <div class="resumo-bar">DIAGNÓSTICO E VALIDAÇÃO ESTRATÉGICA (VELOCÍMETROS DE DESEMPENHO)</div>
         """, unsafe_allow_html=True)
 
-        # Função para criar velocímetros compactos e elegantes
         def criar_gauge(titulo, valor, max_val, cor_barra, sufixo=""):
             fig = go.Figure(go.Indicator(
                 mode = "gauge+number",
                 value = valor,
                 number = {'suffix': sufixo, 'font': {'size': 26, 'color': '#1f3b58', 'family': 'Arial'}},
-                title = {'text': titulo, 'font': {'size': 12, 'color': '#333333', 'family': 'Arial'}},
+                title = {'text': titulo, 'font': {'size': 12, 'color': '#1f2937', 'family': 'Arial'}},
                 gauge = {
-                    'axis': {'range': [None, max_val], 'tickwidth': 1, 'tickcolor': "#888"},
+                    'axis': {'range': [None, max_val], 'tickwidth': 1, 'tickcolor': "#475569"},
                     'bar': {'color': cor_barra},
-                    'bgcolor': "#f8f9fa",
+                    'bgcolor': "#ffffff",
                     'borderwidth': 1,
-                    'bordercolor': "#d1d5db",
+                    'bordercolor': "#cbd5e1",
                     'steps': [
                         {'range': [0, max_val * 0.6], 'color': '#f1f5f9'},
                         {'range': [max_val * 0.6, max_val], 'color': '#e2e8f0'}
                     ],
                 }
             ))
-            fig.update_layout(height=160, margin=dict(l=25, r=25, t=35, b=10), paper_bgcolor='rgba(0,0,0,0)')
+            fig.update_layout(height=150, margin=dict(l=20, r=20, t=30, b=10), paper_bgcolor='rgba(0,0,0,0)')
             return fig
 
         gauge_col1, gauge_col2, gauge_col3 = st.columns(3)
 
         with gauge_col1:
-            # Velocímetro 1: Total de Requisições (Escala baseada no volume total + folga)
             max_sc = max(total_sc_unicas * 1.5, 10)
             fig1 = criar_gauge("TOTAL DE REQUISIÇÕES (ÚNICAS)", total_sc_unicas, max_sc, "#2b6cb0")
+            
+            # Envolvendo dentro do retângulo sólido
+            st.markdown('<div class="gauge-card">', unsafe_allow_html=True)
             st.plotly_chart(fig1, use_container_width=True)
-            st.markdown(f"<p style='text-align: center; color: #666; font-size: 0.75rem; margin-top: -10px;'>Volume Bruto: <b>{total_linhas} itens</b> processados</p>", unsafe_allow_html=True)
+            st.markdown(f"<p style='text-align: center; color: #475569; font-size: 0.75rem; margin-top: -5px;'>Volume Bruto: <b>{total_linhas} itens</b></p>", unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
 
         with gauge_col2:
-            # Velocímetro 2: Backlog Crítico (Alerta em vermelho)
             max_backlog = max(total_sc_unicas, 10)
             fig2 = criar_gauge("BACKLOG CRÍTICO (>=20 DIAS)", backlog_critico, max_backlog, "#e53e3e")
+            
+            st.markdown('<div class="gauge-card">', unsafe_allow_html=True)
             st.plotly_chart(fig2, use_container_width=True)
-            st.markdown(f"<p style='text-align: center; color: #e53e3e; font-size: 0.75rem; margin-top: -10px;'><b>{(backlog_critico/total_sc_unicas*100 if total_sc_unicas > 0 else 0):.1f}%</b> das SCs ativas</p>", unsafe_allow_html=True)
+            st.markdown(f"<p style='text-align: center; color: #e53e3e; font-size: 0.75rem; margin-top: -5px;'><b>{(backlog_critico/total_sc_unicas*100 if total_sc_unicas > 0 else 0):.1f}%</b> das SCs ativas</p>", unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
 
         with gauge_col3:
-            # Velocímetro 3: Taxa de Atendimento / Saúde (Escala fixa de 0 a 100%)
             fig3 = criar_gauge("TAXA DE ATENDIMENTO / SAÚDE", round(taxa_atendimento_val, 1), 100, "#388e3c", sufixo="%")
+            
+            st.markdown('<div class="gauge-card">', unsafe_allow_html=True)
             st.plotly_chart(fig3, use_container_width=True)
-            st.markdown(f"<p style='text-align: center; color: #388e3c; font-size: 0.75rem; margin-top: -10px;'>Dentro do SLA padrão (&lt;20 dias)</p>", unsafe_allow_html=True)
+            st.markdown(f"<p style='text-align: center; color: #388e3c; font-size: 0.75rem; margin-top: -5px;'>Dentro do SLA padrão (&lt;20 dias)</p>", unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
 
