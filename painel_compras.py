@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 st.set_page_config(layout="wide", page_title="Panorama Executivo de Suprimentos")
 
 # ==========================================
-# CSS CUSTOMIZADO (Espaçamento refinado e títulos em negrito com sombra)
+# CSS CUSTOMIZADO (Título ajustado e espaçamento refinado)
 # ==========================================
 st.markdown("""
     <style>
@@ -41,7 +41,7 @@ st.markdown("""
         padding: 8px;
         text-transform: uppercase;
         letter-spacing: 1px;
-        margin-bottom: 25px; /* Afasta bem os velocímetros da barra */
+        margin-bottom: 25px;
         border-radius: 2px;
     }
     .section-header {
@@ -55,7 +55,6 @@ st.markdown("""
         border-radius: 2px;
         margin-bottom: 8px;
     }
-    /* Estilização avançada para os rodapés dos velocímetros: Negrito, maior e com sobreamento/sombra */
     .gauge-footer {
         text-align: center;
         color: #1e293b;
@@ -113,11 +112,11 @@ if uploaded_file is not None:
         taxa_atendimento_val = (no_prazo / total_sc_unicas * 100) if total_sc_unicas > 0 else 100
 
         # ==========================================
-        # PASSO 1: CABEÇALHO E VELOCÍMETROS COM ESPAÇAMENTO ADEQUADO
+        # PASSO 1: CABEÇALHO E VELOCÍMETROS
         # ==========================================
         st.markdown(f"""
         <div class="header-box">
-            <span class="header-title">PANORAMA DE PENDÊNCIAS DE REQUISIÇÕES DE COMPRA</span>
+            <span class="header-title">PANORAMA DE PENDÊNCIAS DE REQUISIÇÕES "PENDENTES" DE COMPRA</span>
             <span class="header-sub">DADOS CONSOLIDADOS | {hoje.strftime("%d/%m/%Y")}</span>
         </div>
         <div class="resumo-bar">DIAGNÓSTICO E VALIDAÇÃO ESTRATÉGICA (VELOCÍMETROS DE DESEMPENHO)</div>
@@ -140,7 +139,6 @@ if uploaded_file is not None:
                     ],
                 }
             ))
-            # Margem superior ajustada (t=45) para descer o título do velocídio perfeitamente
             fig.update_layout(height=180, margin=dict(l=20, r=20, t=45, b=10), paper_bgcolor='rgba(0,0,0,0)')
             return fig
 
