@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 st.set_page_config(layout="wide", page_title="Panorama Executivo de Suprimentos")
 
 # ==========================================
-# CSS CUSTOMIZADO (Título ajustado e espaçamento refinado)
+# CSS CUSTOMIZADO (Título ajustado e sem aspas)
 # ==========================================
 st.markdown("""
     <style>
@@ -116,7 +116,7 @@ if uploaded_file is not None:
         # ==========================================
         st.markdown(f"""
         <div class="header-box">
-            <span class="header-title">PANORAMA DE PENDÊNCIAS DE REQUISIÇÕES "PENDENTES" DE COMPRA</span>
+            <span class="header-title">PANORAMA DE REQUISIÇÕES PENDENTES DE COMPRA (EM ABERTO)</span>
             <span class="header-sub">DADOS CONSOLIDADOS | {hoje.strftime("%d/%m/%Y")}</span>
         </div>
         <div class="resumo-bar">DIAGNÓSTICO E VALIDAÇÃO ESTRATÉGICA (VELOCÍMETROS DE DESEMPENHO)</div>
