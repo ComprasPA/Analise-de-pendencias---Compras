@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 st.set_page_config(layout="wide", page_title="Panorama Executivo de Suprimentos")
 
 # ==========================================
-# CSS CUSTOMIZADO (Fundos Sólidos e Alta Legibilidade)
+# CSS CUSTOMIZADO (Fontes ampliadas em +0.3)
 # ==========================================
 st.markdown("""
     <style>
@@ -18,20 +18,30 @@ st.markdown("""
     .header-box {
         background-color: #1f3b58;
         color: white;
-        padding: 12px 20px;
+        padding: 14px 22px;
         border-radius: 4px;
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-bottom: 10px;
     }
+    /* Título principal do cabeçalho (1.2rem + 0.3 = 1.5rem) */
+    .header-title {
+        font-size: 1.5rem;
+        font-weight: bold;
+    }
+    /* Data e subtítulo do cabeçalho (0.9rem + 0.3 = 1.2rem) */
+    .header-sub {
+        font-size: 1.2rem;
+    }
     .resumo-bar {
         background-color: #2b4c7e;
         color: white;
         text-align: center;
         font-weight: bold;
-        font-size: 0.85rem;
-        padding: 5px;
+        /* 0.85rem + 0.3 = 1.15rem */
+        font-size: 1.15rem;
+        padding: 6px;
         text-transform: uppercase;
         letter-spacing: 1px;
         margin-bottom: 10px;
@@ -42,8 +52,9 @@ st.markdown("""
         color: white;
         text-align: center;
         font-weight: bold;
-        font-size: 0.85rem;
-        padding: 6px;
+        /* 0.85rem + 0.3 = 1.15rem */
+        font-size: 1.15rem;
+        padding: 8px;
         text-transform: uppercase;
         border-radius: 2px;
         margin-bottom: 8px;
@@ -55,6 +66,14 @@ st.markdown("""
         padding: 10px;
         box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         text-align: center;
+    }
+    /* Legendas e rodapés de apoio (0.75rem + 0.3 = 1.05rem) */
+    .gauge-footer {
+        text-align: center;
+        color: #475569;
+        font-size: 1.05rem;
+        margin-top: -5px;
+        font-weight: 500;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -105,12 +124,12 @@ if uploaded_file is not None:
         taxa_atendimento_val = (no_prazo / total_sc_unicas * 100) if total_sc_unicas > 0 else 100
 
         # ==========================================
-        # PASSO 1: CABEÇALHO E VELOCÍMETROS COM FUNDO SÓLIDO
+        # PASSO 1: CABEÇALHO E VELOCÍMETROS
         # ==========================================
         st.markdown(f"""
         <div class="header-box">
-            <span style="font-size: 1.2rem; font-weight: bold;">PANORAMA DE PENDÊNCIAS DE REQUISIÇÕES DE COMPRA</span>
-            <span style="font-size: 0.9rem;">DADOS CONSOLIDADOS | {hoje.strftime("%d/%m/%Y")}</span>
+            <span class="header-title">PANORAMA DE PENDÊNCIAS DE REQUISIÇÕES DE COMPRA</span>
+            <span class="header-sub">DADOS CONSOLIDADOS | {hoje.strftime("%d/%m/%Y")}</span>
         </div>
         <div class="resumo-bar">DIAGNÓSTICO E VALIDAÇÃO ESTRATÉGICA (VELOCÍMETROS DE DESEMPENHO)</div>
         """, unsafe_allow_html=True)
@@ -119,10 +138,10 @@ if uploaded_file is not None:
             fig = go.Figure(go.Indicator(
                 mode = "gauge+number",
                 value = valor,
-                number = {'suffix': sufixo, 'font': {'size': 26, 'color': '#1f3b58', 'family': 'Arial'}},
-                title = {'text': titulo, 'font': {'size': 12, 'color': '#1f2937', 'family': 'Arial'}},
+                number = {'suffix': sufixo, 'font': {'size': 32, 'color': '#1f3b58', 'family': 'Arial'}}, # Aumentado de 26 para 32
+                title = {'text': titulo, 'font': {'size': 15, 'color': '#1f2937', 'family': 'Arial'}}, # Aumentado de 12 para 15
                 gauge = {
-                    'axis': {'range': [None, max_val], 'tickwidth': 1, 'tickcolor': "#475569"},
+                    'axis': {'range': [None, max_val], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 12}},
                     'bar': {'color': cor_barra},
                     'bgcolor': "#ffffff",
                     'borderwidth': 1,
@@ -133,7 +152,7 @@ if uploaded_file is not None:
                     ],
                 }
             ))
-            fig.update_layout(height=150, margin=dict(l=20, r=20, t=30, b=10), paper_bgcolor='rgba(0,0,0,0)')
+            fig.update_layout(height=160, margin=dict(l=20, r=20, t=35, b=10), paper_bgcolor='rgba(0,0,0,0)')
             return fig
 
         gauge_col1, gauge_col2, gauge_col3 = st.columns(3)
@@ -143,7 +162,7 @@ if uploaded_file is not None:
             fig1 = criar_gauge("TOTAL DE REQUISIÇÕES (ÚNICAS)", total_sc_unicas, max_sc, "#2b6cb0")
             st.markdown('<div class="gauge-card">', unsafe_allow_html=True)
             st.plotly_chart(fig1, use_container_width=True)
-            st.markdown(f"<p style='text-align: center; color: #475569; font-size: 0.75rem; margin-top: -5px;'>Volume Bruto: <b>{total_linhas} itens</b></p>", unsafe_allow_html=True)
+            st.markdown(f"<div class='gauge-footer'>Volume Bruto: <b>{total_linhas} itens</b></div>", unsafe_allow_html=True)
             st.markdown('</div>', unsafe_allow_html=True)
 
         with gauge_col2:
@@ -151,20 +170,20 @@ if uploaded_file is not None:
             fig2 = criar_gauge("BACKLOG CRÍTICO (>=20 DIAS)", backlog_critico, max_backlog, "#e53e3e")
             st.markdown('<div class="gauge-card">', unsafe_allow_html=True)
             st.plotly_chart(fig2, use_container_width=True)
-            st.markdown(f"<p style='text-align: center; color: #e53e3e; font-size: 0.75rem; margin-top: -5px;'><b>{(backlog_critico/total_sc_unicas*100 if total_sc_unicas > 0 else 0):.1f}%</b> das SCs ativas</p>", unsafe_allow_html=True)
+            st.markdown(f"<div class='gauge-footer' style='color: #e53e3e;'><b>{(backlog_critico/total_sc_unicas*100 if total_sc_unicas > 0 else 0):.1f}%</b> das SCs ativas</div>", unsafe_allow_html=True)
             st.markdown('</div>', unsafe_allow_html=True)
 
         with gauge_col3:
             fig3 = criar_gauge("TAXA DE ATENDIMENTO / SAÚDE", round(taxa_atendimento_val, 1), 100, "#388e3c", sufixo="%")
             st.markdown('<div class="gauge-card">', unsafe_allow_html=True)
             st.plotly_chart(fig3, use_container_width=True)
-            st.markdown(f"<p style='text-align: center; color: #388e3c; font-size: 0.75rem; margin-top: -5px;'>Dentro do SLA padrão (&lt;20 dias)</p>", unsafe_allow_html=True)
+            st.markdown(f"<div class='gauge-footer' style='color: #388e3c;'>Dentro do SLA padrão (&lt;20 dias)</div>", unsafe_allow_html=True)
             st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
 
         # ==========================================
-        # PASSO 2: RENDERIZAÇÃO DIRETA DOS GRÁFICOS (TOP 10 CC + TABELA CRÍTICOS)
+        # PASSO 2: RENDERIZAÇÃO DOS GRÁFICOS (TOP 10 CC + TABELA CRÍTICOS)
         # ==========================================
         st.markdown("---")
         col_grafico, col_tabela = st.columns([1.1, 1.1])
@@ -185,18 +204,21 @@ if uploaded_file is not None:
                 orientation='h',
                 text=cc_volume['Quantidade'],
                 textposition='outside',
+                textfont=dict(size=14, color='#1f2937'), # Números das barras maiores
                 marker_color=cores_barras
             ))
             
             fig.update_layout(
                 xaxis_title="Volume de Requisições / Itens", 
                 yaxis_title="Centro de Custo",
+                xaxis_title_font=dict(size=14),
+                yaxis_title_font=dict(size=14),
                 plot_bgcolor="rgba(0,0,0,0)",
                 paper_bgcolor="rgba(0,0,0,0)",
                 margin=dict(l=10, r=25, t=10, b=10),
-                height=360,
-                xaxis=dict(showgrid=True, gridcolor='#e2e8f0'),
-                yaxis=dict(type='category')
+                height=380,
+                xaxis=dict(showgrid=True, gridcolor='#e2e8f0', tickfont=dict(size=12)),
+                yaxis=dict(type='category', tickfont=dict(size=12))
             )
             st.plotly_chart(fig, use_container_width=True)
 
@@ -209,16 +231,25 @@ if uploaded_file is not None:
             top_critical['C. CUSTO'] = top_critical['C. CUSTO'].astype(str)
             top_critical['DIAS EM ATRASO'] = top_critical['DIAS EM ATRASO'].astype(str) + " DIAS 🔥"
 
+            # Injeção de CSS para aumentar o tamanho da fonte dentro da tabela nativa do Streamlit
+            st.markdown("""
+                <style>
+                dataframe, th, td {
+                    font-size: 1.1rem !important;
+                }
+                </style>
+            """, unsafe_allow_html=True)
+
             st.dataframe(
                 top_critical, 
                 use_container_width=True,
-                height=360,
+                height=380,
                 hide_index=True
             )
 
         st.markdown("""
-        <hr style='margin: 10px 0px 5px 0px;'>
-        <div style="font-size: 0.75rem; color: #4a5568; display: flex; justify-content: space-between;">
+        <hr style='margin: 15px 0px 8px 0px;'>
+        <div style="font-size: 1.05rem; color: #4a5568; display: flex; justify-content: space-between; font-weight: 500;">
             <span><b style="color: #e53e3e;">→ Alerta Crítico:</b> Backlog com inércia superior a 20 dias</span>
             <span><b style="color: #3273a8;">→ Top 10 CC:</b> Eixo Y com os 10 principais centros de custo mapeados</span>
             <span><b style="color: #388e3c;">Metodologia:</b> Contagem consolidada de SCs e itens do Protheus</span>
@@ -228,4 +259,4 @@ if uploaded_file is not None:
     except Exception as e:
         st.error(f"⚠️ Erro analítico no processamento do arquivo. Detalhe técnico: {e}")
 else:
-    st.info("💡 Faça o upload da planilha de pendências no topo à direita para carregar o panorama executivo completo.")
+    st.info("💡 Faça o upload da planilha de pendências no topo à direita para carregar o panorama executivo.")
