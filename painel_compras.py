@@ -4,6 +4,14 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from datetime import datetime
 import io
+from PIL import Image
+
+# ==========================================
+# 0. CORREÇÃO DE LIMITE DE IMAGEM (DECOMPRESSION BOMB)
+# ==========================================
+# Desativa o limite de pixels para evitar bloqueios ao ler planilhas com logos
+# grandes embutidos ou ao renderizar gráficos de alta resolução.
+Image.MAX_IMAGE_PIXELS = None
 
 # ==========================================
 # 1. CONFIGURAÇÃO DA PÁGINA STREAMLIT
@@ -63,11 +71,9 @@ if uploaded_file is not None:
         # ==========================================
         # 3. GERAÇÃO DO INFOGRÁFICO (MATPLOTLIB)
         # ==========================================
-        # Fundo cinza azulado claro da imagem de referência
         fig, ax = plt.subplots(figsize=(18, 10), facecolor='#e9eef2')
         ax.axis('off')
 
-        # Paleta de Cores do Novo Design
         text_dark = '#1a202c'
         text_gray = '#4a5568'
         card_bg = 'white'
@@ -76,48 +82,34 @@ if uploaded_file is not None:
         red_highlight = '#e53e3e'
         table_header = '#457b9d'
 
-        # --- Cabeçalho ---
+        # Cabeçalho
         ax.text(0.02, 0.95, 'PANORAMA DE REQUISIÇÕES DE COMPRA PENDENTES', ha='left', va='center', fontsize=26, fontweight='bold', color=text_dark)
         ax.text(0.98, 0.965, f'DADOS CONSOLIDADOS | {hoje.strftime("%d DE %B DE %Y").upper()}', ha='right', va='center', fontsize=12, color=text_dark)
         ax.text(0.98, 0.935, f'FONTE: {uploaded_file.name}', ha='right', va='center', fontsize=10, color=text_gray)
-        
-        # Linha separadora do cabeçalho
         ax.plot([0.02, 0.98], [0.91, 0.91], color=border_color, lw=2, transform=ax.transAxes)
 
-        # --- Função Auxiliar para Desenhar os Cards ---
         def draw_card(x, y, w, h, edge_color=border_color, left_strip_color=None):
-            # Card principal
             card = patches.FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.01", facecolor=card_bg, edgecolor=edge_color, transform=ax.transAxes, zorder=1)
             ax.add_patch(card)
-            # Faixa colorida lateral (opcional)
             if left_strip_color:
                 strip = patches.FancyBboxPatch((x, y), 0.005, h, boxstyle="round,pad=0.01", facecolor=left_strip_color, edgecolor='none', transform=ax.transAxes, zorder=2)
                 ax.add_patch(strip)
 
-        # ---------------------------------------------------------
-        # CARD 1: TOTAL (Topo Esquerda)
-        # ---------------------------------------------------------
+        # CARD 1: TOTAL 
         draw_card(0.02, 0.70, 0.46, 0.18, left_strip_color=blue_highlight)
         ax.text(0.05, 0.83, 'TOTAL DE REQUISIÇÕES PENDENTES', ha='left', va='center', fontsize=16, color=text_dark)
-        
-        # Números grandes separados por barra vertical
         ax.text(0.12, 0.75, str(total_sc_unicas), ha='center', va='center', fontsize=48, fontweight='bold', color=text_dark)
         ax.plot([0.22, 0.22], [0.72, 0.78], color=border_color, lw=2, transform=ax.transAxes, zorder=3)
         ax.text(0.32, 0.75, str(total_linhas), ha='center', va='center', fontsize=48, fontweight='bold', color=text_dark)
 
-        # ---------------------------------------------------------
-        # CARD 2: CRÍTICO (Topo Direita)
-        # ---------------------------------------------------------
+        # CARD 2: CRÍTICO
         draw_card(0.51, 0.70, 0.47, 0.18, left_strip_color=red_highlight)
         ax.text(0.54, 0.83, 'BACKLOG CRÍTICO (>= 20 dias)', ha='left', va='center', fontsize=16, color=text_dark)
-        
         ax.text(0.57, 0.75, str(backlog_critico), ha='center', va='center', fontsize=48, fontweight='bold', color=text_dark)
         ax.text(0.75, 0.73, f'PERCENTUAL DO TOTAL: ~{percentual_critico:.1f}%', ha='center', va='center', fontsize=14, color=text_dark)
         ax.text(0.93, 0.73, 'ALERTA', ha='center', va='center', fontsize=14, fontweight='bold', color=red_highlight)
 
-        # ---------------------------------------------------------
-        # CARD 3: GRÁFICO (Base Esquerda)
-        # ---------------------------------------------------------
+        # CARD 3: GRÁFICO 
         draw_card(0.02, 0.05, 0.46, 0.61)
         ax.text(0.25, 0.61, 'DISTRIBUIÇÃO POR CENTRO DE CUSTO', ha='center', va='center', fontsize=16, fontweight='bold', color=text_dark)
         ax.text(0.25, 0.58, 'TOP 3 MAIORES PENDÊNCIAS', ha='center', va='center', fontsize=14, color=text_gray)
@@ -125,12 +117,9 @@ if uploaded_file is not None:
         ax_bar = fig.add_axes([0.10, 0.10, 0.35, 0.43])
         ax_bar.set_facecolor(card_bg)
         
-        # Preparar dados do gráfico (inverter para plotar de cima para baixo)
         bar_labels = cc_labels[::-1]
         bar_vals = cc_vals[::-1]
-        bar_colors = ['#f68741', '#f0a04b', '#48b59e', '#4585bb'] # Cores simulando a imagem: Outros, 3º, 2º, 1º
-        
-        # Ajuste de cores baseado na quantidade de itens (se tiver menos de 4)
+        bar_colors = ['#f68741', '#f0a04b', '#48b59e', '#4585bb'] 
         bar_colors = bar_colors[-len(bar_vals):]
 
         bars = ax_bar.barh(bar_labels, bar_vals, color=bar_colors, height=0.6)
@@ -150,9 +139,7 @@ if uploaded_file is not None:
                 if width > 0:
                     ax_bar.text(width + max(bar_vals)*0.02, bar.get_y() + bar.get_height()/2, f'{int(width)}', va='center', ha='left', fontsize=14, fontweight='bold', color=text_dark)
 
-        # ---------------------------------------------------------
-        # CARD 4: TABELA (Base Direita)
-        # ---------------------------------------------------------
+        # CARD 4: TABELA 
         draw_card(0.51, 0.05, 0.47, 0.61)
         ax.text(0.745, 0.61, 'DETALHAMENTO DE ITENS CRÍTICOS (>= 20 dias)', ha='center', va='center', fontsize=16, fontweight='bold', color=text_dark)
 
@@ -163,7 +150,6 @@ if uploaded_file is not None:
         for _, row in top_critical.iterrows():
             table_data.append([str(row['Numero da SC']), str(row['C Custo']), f"{int(row['Days'])} dias"])
             
-        # Preencher linhas para manter tamanho consistente (10 linhas)
         while len(table_data) < 10:
             table_data.append(['-', '-', '-'])
 
@@ -171,14 +157,12 @@ if uploaded_file is not None:
         table.auto_set_font_size(False)
         table.set_fontsize(13)
 
-        # Estilo dinâmico da tabela para bater com a imagem
         for (row, col), cell in table.get_celld().items():
             if row == 0: 
                 cell.set_facecolor(table_header)
                 cell.set_text_props(color='white', fontweight='bold')
                 cell.set_edgecolor('white')
             else: 
-                # Linhas alternadas: branco e cinza ultra claro
                 cell.set_facecolor('#f4f7f9' if row % 2 == 0 else 'white')
                 cell.set_edgecolor(border_color)
                 cell.set_text_props(color=text_dark)
@@ -188,9 +172,9 @@ if uploaded_file is not None:
         # ==========================================
         st.pyplot(fig)
         
-        # Botão para Download
+        # Removi o bbox_inches='tight' aqui também para evitar estouro de limite
         buf = io.BytesIO()
-        fig.savefig(buf, format="png", dpi=300, bbox_inches='tight')
+        fig.savefig(buf, format="png", dpi=200)
         st.download_button(label="📥 Baixar Infográfico (PNG)", data=buf.getvalue(), file_name="infografico_painel_atualizado.png", mime="image/png")
         
     except Exception as e:
