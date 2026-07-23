@@ -319,10 +319,10 @@ if uploaded_file is not None:
                     st.plotly_chart(fig_crit_stat, use_container_width=True)
 
         # ==========================================
-        # PASSO 4: DESEMPENHO POR COMPRADOR (VELOCÍMETRO + PERCENTUAIS)
+        # PASSO 4: DESEMPENHO POR COMPRADOR (RENDIMENTO + BACKLOG PENDENTE)
         # ==========================================
         st.markdown("---")
-        st.markdown('<div class="section-header" style="background-color: #2b4c7e;">DESEMPENHO INDIVIDUAL POR COMPRADOR (% DOS ITENS EM ABERTO)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header" style="background-color: #2b4c7e;">DESEMPENHO INDIVIDUAL POR COMPRADOR</div>', unsafe_allow_html=True)
         
         row4_c1, row4_c2, row4_c3 = st.columns(3)
         compradores = ['Ednilson', 'Dayana', 'Luiz']
@@ -335,39 +335,42 @@ if uploaded_file is not None:
             with col_st:
                 st.markdown(f'<div style="text-align: center; font-weight: bold; font-size: 1.15rem; margin-bottom: 5px; color: #1f3b58;">👤 {comp}</div>', unsafe_allow_html=True)
                 
+                # Base total do comprador (Finalizadas + Pendentes)
                 df_comp_total = df[df['Comprador_Resp'] == comp].copy()
                 
                 if not df_comp_total.empty and 'Status_Detalhado' in df_comp_total.columns:
                     
+                    total_emitidas = len(df_comp_total)
                     qtd_atendidas = len(df_comp_total[df_comp_total['Status_Detalhado'] == 'Atendidas'])
+                    taxa_rendimento_comp = (qtd_atendidas / total_emitidas * 100) if total_emitidas > 0 else 0
+                    
+                    # ----- VELOCÍMETRO DE RENDIMENTO INDIVIDUAL -----
+                    cor_gauge_comp = '#388e3c' if taxa_rendimento_comp >= 75 else ('#d97706' if taxa_rendimento_comp >= 50 else '#e53e3e')
+                    
+                    fig_gauge = go.Figure(go.Indicator(
+                        mode = "gauge+number", value = taxa_rendimento_comp,
+                        number = {'suffix': "%", 'font': {'size': 20, 'color': '#1f3b58', 'family': 'Arial Black'}},
+                        title = {'text': "RENDIMENTO (ATENDIDAS / TOTAL)", 'font': {'size': 10, 'color': '#111827', 'family': 'Arial Black'}},
+                        gauge = {
+                            'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 9, 'family': 'Arial Black'}},
+                            'bar': {'color': cor_gauge_comp}, 'bgcolor': "rgba(0,0,0,0)", 'borderwidth': 0,
+                            'steps': [{'range': [0, 60], 'color': '#f1f5f9'}, {'range': [60, 100], 'color': '#e2e8f0'}],
+                        }
+                    ))
+                    fig_gauge.update_layout(height=130, margin=dict(l=10, r=10, t=20, b=5), paper_bgcolor='rgba(0,0,0,0)')
+                    st.plotly_chart(fig_gauge, use_container_width=True)
+
+                    # ----- GRÁFICO DE BARRAS PERCENTUAIS DO BACKLOG PENDENTE -----
                     df_comp_aberto = df_comp_total[df_comp_total['Status_Detalhado'] != 'Atendidas'].copy()
                     
                     if not df_comp_aberto.empty:
                         comp_stats = df_comp_aberto.groupby('Status_Detalhado').size().reset_index(name='Quantidade')
                         total_aberto = comp_stats['Quantidade'].sum()
-                        
-                        # ----- VELOCÍMETRO DE SAÚDE INDIVIDUAL -----
-                        qtd_comp_no_prazo = df_comp_aberto[df_comp_aberto['Status_Detalhado'] == 'No Prazo'].shape[0]
-                        taxa_saude_comp = (qtd_comp_no_prazo / total_aberto * 100) if total_aberto > 0 else 100
-                        cor_gauge_comp = '#388e3c' if taxa_saude_comp >= 75 else ('#d97706' if taxa_saude_comp >= 50 else '#e53e3e')
-                        
-                        fig_gauge = go.Figure(go.Indicator(
-                            mode = "gauge+number", value = taxa_saude_comp,
-                            number = {'suffix': "%", 'font': {'size': 20, 'color': '#1f3b58', 'family': 'Arial Black'}},
-                            title = {'text': "TAXA DE ATENDIMENTO (SAÚDE)", 'font': {'size': 10, 'color': '#111827', 'family': 'Arial Black'}},
-                            gauge = {
-                                'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 9, 'family': 'Arial Black'}},
-                                'bar': {'color': cor_gauge_comp}, 'bgcolor': "rgba(0,0,0,0)", 'borderwidth': 0,
-                                'steps': [{'range': [0, 60], 'color': '#f1f5f9'}, {'range': [60, 100], 'color': '#e2e8f0'}],
-                            }
-                        ))
-                        fig_gauge.update_layout(height=130, margin=dict(l=10, r=10, t=20, b=5), paper_bgcolor='rgba(0,0,0,0)')
-                        st.plotly_chart(fig_gauge, use_container_width=True)
-
-                        # ----- GRÁFICO DE BARRAS PERCENTUAIS -----
                         comp_stats['Percentual'] = (comp_stats['Quantidade'] / total_aberto * 100).round(1)
+                        
                         comp_stats['Status_Detalhado'] = pd.Categorical(comp_stats['Status_Detalhado'], categories=ordem_status_aberto, ordered=True)
                         comp_stats = comp_stats.sort_values('Status_Detalhado')
+                        
                         cores = [color_status_map.get(s, '#718096') for s in comp_stats['Status_Detalhado']]
                         
                         fig_comp_ind = go.Figure(go.Bar(
@@ -381,7 +384,7 @@ if uploaded_file is not None:
                         ))
                         
                         fig_comp_ind.update_layout(
-                            xaxis_title="", yaxis_title="",
+                            xaxis_title="% do Backlog Restante", yaxis_title="",
                             plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=150,
                             margin=dict(l=5, r=30, t=0, b=10),
                             xaxis=dict(showgrid=True, gridcolor='#e2e8f0', range=[0, max(comp_stats['Percentual'].max() * 1.25, 100)], tickfont=dict(size=9)), 
@@ -393,7 +396,7 @@ if uploaded_file is not None:
                     
                     st.markdown(f"""
                     <div style='text-align: center; font-size: 0.95rem; color: #2b6cb0; font-weight: bold; background-color: #f1f5f9; padding: 6px; border-radius: 4px; margin-top: 5px;'>
-                        ✅ {qtd_atendidas} Itens Atendidos (Finalizados)
+                        ✅ {qtd_atendidas} de {total_emitidas} Itens Atendidos
                     </div>
                     """, unsafe_allow_html=True)
                     
@@ -403,8 +406,8 @@ if uploaded_file is not None:
         st.markdown("""
         <hr style='margin: 15px 0px 8px 0px;'>
         <div style="font-size: 1.05rem; color: #4a5568; display: flex; justify-content: space-between; font-weight: 700;">
-            <span><b style="color: #2b4c7e;">→ Volumetria:</b> O painel superior foi isolado para cruzar as SCs únicas com o volume bruto de itens.</span>
-            <span><b style="color: #388e3c;">Metodologia:</b> Base excluindo status finalizados para as análises dinâmicas Protheus Parente Andrade.</span>
+            <span><b style="color: #2b4c7e;">→ Performance (Rendimento):</b> Velocímetro individual calcula (Itens Atendidos / Total Emitido).</span>
+            <span><b style="color: #388e3c;">Metodologia:</b> Status mapeados diretamente da base Protheus.</span>
         </div>
         """, unsafe_allow_html=True)
 
