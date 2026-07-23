@@ -64,11 +64,10 @@ st.markdown("""
     }
     .gauge-footer {
         text-align: center;
-        color: #1e293b;
         font-size: 1.05rem;
         font-weight: 800;
-        margin-top: 5px;
-        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.15);
+        margin-top: -5px;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.10);
     }
     .stDataFrame td, .stDataFrame th {
         font-size: 1rem !important;
@@ -154,46 +153,67 @@ if uploaded_file is not None:
         total_sc_unicas_aberto = len(unique_scs_aberto)
         
         criticos_df = unique_scs_aberto[unique_scs_aberto['Days'] >= 20]
-        backlog_critico = len(criticos_df)
         
-        no_prazo = total_sc_unicas_aberto - backlog_critico
-        taxa_atendimento_val = (no_prazo / total_sc_unicas_aberto * 100) if total_sc_unicas_aberto > 0 else 100
+        # Consolidações para os Velocímetros
+        status_counts = df_aberto['Status_Detalhado'].value_counts()
+        qtd_no_prazo = status_counts.get('No Prazo', 0)
+        qtd_atencao = status_counts.get('Atenção', 0)
+        qtd_fora = status_counts.get('Fora do Prazo', 0)
+        
+        crit_counts = df_aberto[col_criticidade].astype(str).str.upper().value_counts() if col_criticidade else {}
+        qtd_rot = crit_counts.get('ROTINEIRA', 0)
+        qtd_emg = crit_counts.get('EMERGENCIAL', 0)
 
         # ==========================================
-        # PASSO 1: CABEÇALHO E VELOCÍMETROS
+        # PASSO 1: QUADRANTE DE VOLUMETRIA E VELOCÍMETROS
         # ==========================================
         st.markdown(f"""
         <div class="header-box">
             <span class="header-title">PANORAMA DE REQUISIÇÕES PENDENTES DE COMPRA (EM ABERTO)</span>
             <span class="header-sub">DADOS CONSOLIDADOS | {hoje.strftime("%d/%m/%Y")}</span>
         </div>
-        <div class="resumo-bar">DIAGNÓSTICO E VALIDAÇÃO ESTRATÉGICA (VELOCÍMETROS DE DESEMPENHO)</div>
+        <div class="resumo-bar">DIAGNÓSTICO E VALIDAÇÃO ESTRATÉGICA (VOLUMETRIA, STATUS E CRITICIDADE)</div>
         """, unsafe_allow_html=True)
 
-        def criar_gauge(titulo, valor, max_val, cor_barra, sufixo=""):
+        def criar_gauge(titulo, valor, max_val, cor_barra):
             fig = go.Figure(go.Indicator(
                 mode = "gauge+number", value = valor,
-                number = {'suffix': sufixo, 'font': {'size': 32, 'color': '#1f3b58', 'family': 'Arial Black'}},
-                title = {'text': titulo, 'font': {'size': 15, 'color': '#111827', 'family': 'Arial Black'}},
+                number = {'font': {'size': 24, 'color': '#1f3b58', 'family': 'Arial Black'}},
+                title = {'text': titulo, 'font': {'size': 11, 'color': '#111827', 'family': 'Arial Black'}},
                 gauge = {
-                    'axis': {'range': [None, max_val], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 12, 'family': 'Arial Black'}},
+                    'axis': {'range': [None, max_val], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 9, 'family': 'Arial Black'}},
                     'bar': {'color': cor_barra}, 'bgcolor': "rgba(0,0,0,0)", 'borderwidth': 0,
                     'steps': [{'range': [0, max_val * 0.6], 'color': '#f1f5f9'}, {'range': [max_val * 0.6, max_val], 'color': '#e2e8f0'}],
                 }
             ))
-            fig.update_layout(height=160, margin=dict(l=15, r=15, t=35, b=5), paper_bgcolor='rgba(0,0,0,0)')
+            fig.update_layout(height=140, margin=dict(l=10, r=10, t=30, b=5), paper_bgcolor='rgba(0,0,0,0)')
             return fig
 
-        gauge_col1, gauge_col2, gauge_col3 = st.columns(3)
-        with gauge_col1:
-            st.plotly_chart(criar_gauge("TOTAL DE REQUISIÇÕES (ÚNICAS ABERTAS)", total_sc_unicas_aberto, max(total_sc_unicas_aberto * 1.5, 10), "#2b6cb0"), use_container_width=True)
-            st.markdown(f"<div class='gauge-footer'>Volume Bruto: <b>{total_linhas_aberto} itens</b></div>", unsafe_allow_html=True)
-        with gauge_col2:
-            st.plotly_chart(criar_gauge("BACKLOG CRÍTICO (>=20 DIAS)", backlog_critico, max(total_sc_unicas_aberto, 10), "#e53e3e"), use_container_width=True)
-            st.markdown(f"<div class='gauge-footer' style='color: #e53e3e;'><b>{(backlog_critico/total_sc_unicas_aberto*100 if total_sc_unicas_aberto > 0 else 0):.1f}%</b> das SCs ativas</div>", unsafe_allow_html=True)
-        with gauge_col3:
-            st.plotly_chart(criar_gauge("TAXA DE ATENDIMENTO / SAÚDE", round(taxa_atendimento_val, 1), 100, "#388e3c", sufixo="%"), use_container_width=True)
-            st.markdown(f"<div class='gauge-footer' style='color: #388e3c;'>Dentro do SLA padrão (&lt;20 dias)</div>", unsafe_allow_html=True)
+        row1_c1, row1_c2, row1_c3, row1_c4, row1_c5, row1_c6 = st.columns([1.5, 1, 1, 1, 1, 1])
+
+        with row1_c1:
+            st.markdown(f"""
+            <div style="background-color: white; border: 1px solid #cbd5e1; border-radius: 4px; padding: 10px; text-align: center; height: 160px; display: flex; flex-direction: column; justify-content: center;">
+                <div style="color: #1f3b58; font-size: 1rem; font-family: 'Arial Black'; margin-bottom: 5px;">VOLUMETRIA EM ABERTO</div>
+                <div style="font-size: 2rem; font-weight: bold; color: #2b6cb0; line-height: 1;">{total_sc_unicas_aberto}</div>
+                <div style="font-size: 0.75rem; color: #475569; font-weight: bold; text-transform: uppercase; margin-bottom: 5px;">Solicitações (SCs)</div>
+                <div style="border-top: 1px dashed #cbd5e1; margin: 5px 0;"></div>
+                <div style="font-size: 2rem; font-weight: bold; color: #ed8034; line-height: 1;">{total_linhas_aberto}</div>
+                <div style="font-size: 0.75rem; color: #475569; font-weight: bold; text-transform: uppercase;">Total de Itens</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        def render_gauge(col, titulo, valor, max_val, cor):
+            with col:
+                st.plotly_chart(criar_gauge(titulo, valor, max_val, cor), use_container_width=True)
+                perc = (valor / max_val * 100) if max_val > 0 else 0
+                st.markdown(f"<div class='gauge-footer' style='color: {cor};'>{perc:.1f}%</div>", unsafe_allow_html=True)
+
+        render_gauge(row1_c2, "NO PRAZO", qtd_no_prazo, total_linhas_aberto, "#388e3c")
+        render_gauge(row1_c3, "ATENÇÃO", qtd_atencao, total_linhas_aberto, "#d97706")
+        render_gauge(row1_c4, "FORA DO PRAZO", qtd_fora, total_linhas_aberto, "#e53e3e")
+        render_gauge(row1_c5, "ROTINEIRA", qtd_rot, total_linhas_aberto, "#2b6cb0")
+        render_gauge(row1_c6, "EMERGENCIAL", qtd_emg, total_linhas_aberto, "#805ad5")
 
         st.markdown("<br>", unsafe_allow_html=True)
 
@@ -253,7 +273,6 @@ if uploaded_file is not None:
         row3_c1, row3_c2 = st.columns(2)
 
         with row3_c1:
-            # Título atualizado para refletir explicitamente que a contagem é de ITENS
             st.markdown('<div class="section-header">CONSOLIDAÇÃO GERAL: STATUS DE PRAZO (QTD. ITENS)</div>', unsafe_allow_html=True)
             if col_status:
                 status_count = df_aberto.groupby(col_status).size().reset_index(name='Quantidade').sort_values(by='Quantidade', ascending=False)
@@ -263,9 +282,8 @@ if uploaded_file is not None:
                 cores_status = ['#e53e3e' if 'FORA' in s.upper() else '#d97706' if 'ATENÇÃO' in s.upper() else '#388e3c' for s in status_count[col_status]]
                 fig_status = go.Figure(go.Bar(
                     x=status_count['Quantidade'], y=status_count[col_status], orientation='h',
-                    text=status_count['Quantidade'], 
-                    textposition='outside', 
-                    textfont=dict(size=12, color='#1f2937', family='Arial Black'), # Sempre preto/escuro pois fica fora
+                    text=status_count['Quantidade'], textposition='outside', 
+                    textfont=dict(size=12, color='#1f2937', family='Arial Black'), 
                     marker_color=cores_status
                 ))
                 fig_status.update_layout(
@@ -275,7 +293,6 @@ if uploaded_file is not None:
                 st.plotly_chart(fig_status, use_container_width=True)
 
         with row3_c2:
-            # Título atualizado para refletir explicitamente que a contagem é de ITENS
             st.markdown('<div class="section-header">CRITICIDADE VS STATUS (QTD. ITENS)</div>', unsafe_allow_html=True)
             if col_criticidade and col_status:
                 df_crit_stat = df_aberto[df_aberto[col_criticidade].astype(str).str.upper().isin(['ROTINEIRA', 'EMERGENCIAL'])]
@@ -289,11 +306,10 @@ if uploaded_file is not None:
                             fig_crit_stat.add_trace(go.Bar(
                                 x=df_sub[col_criticidade], y=df_sub['Quantidade'], name=status_val.title(),
                                 marker_color=color_map.get(status_val, '#718096'),
-                                text=df_sub['Quantidade'], 
-                                textposition='auto', 
+                                text=df_sub['Quantidade'], textposition='auto', 
                                 textfont=dict(size=12, family='Arial Black'),
-                                insidetextfont=dict(color='white'),       # Se couber dentro: Branco
-                                outsidetextfont=dict(color='#1f2937')     # Se for ejetado para fora: Escuro
+                                insidetextfont=dict(color='white'),       
+                                outsidetextfont=dict(color='#1f2937')     
                             ))
                     fig_crit_stat.update_layout(
                         barmode='group', xaxis_title="", yaxis_title="Qtd. Itens em Aberto", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=320,
@@ -342,7 +358,7 @@ if uploaded_file is not None:
                             orientation='h',
                             text=comp_stats['Percentual'].astype(str) + '%',
                             textposition='outside',
-                            textfont=dict(size=12, color='#1f2937', family='Arial Black'), # Sempre escuro pois fica fora
+                            textfont=dict(size=12, color='#1f2937', family='Arial Black'), 
                             marker_color=cores
                         ))
                         
@@ -369,8 +385,8 @@ if uploaded_file is not None:
         st.markdown("""
         <hr style='margin: 15px 0px 8px 0px;'>
         <div style="font-size: 1.05rem; color: #4a5568; display: flex; justify-content: space-between; font-weight: 700;">
-            <span><b style="color: #2b4c7e;">→ Performance:</b> Gráficos percentuais calculados exclusivamente sobre o backlog em aberto.</span>
-            <span><b style="color: #388e3c;">Metodologia:</b> Status mapeados diretamente da base Protheus Parente Andrade.</span>
+            <span><b style="color: #2b4c7e;">→ Volumetria:</b> O painel superior foi isolado para cruzar as SCs únicas com o volume bruto de itens.</span>
+            <span><b style="color: #388e3c;">Metodologia:</b> Base excluindo status finalizados para as análises dinâmicas Protheus Parente Andrade.</span>
         </div>
         """, unsafe_allow_html=True)
 
