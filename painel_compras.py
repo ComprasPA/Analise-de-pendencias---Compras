@@ -3,11 +3,11 @@ import pandas as pd
 import datetime
 import plotly.graph_objects as go
 
-# 1. CONFIGURAÇÃO DA PÁGINA (Wide)
+# 1. CONFIGURAÇÃO DA PÁGINA (Wide com barra de rolagem habilitada)
 st.set_page_config(layout="wide", page_title="Panorama Executivo de Suprimentos")
 
 # ==========================================
-# CSS CUSTOMIZADO (Visual Executivo e Responsivo)
+# CSS CUSTOMIZADO (Visual Executivo Completo)
 # ==========================================
 st.markdown("""
     <style>
@@ -16,39 +16,39 @@ st.markdown("""
         display: none !important;
     }
     .block-container {
-        padding-top: 0.6rem;
-        padding-bottom: 0.6rem;
-        padding-left: 1rem;
-        padding-right: 1rem;
+        padding-top: 1rem;
+        padding-bottom: 2rem;
+        padding-left: 1.5rem;
+        padding-right: 1.5rem;
         max-width: 100% !important;
     }
     .header-box {
         background-color: #1f3b58;
         color: white;
-        padding: 8px 16px;
+        padding: 12px 20px;
         border-radius: 4px;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 6px;
+        margin-bottom: 10px;
     }
     .header-title {
-        font-size: 1.2rem;
+        font-size: 1.4rem;
         font-weight: bold;
     }
     .header-sub {
-        font-size: 0.95rem;
+        font-size: 1.1rem;
     }
     .resumo-bar {
         background-color: #2b4c7e;
         color: white;
         text-align: center;
         font-weight: bold;
-        font-size: 0.85rem;
-        padding: 4px;
+        font-size: 1rem;
+        padding: 6px;
         text-transform: uppercase;
         letter-spacing: 1px;
-        margin-bottom: 8px;
+        margin-bottom: 15px;
         border-radius: 2px;
     }
     .section-header {
@@ -56,24 +56,24 @@ st.markdown("""
         color: white;
         text-align: center;
         font-weight: bold;
-        font-size: 0.85rem;
-        padding: 4px;
+        font-size: 1rem;
+        padding: 6px;
         text-transform: uppercase;
         border-radius: 2px;
-        margin-bottom: 4px;
+        margin-bottom: 8px;
     }
     .gauge-footer {
         text-align: center;
         color: #1e293b;
-        font-size: 0.9rem;
+        font-size: 1.05rem;
         font-weight: 800;
-        margin-top: -2px;
+        margin-top: 5px;
         text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.15);
     }
     .stDataFrame td, .stDataFrame th {
-        font-size: 0.9rem !important;
+        font-size: 1.05rem !important;
         font-weight: 800 !important;
-        padding: 2px 4px !important;
+        padding: 4px 6px !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -152,10 +152,10 @@ if uploaded_file is not None:
             fig = go.Figure(go.Indicator(
                 mode = "gauge+number",
                 value = valor,
-                number = {'suffix': sufixo, 'font': {'size': 24, 'color': '#1f3b58', 'family': 'Arial Black'}},
-                title = {'text': titulo, 'font': {'size': 12, 'color': '#111827', 'family': 'Arial Black'}},
+                number = {'suffix': sufixo, 'font': {'size': 32, 'color': '#1f3b58', 'family': 'Arial Black'}},
+                title = {'text': titulo, 'font': {'size': 15, 'color': '#111827', 'family': 'Arial Black'}},
                 gauge = {
-                    'axis': {'range': [None, max_val], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 10, 'family': 'Arial Black'}},
+                    'axis': {'range': [None, max_val], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 12, 'family': 'Arial Black'}},
                     'bar': {'color': cor_barra},
                     'bgcolor': "rgba(0,0,0,0)",
                     'borderwidth': 0,
@@ -165,7 +165,7 @@ if uploaded_file is not None:
                     ],
                 }
             ))
-            fig.update_layout(height=110, margin=dict(l=10, r=10, t=25, b=0), paper_bgcolor='rgba(0,0,0,0)')
+            fig.update_layout(height=160, margin=dict(l=15, r=15, t=35, b=5), paper_bgcolor='rgba(0,0,0,0)')
             return fig
 
         gauge_col1, gauge_col2, gauge_col3 = st.columns(3)
@@ -187,16 +187,76 @@ if uploaded_file is not None:
             st.plotly_chart(fig3, use_container_width=True)
             st.markdown(f"<div class='gauge-footer' style='color: #388e3c;'>Dentro do SLA padrão (&lt;20 dias)</div>", unsafe_allow_html=True)
 
-        # ==========================================
-        # PASSO 2: RENDERIZAÇÃO PANORÂMICA (GRÁFICO STATUS SLA + TOP 10 CC + TABELA CRÍTICOS)
-        # ==========================================
-        st.markdown("<hr style='margin: 8px 0px;'>", unsafe_allow_html=True)
-        
-        col_g1, col_g2, col_tabela = st.columns([1, 1, 1.1])
+        st.markdown("<br>", unsafe_allow_html=True)
 
-        with col_g1:
-            st.markdown('<div class="section-header">STATUS DE PRAZO (SLA) EM ABERTO</div>', unsafe_allow_html=True)
+        # ==========================================
+        # PASSO 2: PRIMEIRA LINHA DE GRÁFICOS (TOP 10 ITENS + TOP 10 REQUISIÇÕES)
+        # ==========================================
+        st.markdown("---")
+        row1_c1, row1_c2 = st.columns(2)
+
+        with row1_c1:
+            st.markdown('<div class="section-header">TOP 10 CENTROS DE CUSTO (VOLUME DE ITENS)</div>', unsafe_allow_html=True)
+            cc_volume = df_aberto.groupby(col_cc).size().reset_index(name='Quantidade').sort_values(by='Quantidade', ascending=False).head(10)
+            cc_volume[col_cc] = cc_volume[col_cc].astype(str)
             
+            cores_barras = ['#3273a8'] + ['#ed8034'] * (len(cc_volume) - 1)
+            cc_volume = cc_volume.sort_values(by='Quantidade', ascending=True)
+            cores_barras = cores_barras[::-1]
+
+            fig_cc_it = go.Figure(go.Bar(
+                x=cc_volume['Quantidade'],
+                y=cc_volume[col_cc],
+                orientation='h',
+                text=cc_volume['Quantidade'],
+                textposition='outside',
+                textfont=dict(size=12, color='#1f2937', family='Arial Black'),
+                marker_color=cores_barras
+            ))
+            fig_cc_it.update_layout(
+                xaxis_title="Qtd. Itens", yaxis_title="Centro de Custo",
+                plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                margin=dict(l=5, r=20, t=10, b=10), height=350,
+                xaxis=dict(showgrid=True, gridcolor='#e2e8f0', tickfont=dict(size=11)),
+                yaxis=dict(type='category', tickfont=dict(size=11, family='Arial Black'))
+            )
+            st.plotly_chart(fig_cc_it, use_container_width=True)
+
+        with row1_c2:
+            st.markdown('<div class="section-header">TOP 10 CENTROS DE CUSTO (QTD. REQUISIÇÕES / SCs)</div>', unsafe_allow_html=True)
+            cc_scs = unique_scs_aberto.groupby(col_cc)[col_sc].nunique().reset_index(name='Qtd_SCs').sort_values(by='Qtd_SCs', ascending=False).head(10)
+            cc_scs[col_cc] = cc_scs[col_cc].astype(str)
+            
+            cores_barras_sc = ['#2b6cb0'] + ['#319795'] * (len(cc_scs) - 1)
+            cc_scs = cc_scs.sort_values(by='Qtd_SCs', ascending=True)
+            cores_barras_sc = cores_barras_sc[::-1]
+
+            fig_cc_sc = go.Figure(go.Bar(
+                x=cc_scs['Qtd_SCs'],
+                y=cc_scs[col_cc],
+                orientation='h',
+                text=cc_scs['Qtd_SCs'],
+                textposition='outside',
+                textfont=dict(size=12, color='#1f2937', family='Arial Black'),
+                marker_color=cores_barras_sc
+            ))
+            fig_cc_sc.update_layout(
+                xaxis_title="Qtd. Requisições (SCs)", yaxis_title="Centro de Custo",
+                plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                margin=dict(l=5, r=20, t=10, b=10), height=350,
+                xaxis=dict(showgrid=True, gridcolor='#e2e8f0', tickfont=dict(size=11)),
+                yaxis=dict(type='category', tickfont=dict(size=11, family='Arial Black'))
+            )
+            st.plotly_chart(fig_cc_sc, use_container_width=True)
+
+        # ==========================================
+        # PASSO 3: SEGUNDA LINHA DE GRÁFICOS (STATUS SLA + ITENS CRÍTICOS)
+        # ==========================================
+        st.markdown("---")
+        row2_c1, row2_c2 = st.columns(2)
+
+        with row2_c1:
+            st.markdown('<div class="section-header">STATUS DE PRAZO DE SLA (EM ABERTO)</div>', unsafe_allow_html=True)
             if col_status:
                 status_count = df_aberto.groupby(col_status).size().reset_index(name='Quantidade').sort_values(by='Quantidade', ascending=False)
                 status_count[col_status] = status_count[col_status].astype(str)
@@ -217,63 +277,22 @@ if uploaded_file is not None:
                     orientation='h',
                     text=status_count['Quantidade'],
                     textposition='outside',
-                    textfont=dict(size=10, color='#1f2937', family='Arial Black'),
+                    textfont=dict(size=12, color='#1f2937', family='Arial Black'),
                     marker_color=cores_status
                 ))
-                
                 fig_status.update_layout(
-                    xaxis_title="Qtd. Solicitações", 
-                    yaxis_title="Status de Prazo",
-                    xaxis_title_font=dict(size=10, family='Arial Black'),
-                    yaxis_title_font=dict(size=10, family='Arial Black'),
-                    plot_bgcolor="rgba(0,0,0,0)",
-                    paper_bgcolor="rgba(0,0,0,0)",
-                    margin=dict(l=2, r=15, t=2, b=2),
-                    height=200,
-                    xaxis=dict(showgrid=True, gridcolor='#e2e8f0', tickfont=dict(size=9)),
-                    yaxis=dict(type='category', tickfont=dict(size=9, family='Arial Black'))
+                    xaxis_title="Qtd. Solicitações", yaxis_title="Status de Prazo",
+                    plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                    margin=dict(l=5, r=20, t=10, b=10), height=350,
+                    xaxis=dict(showgrid=True, gridcolor='#e2e8f0', tickfont=dict(size=11)),
+                    yaxis=dict(type='category', tickfont=dict(size=11, family='Arial Black'))
                 )
                 st.plotly_chart(fig_status, use_container_width=True)
             else:
                 st.info("Coluna STATUS não encontrada.")
 
-        with col_g2:
-            st.markdown('<div class="section-header">TOP 10 CC (VOLUME DE ITENS)</div>', unsafe_allow_html=True)
-            
-            cc_volume = df_aberto.groupby(col_cc).size().reset_index(name='Quantidade').sort_values(by='Quantidade', ascending=False).head(10)
-            cc_volume[col_cc] = cc_volume[col_cc].astype(str)
-            
-            cores_barras = ['#3273a8'] + ['#ed8034'] * (len(cc_volume) - 1)
-            cc_volume = cc_volume.sort_values(by='Quantidade', ascending=True)
-            cores_barras = cores_barras[::-1]
-
-            fig1 = go.Figure(go.Bar(
-                x=cc_volume['Quantidade'],
-                y=cc_volume[col_cc],
-                orientation='h',
-                text=cc_volume['Quantidade'],
-                textposition='outside',
-                textfont=dict(size=10, color='#1f2937', family='Arial Black'),
-                marker_color=cores_barras
-            ))
-            
-            fig1.update_layout(
-                xaxis_title="Qtd. Itens", 
-                yaxis_title="Centro de Custo",
-                xaxis_title_font=dict(size=10, family='Arial Black'),
-                yaxis_title_font=dict(size=10, family='Arial Black'),
-                plot_bgcolor="rgba(0,0,0,0)",
-                paper_bgcolor="rgba(0,0,0,0)",
-                margin=dict(l=2, r=15, t=2, b=2),
-                height=200,
-                xaxis=dict(showgrid=True, gridcolor='#e2e8f0', tickfont=dict(size=9)),
-                yaxis=dict(type='category', tickfont=dict(size=9, family='Arial Black'))
-            )
-            st.plotly_chart(fig1, use_container_width=True)
-
-        with col_tabela:
-            st.markdown('<div class="section-header">ITENS CRÍTICOS (MAIORES SLAS)</div>', unsafe_allow_html=True)
-            
+        with row2_c2:
+            st.markdown('<div class="section-header">ITENS CRÍTICOS (MAIORES SLAS EM ATRASO)</div>', unsafe_allow_html=True)
             top_critical = criticos_df.sort_values(by='Days', ascending=False)[[col_sc, col_cc, 'Days']].head(10)
             top_critical.columns = ['Nº SC', 'C. CUSTO', 'ATRASO']
             top_critical['Nº SC'] = top_critical['Nº SC'].astype(str)
@@ -283,16 +302,16 @@ if uploaded_file is not None:
             st.dataframe(
                 top_critical, 
                 use_container_width=True,
-                height=200,
+                height=350,
                 hide_index=True
             )
 
         st.markdown("""
-        <hr style='margin: 4px 0px;'>
-        <div style="font-size: 0.85rem; color: #4a5568; display: flex; justify-content: space-between; font-weight: 700;">
+        <hr style='margin: 15px 0px 8px 0px;'>
+        <div style="font-size: 1.05rem; color: #4a5568; display: flex; justify-content: space-between; font-weight: 700;">
             <span><b style="color: #e53e3e;">→ Alerta Crítico:</b> Backlog superior a 20 dias</span>
-            <span><b style="color: #3273a8;">→ Status de Prazo:</b> Reflete regras de SLA (3d úteis emergencial / 15d rotineira)</span>
-            <span><b style="color: #388e3c;">Metodologia:</b> Contagem Protheus (6 dígitos, exceto Finalizados)</span>
+            <span><b style="color: #3273a8;">→ Status de Prazo:</b> SLA (3d úteis emergencial / 15d corridos rotineira)</span>
+            <span><b style="color: #388e3c;">Metodologia:</b> Contagem consolidada Protheus (6 dígitos)</span>
         </div>
         """, unsafe_allow_html=True)
 
