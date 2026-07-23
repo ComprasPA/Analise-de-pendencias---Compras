@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import datetime
 import plotly.graph_objects as go
+import os
 
 # 1. CONFIGURAÇÃO DA PÁGINA (Wide com barra de rolagem habilitada)
 st.set_page_config(layout="wide", page_title="Panorama Executivo de Suprimentos")
@@ -83,7 +84,7 @@ st.markdown("""
 st.markdown("### ⚙️ Painel Executivo de Suprimentos - Configurações")
 col_up1, col_up2 = st.columns([3, 1])
 with col_up1:
-    uploaded_file = st.file_uploader("Faça o upload do arquivo de pendências (.xlsx / .csv)", type=["xlsx", "xls", "csv"])
+    uploaded_file = st.file_uploader("Faça o upload do arquivo de pendências (.xlsx / .csv) para atualizar a base", type=["xlsx", "xls", "csv"])
 with col_up2:
     data_base = st.date_input("Data base para cálculo de SLA:", datetime.date.today())
 
@@ -101,17 +102,41 @@ MAPA_COMPRADORES = {
 }
 
 # ==========================================
-# PROCESSAMENTO ANALÍTICO DE DADOS
+# PROCESSAMENTO ANALÍTICO DE DADOS (MEMÓRIA GLOBAL)
 # ==========================================
+ARQUIVO_MEMORIA = "base_ativa_painel.xlsx"
+df = None
+
+# 1. Se o usuário acabou de fazer um upload
 if uploaded_file is not None:
     try:
+        # Salva o arquivo fisicamente no servidor para os próximos acessos
+        with open(ARQUIVO_MEMORIA, "wb") as f:
+            f.write(uploaded_file.getbuffer())
+        st.success("✅ Base atualizada com sucesso! Esta base agora é a padrão para todos os usuários.")
+        
         if uploaded_file.name.endswith('.csv'):
             df = pd.read_csv(uploaded_file, sep=None, engine='python', encoding='utf-8')
         else:
             xls = pd.ExcelFile(uploaded_file)
             sheet_name = 'Solicitações' if 'Solicitações' in xls.sheet_names else xls.sheet_names[0]
             df = pd.read_excel(uploaded_file, sheet_name=sheet_name)
-            
+    except Exception as e:
+        st.error(f"Erro ao ler o arquivo enviado: {e}")
+
+# 2. Se não tem upload agora, busca o arquivo salvo no servidor
+elif os.path.exists(ARQUIVO_MEMORIA):
+    try:
+        xls = pd.ExcelFile(ARQUIVO_MEMORIA)
+        sheet_name = 'Solicitações' if 'Solicitações' in xls.sheet_names else xls.sheet_names[0]
+        df = pd.read_excel(ARQUIVO_MEMORIA, sheet_name=sheet_name)
+        st.info("📌 Exibindo a última base de dados atualizada no sistema.")
+    except Exception as e:
+        st.error(f"Erro ao ler a base salva no servidor: {e}")
+
+# 3. Executa a construção do painel apenas se o df foi carregado
+if df is not None:
+    try:
         df.columns = df.columns.astype(str).str.strip()
 
         col_status = 'STATUS' if 'STATUS' in df.columns else None
@@ -124,7 +149,7 @@ if uploaded_file is not None:
             st.error(f"⚠️ Erro: Colunas essenciais não encontradas. Colunas disponíveis: {list(df.columns)}")
             st.stop()
 
-        # Converte a coluna de data para o dataframe geral, garantindo filtros de período precisos
+        # Converte a data para lidar com a regra do Luiz
         if col_dt:
             df[col_dt] = pd.to_datetime(df[col_dt], errors='coerce')
 
@@ -346,7 +371,7 @@ if uploaded_file is not None:
                     st.markdown("<div style='text-align: center; font-size: 0.75rem; font-weight: bold; color: #e53e3e; margin-bottom: 8px;'>*(Análise iniciada em 01/07/2026)</div>", unsafe_allow_html=True)
                     df_comp_total = df_comp_total[df_comp_total[col_dt] >= pd.to_datetime('2026-07-01')]
                 else:
-                    st.markdown("<div style='text-align: center; font-size: 0.75rem; color: transparent; margin-bottom: 8px;'>.</div>", unsafe_allow_html=True) # Espaçador invisível para alinhar os gráficos
+                    st.markdown("<div style='text-align: center; font-size: 0.75rem; color: transparent; margin-bottom: 8px;'>.</div>", unsafe_allow_html=True)
                 
                 if not df_comp_total.empty and 'Status_Detalhado' in df_comp_total.columns:
                     
@@ -416,12 +441,12 @@ if uploaded_file is not None:
         st.markdown("""
         <hr style='margin: 15px 0px 8px 0px;'>
         <div style="font-size: 1.05rem; color: #4a5568; display: flex; justify-content: space-between; font-weight: 700;">
-            <span><b style="color: #2b4c7e;">→ Performance (Rendimento):</b> Velocímetro individual calcula (Itens Atendidos / Total Emitido).</span>
-            <span><b style="color: #388e3c;">Metodologia:</b> Status mapeados diretamente da base Protheus.</span>
+            <span><b style="color: #2b4c7e;">→ Base Salva:</b> O último arquivo enviado fica salvo como base de consulta para toda a equipe.</span>
+            <span><b style="color: #388e3c;">Metodologia:</b> Gráficos atualizados via integração analítica Protheus.</span>
         </div>
         """, unsafe_allow_html=True)
 
     except Exception as e:
         st.error(f"⚠️ Erro analítico no processamento. Detalhe técnico: {e}")
 else:
-    st.info("💡 Faça o upload do arquivo de pendências (`.xlsx` ou `.csv`) no topo da página para carregar o panorama executivo.")
+    st.info("💡 Faça o upload do arquivo de pendências (`.xlsx` ou `.csv`) no topo da página para iniciar a base de dados.")
