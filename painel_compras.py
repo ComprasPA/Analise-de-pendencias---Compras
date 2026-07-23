@@ -124,6 +124,10 @@ if uploaded_file is not None:
             st.error(f"⚠️ Erro: Colunas essenciais não encontradas. Colunas disponíveis: {list(df.columns)}")
             st.stop()
 
+        # Converte a coluna de data para o dataframe geral, garantindo filtros de período precisos
+        if col_dt:
+            df[col_dt] = pd.to_datetime(df[col_dt], errors='coerce')
+
         # Tratamento Compradores
         df['CC_clean'] = df[col_cc].astype(str).str.split('.').str[0].str.strip()
         df['Comprador_Resp'] = df['CC_clean'].map(MAPA_COMPRADORES).fillna('Não Mapeado / Outros')
@@ -145,7 +149,6 @@ if uploaded_file is not None:
         df_aberto[col_sc] = df_aberto[col_sc].astype(str).str.split('.').str[0].str.zfill(6)
 
         hoje = pd.to_datetime(data_base)
-        df_aberto[col_dt] = pd.to_datetime(df_aberto[col_dt], errors='coerce')
         df_aberto['Days'] = (hoje - df_aberto[col_dt]).dt.days
 
         total_linhas_aberto = len(df_aberto) 
@@ -333,10 +336,17 @@ if uploaded_file is not None:
         
         for comp, col_st in zip(compradores, colunas_st):
             with col_st:
-                st.markdown(f'<div style="text-align: center; font-weight: bold; font-size: 1.15rem; margin-bottom: 5px; color: #1f3b58;">👤 {comp}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div style="text-align: center; font-weight: bold; font-size: 1.15rem; margin-bottom: 2px; color: #1f3b58;">👤 {comp}</div>', unsafe_allow_html=True)
                 
                 # Base total do comprador (Finalizadas + Pendentes)
                 df_comp_total = df[df['Comprador_Resp'] == comp].copy()
+                
+                # ------ REGRA DE EXCEÇÃO: LUIZ APENAS A PARTIR DE 01/07/2026 ------
+                if comp == 'Luiz' and col_dt in df_comp_total.columns:
+                    st.markdown("<div style='text-align: center; font-size: 0.75rem; font-weight: bold; color: #e53e3e; margin-bottom: 8px;'>*(Análise iniciada em 01/07/2026)</div>", unsafe_allow_html=True)
+                    df_comp_total = df_comp_total[df_comp_total[col_dt] >= pd.to_datetime('2026-07-01')]
+                else:
+                    st.markdown("<div style='text-align: center; font-size: 0.75rem; color: transparent; margin-bottom: 8px;'>.</div>", unsafe_allow_html=True) # Espaçador invisível para alinhar os gráficos
                 
                 if not df_comp_total.empty and 'Status_Detalhado' in df_comp_total.columns:
                     
