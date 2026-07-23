@@ -79,7 +79,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# PAINEL DE CONFIGURAÇÕES (Sempre visível para upload)
+# PAINEL DE CONFIGURAÇÕES
 # ==========================================
 st.markdown("### ⚙️ Painel Executivo de Suprimentos - Configurações")
 col_up1, col_up2 = st.columns([3, 1])
@@ -89,6 +89,20 @@ with col_up2:
     data_base = st.date_input("Data base para cálculo de SLA:", datetime.date.today())
 
 st.markdown("---")
+
+# ==========================================
+# MAPEAMENTO DOS COMPRADORES POR CENTRO DE CUSTO
+# ==========================================
+MAPA_COMPRADORES = {
+    # Ednilson (Comp 01)
+    '1225': 'Ednilson', '1235': 'Ednilson', '1244': 'Ednilson', '1241': 'Ednilson', '1236': 'Ednilson',
+    # Dayana (Comp 02)
+    '1238': 'Dayana', '1243': 'Dayana', '1217': 'Dayana', '1237': 'Dayana',
+    # Luiz (Comp 03)
+    '1223': 'Luiz', '1240': 'Luiz', '9001': 'Luiz', '2003': 'Luiz', '2002': 'Luiz', '2001': 'Luiz',
+    '3003': 'Luiz', '2010': 'Luiz', '3007': 'Luiz', '3010': 'Luiz', '3000': 'Luiz', '3002': 'Luiz',
+    '3006': 'Luiz', '1239': 'Luiz', '3013': 'Luiz', '3024': 'Luiz'
+}
 
 # ==========================================
 # PROCESSAMENTO ANALÍTICO DE DADOS
@@ -114,12 +128,19 @@ if uploaded_file is not None:
             st.error(f"⚠️ Erro: Colunas essenciais não encontradas. Colunas disponíveis: {list(df.columns)}")
             st.stop()
 
-        # Considerar apenas solicitações que NÃO estejam com status 'FINALIZADO'
-        if col_status:
-            df_aberto = df[df[col_status].astype(str).str.strip().str.upper() != 'FINALIZADO'].copy()
-        else:
-            df_aberto = df.copy()
+        # Tratamento do Centro de Custo para String Limpa (remove decimais .0 e espaços)
+        df['CC_clean'] = df[col_cc].astype(str).str.split('.').str[0].str.strip()
+        
+        # Mapeamento do Comprador
+        df['Comprador_Resp'] = df['CC_clean'].map(MAPA_COMPRADORES).fillna('Não Mapeado / Outros')
+        
+        # Status Simplificado (Atendidas vs Pendentes)
+        df['Status_Simplificado'] = df[col_status].apply(
+            lambda x: 'Atendidas' if str(x).strip().upper() == 'FINALIZADO' else 'Pendentes'
+        )
 
+        # Base para gráficos de Backlog (Sem as Finalizadas)
+        df_aberto = df[df['Status_Simplificado'] == 'Pendentes'].copy()
         df_aberto = df_aberto.dropna(subset=[col_sc])
         df_aberto[col_sc] = df_aberto[col_sc].astype(str).str.split('.').str[0].str.zfill(6)
 
@@ -169,19 +190,16 @@ if uploaded_file is not None:
             return fig
 
         gauge_col1, gauge_col2, gauge_col3 = st.columns(3)
-
         with gauge_col1:
             max_sc = max(total_sc_unicas_aberto * 1.5, 10)
             fig1 = criar_gauge("TOTAL DE REQUISIÇÕES (ÚNICAS ABERTAS)", total_sc_unicas_aberto, max_sc, "#2b6cb0")
             st.plotly_chart(fig1, use_container_width=True)
             st.markdown(f"<div class='gauge-footer'>Volume Bruto: <b>{total_linhas_aberto} itens</b></div>", unsafe_allow_html=True)
-
         with gauge_col2:
             max_backlog = max(total_sc_unicas_aberto, 10)
             fig2 = criar_gauge("BACKLOG CRÍTICO (>=20 DIAS)", backlog_critico, max_backlog, "#e53e3e")
             st.plotly_chart(fig2, use_container_width=True)
             st.markdown(f"<div class='gauge-footer' style='color: #e53e3e;'><b>{(backlog_critico/total_sc_unicas_aberto*100 if total_sc_unicas_aberto > 0 else 0):.1f}%</b> das SCs ativas</div>", unsafe_allow_html=True)
-
         with gauge_col3:
             fig3 = criar_gauge("TAXA DE ATENDIMENTO / SAÚDE", round(taxa_atendimento_val, 1), 100, "#388e3c", sufixo="%")
             st.plotly_chart(fig3, use_container_width=True)
@@ -190,7 +208,7 @@ if uploaded_file is not None:
         st.markdown("<br>", unsafe_allow_html=True)
 
         # ==========================================
-        # PASSO 2: PRIMEIRA LINHA DE GRÁFICOS (TOP 10 ITENS + TOP 10 REQUISIÇÕES)
+        # PASSO 2: PRIMEIRA LINHA (TOP 10 CC)
         # ==========================================
         st.markdown("---")
         row1_c1, row1_c2 = st.columns(2)
@@ -201,24 +219,20 @@ if uploaded_file is not None:
             cc_volume[col_cc] = cc_volume[col_cc].astype(str)
             
             cores_barras = ['#3273a8'] + ['#ed8034'] * (len(cc_volume) - 1)
-            cc_volume = cc_volume.sort_values(by='Quantidade', ascending=True)
-            cores_barras = cores_barras[::-1]
-
             fig_cc_it = go.Figure(go.Bar(
-                x=cc_volume['Quantidade'],
-                y=cc_volume[col_cc],
+                x=cc_volume.sort_values(by='Quantidade', ascending=True)['Quantidade'],
+                y=cc_volume.sort_values(by='Quantidade', ascending=True)[col_cc],
                 orientation='h',
-                text=cc_volume['Quantidade'],
+                text=cc_volume.sort_values(by='Quantidade', ascending=True)['Quantidade'],
                 textposition='outside',
                 textfont=dict(size=12, color='#1f2937', family='Arial Black'),
-                marker_color=cores_barras
+                marker_color=cores_barras[::-1]
             ))
             fig_cc_it.update_layout(
                 xaxis_title="Qtd. Itens", yaxis_title="Centro de Custo",
                 plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
                 margin=dict(l=5, r=20, t=10, b=10), height=350,
-                xaxis=dict(showgrid=True, gridcolor='#e2e8f0', tickfont=dict(size=11)),
-                yaxis=dict(type='category', tickfont=dict(size=11, family='Arial Black'))
+                xaxis=dict(showgrid=True, gridcolor='#e2e8f0'), yaxis=dict(type='category', tickfont=dict(family='Arial Black'))
             )
             st.plotly_chart(fig_cc_it, use_container_width=True)
 
@@ -228,29 +242,25 @@ if uploaded_file is not None:
             cc_scs[col_cc] = cc_scs[col_cc].astype(str)
             
             cores_barras_sc = ['#2b6cb0'] + ['#319795'] * (len(cc_scs) - 1)
-            cc_scs = cc_scs.sort_values(by='Qtd_SCs', ascending=True)
-            cores_barras_sc = cores_barras_sc[::-1]
-
             fig_cc_sc = go.Figure(go.Bar(
-                x=cc_scs['Qtd_SCs'],
-                y=cc_scs[col_cc],
+                x=cc_scs.sort_values(by='Qtd_SCs', ascending=True)['Qtd_SCs'],
+                y=cc_scs.sort_values(by='Qtd_SCs', ascending=True)[col_cc],
                 orientation='h',
-                text=cc_scs['Qtd_SCs'],
+                text=cc_scs.sort_values(by='Qtd_SCs', ascending=True)['Qtd_SCs'],
                 textposition='outside',
                 textfont=dict(size=12, color='#1f2937', family='Arial Black'),
-                marker_color=cores_barras_sc
+                marker_color=cores_barras_sc[::-1]
             ))
             fig_cc_sc.update_layout(
                 xaxis_title="Qtd. Requisições (SCs)", yaxis_title="Centro de Custo",
                 plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
                 margin=dict(l=5, r=20, t=10, b=10), height=350,
-                xaxis=dict(showgrid=True, gridcolor='#e2e8f0', tickfont=dict(size=11)),
-                yaxis=dict(type='category', tickfont=dict(size=11, family='Arial Black'))
+                xaxis=dict(showgrid=True, gridcolor='#e2e8f0'), yaxis=dict(type='category', tickfont=dict(family='Arial Black'))
             )
             st.plotly_chart(fig_cc_sc, use_container_width=True)
 
         # ==========================================
-        # PASSO 3: SEGUNDA LINHA DE GRÁFICOS (STATUS SLA + ITENS CRÍTICOS)
+        # PASSO 3: SEGUNDA LINHA (STATUS SLA E ITENS CRÍTICOS)
         # ==========================================
         st.markdown("---")
         row2_c1, row2_c2 = st.columns(2)
@@ -262,111 +272,93 @@ if uploaded_file is not None:
                 status_count[col_status] = status_count[col_status].astype(str)
                 status_count = status_count.sort_values(by='Quantidade', ascending=True)
                 
-                cores_status = []
-                for s in status_count[col_status]:
-                    if 'FORA' in s.upper():
-                        cores_status.append('#e53e3e')
-                    elif 'ATENÇÃO' in s.upper():
-                        cores_status.append('#d97706')
-                    else:
-                        cores_status.append('#388e3c')
-
+                cores_status = ['#e53e3e' if 'FORA' in s.upper() else '#d97706' if 'ATENÇÃO' in s.upper() else '#388e3c' for s in status_count[col_status]]
                 fig_status = go.Figure(go.Bar(
-                    x=status_count['Quantidade'],
-                    y=status_count[col_status],
-                    orientation='h',
-                    text=status_count['Quantidade'],
-                    textposition='outside',
-                    textfont=dict(size=12, color='#1f2937', family='Arial Black'),
-                    marker_color=cores_status
+                    x=status_count['Quantidade'], y=status_count[col_status], orientation='h',
+                    text=status_count['Quantidade'], textposition='outside', textfont=dict(size=12, family='Arial Black'), marker_color=cores_status
                 ))
                 fig_status.update_layout(
-                    xaxis_title="Qtd. Solicitações", yaxis_title="Status de Prazo",
-                    plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-                    margin=dict(l=5, r=20, t=10, b=10), height=350,
-                    xaxis=dict(showgrid=True, gridcolor='#e2e8f0', tickfont=dict(size=11)),
-                    yaxis=dict(type='category', tickfont=dict(size=11, family='Arial Black'))
+                    xaxis_title="Qtd. Solicitações", yaxis_title="Status",
+                    plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=350,
+                    margin=dict(l=5, r=20, t=10, b=10), xaxis=dict(showgrid=True, gridcolor='#e2e8f0'), yaxis=dict(type='category', tickfont=dict(family='Arial Black'))
                 )
                 st.plotly_chart(fig_status, use_container_width=True)
-            else:
-                st.info("Coluna STATUS não encontrada.")
 
         with row2_c2:
             st.markdown('<div class="section-header">ITENS CRÍTICOS (MAIORES SLAS EM ATRASO)</div>', unsafe_allow_html=True)
             top_critical = criticos_df.sort_values(by='Days', ascending=False)[[col_sc, col_cc, 'Days']].head(10)
             top_critical.columns = ['Nº SC', 'C. CUSTO', 'ATRASO']
-            top_critical['Nº SC'] = top_critical['Nº SC'].astype(str)
-            top_critical['C. CUSTO'] = top_critical['C. CUSTO'].astype(str)
             top_critical['ATRASO'] = top_critical['ATRASO'].astype(str) + " DIAS 🔥"
-
-            st.dataframe(
-                top_critical, 
-                use_container_width=True,
-                height=350,
-                hide_index=True
-            )
+            st.dataframe(top_critical, use_container_width=True, height=350, hide_index=True)
 
         # ==========================================
-        # PASSO 4: TERCEIRA LINHA (CRUZAMENTO CRITICIDADE VS STATUS)
+        # PASSO 4: TERCEIRA LINHA (DESEMPENHO COMPRADORES & CRITICIDADE FILTRADA)
         # ==========================================
         st.markdown("---")
-        st.markdown('<div class="section-header">DISTRIBUIÇÃO DETALHADA: CRITICIDADE VS. STATUS DE PRAZO</div>', unsafe_allow_html=True)
-        
-        if col_criticidade and col_status:
-            # Agrupar dados por Criticidade e Status
-            df_crit_stat = df_aberto.groupby([col_criticidade, col_status]).size().reset_index(name='Quantidade')
-            
-            # Mapeamento de cores padronizado para os status
-            color_map = {
-                'NO PRAZO': '#388e3c',
-                'ATENÇÃO': '#d97706',
-                'FORA DO PRAZO': '#e53e3e'
-            }
-            
-            fig_crit_stat = go.Figure()
-            
-            # Adicionar uma barra para cada status (No Prazo, Atenção, Fora do Prazo) agrupando por Criticidade
-            for status_val in ['NO PRAZO', 'ATENÇÃO', 'FORA DO PRAZO']:
-                df_sub = df_crit_stat[df_crit_stat[col_status].str.upper() == status_val]
-                
-                if not df_sub.empty:
-                    fig_crit_stat.add_trace(go.Bar(
-                        x=df_sub[col_criticidade],
-                        y=df_sub['Quantidade'],
-                        name=status_val.title(),
-                        marker_color=color_map.get(status_val, '#718096'),
-                        text=df_sub['Quantidade'],
-                        textposition='auto',
-                        textfont=dict(size=12, color='white', family='Arial Black')
-                    ))
-            
-            fig_crit_stat.update_layout(
-                barmode='group',
-                xaxis_title="Classificação de Criticidade (Emergencial, Rotineira, etc.)",
-                yaxis_title="Qtd. Solicitações",
-                plot_bgcolor="rgba(0,0,0,0)",
-                paper_bgcolor="rgba(0,0,0,0)",
-                margin=dict(l=10, r=10, t=10, b=10),
-                height=400,
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(family='Arial Black')),
-                xaxis=dict(showgrid=False, tickfont=dict(size=12, family='Arial Black')),
-                yaxis=dict(showgrid=True, gridcolor='#e2e8f0', tickfont=dict(size=11))
-            )
-            
-            st.plotly_chart(fig_crit_stat, use_container_width=True)
-        else:
-            st.info("Colunas CRITICIDADE ou STATUS não encontradas.")
+        row3_c1, row3_c2 = st.columns(2)
 
-        st.markdown("""
-        <hr style='margin: 15px 0px 8px 0px;'>
-        <div style="font-size: 1.05rem; color: #4a5568; display: flex; justify-content: space-between; font-weight: 700;">
-            <span><b style="color: #e53e3e;">→ Alerta Crítico:</b> Backlog superior a 20 dias</span>
-            <span><b style="color: #3273a8;">→ Status e Criticidade:</b> SLA (3d úteis emergencial / 15d corridos rotineira)</span>
-            <span><b style="color: #388e3c;">Metodologia:</b> Contagem consolidada Protheus (Excluindo Finalizados)</span>
-        </div>
-        """, unsafe_allow_html=True)
+        with row3_c1:
+            st.markdown('<div class="section-header">DESEMPENHO POR COMPRADOR (ATENDIDAS VS PENDENTES)</div>', unsafe_allow_html=True)
+            
+            # Base total de compradores nomeados (ignorando não mapeados para o visual ficar limpo)
+            df_compradores = df[df['Comprador_Resp'] != 'Não Mapeado / Outros'].copy()
+            
+            if not df_compradores.empty:
+                comp_stats = df_compradores.groupby(['Comprador_Resp', 'Status_Simplificado']).size().reset_index(name='Quantidade')
+                fig_comp = go.Figure()
+                
+                color_status_map = {'Atendidas': '#2b6cb0', 'Pendentes': '#ed8034'}
+                for status_val in ['Atendidas', 'Pendentes']:
+                    df_sub = comp_stats[comp_stats['Status_Simplificado'] == status_val]
+                    if not df_sub.empty:
+                        fig_comp.add_trace(go.Bar(
+                            x=df_sub['Comprador_Resp'], y=df_sub['Quantidade'], name=status_val,
+                            marker_color=color_status_map.get(status_val),
+                            text=df_sub['Quantidade'], textposition='auto', textfont=dict(size=12, color='white', family='Arial Black')
+                        ))
+                
+                fig_comp.update_layout(
+                    barmode='group', xaxis_title="Compradores", yaxis_title="Volume Total",
+                    plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=400,
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(family='Arial Black')),
+                    xaxis=dict(showgrid=False, tickfont=dict(size=12, family='Arial Black')), yaxis=dict(showgrid=True, gridcolor='#e2e8f0')
+                )
+                st.plotly_chart(fig_comp, use_container_width=True)
+            else:
+                st.info("Nenhum item localizado com os centros de custo dos compradores mapeados.")
+
+        with row3_c2:
+            st.markdown('<div class="section-header">CRITICIDADE VS STATUS (ROTINEIRA E EMERGENCIAL)</div>', unsafe_allow_html=True)
+            if col_criticidade and col_status:
+                # Filtrar apenas Rotineira e Emergencial
+                df_crit_stat = df_aberto[df_aberto[col_criticidade].astype(str).str.upper().isin(['ROTINEIRA', 'EMERGENCIAL'])]
+                
+                if not df_crit_stat.empty:
+                    crit_stats = df_crit_stat.groupby([col_criticidade, col_status]).size().reset_index(name='Quantidade')
+                    
+                    color_map = {'NO PRAZO': '#388e3c', 'ATENÇÃO': '#d97706', 'FORA DO PRAZO': '#e53e3e'}
+                    fig_crit_stat = go.Figure()
+                    
+                    for status_val in ['NO PRAZO', 'ATENÇÃO', 'FORA DO PRAZO']:
+                        df_sub = crit_stats[crit_stats[col_status].str.upper() == status_val]
+                        if not df_sub.empty:
+                            fig_crit_stat.add_trace(go.Bar(
+                                x=df_sub[col_criticidade], y=df_sub['Quantidade'], name=status_val.title(),
+                                marker_color=color_map.get(status_val, '#718096'),
+                                text=df_sub['Quantidade'], textposition='auto', textfont=dict(size=12, color='white', family='Arial Black')
+                            ))
+                    
+                    fig_crit_stat.update_layout(
+                        barmode='group', xaxis_title="Classificação", yaxis_title="Qtd. Solicitações em Aberto",
+                        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=400,
+                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(family='Arial Black')),
+                        xaxis=dict(showgrid=False, tickfont=dict(size=12, family='Arial Black')), yaxis=dict(showgrid=True, gridcolor='#e2e8f0')
+                    )
+                    st.plotly_chart(fig_crit_stat, use_container_width=True)
+                else:
+                    st.info("Nenhuma solicitação Rotineira ou Emergencial em aberto.")
 
     except Exception as e:
-        st.error(f"⚠️ Erro analítico no processamento do arquivo. Detalhe técnico: {e}")
+        st.error(f"⚠️ Erro analítico no processamento. Detalhe técnico: {e}")
 else:
     st.info("💡 Faça o upload do arquivo de pendências (`.xlsx` ou `.csv`) no topo da página para carregar o panorama executivo.")
