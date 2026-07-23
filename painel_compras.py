@@ -294,60 +294,83 @@ if uploaded_file is not None:
                     st.plotly_chart(fig_crit_stat, use_container_width=True)
 
         # ==========================================
-        # PASSO 4: DESEMPENHO POR COMPRADOR (PERCENTUAIS)
+        # PASSO 4: DESEMPENHO POR COMPRADOR (BACKLOG EM ABERTO)
         # ==========================================
         st.markdown("---")
-        st.markdown('<div class="section-header" style="background-color: #2b4c7e;">DESEMPENHO INDIVIDUAL POR COMPRADOR (% DO TOTAL)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header" style="background-color: #2b4c7e;">DESEMPENHO INDIVIDUAL POR COMPRADOR (% DO BACKLOG EM ABERTO)</div>', unsafe_allow_html=True)
         
         row4_c1, row4_c2, row4_c3 = st.columns(3)
         compradores = ['Ednilson', 'Dayana', 'Luiz']
         colunas_st = [row4_c1, row4_c2, row4_c3]
         
-        color_status_map = {'Atendidas': '#2b6cb0', 'No Prazo': '#388e3c', 'Atenção': '#d97706', 'Fora do Prazo': '#e53e3e'}
-        ordem_status = ['Fora do Prazo', 'Atenção', 'No Prazo', 'Atendidas'] # Ordem para exibir de cima para baixo
+        # Mapa de cores apenas para os status pendentes
+        color_status_map = {'No Prazo': '#388e3c', 'Atenção': '#d97706', 'Fora do Prazo': '#e53e3e'}
+        ordem_status_aberto = ['Fora do Prazo', 'Atenção', 'No Prazo']
         
         for comp, col_st in zip(compradores, colunas_st):
             with col_st:
-                st.markdown(f'<div style="text-align: center; font-weight: bold; font-size: 1.1rem; margin-bottom: 5px; color: #1f3b58;">👤 {comp}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div style="text-align: center; font-weight: bold; font-size: 1.15rem; margin-bottom: 5px; color: #1f3b58;">👤 {comp}</div>', unsafe_allow_html=True)
                 
-                df_comp = df[df['Comprador_Resp'] == comp].copy()
-                if not df_comp.empty and 'Status_Detalhado' in df_comp.columns:
-                    comp_stats = df_comp.groupby('Status_Detalhado').size().reset_index(name='Quantidade')
-                    total_comp = comp_stats['Quantidade'].sum()
-                    comp_stats['Percentual'] = (comp_stats['Quantidade'] / total_comp * 100).round(1)
+                # Resgatar a base total deste comprador específico
+                df_comp_total = df[df['Comprador_Resp'] == comp].copy()
+                
+                if not df_comp_total.empty and 'Status_Detalhado' in df_comp_total.columns:
                     
-                    # Garante a ordem correta no gráfico
-                    comp_stats['Status_Detalhado'] = pd.Categorical(comp_stats['Status_Detalhado'], categories=ordem_status, ordered=True)
-                    comp_stats = comp_stats.sort_values('Status_Detalhado')
+                    # Contagem para o Rodapé Informativo (Atendidas)
+                    qtd_atendidas = len(df_comp_total[df_comp_total['Status_Detalhado'] == 'Atendidas'])
                     
-                    cores = [color_status_map.get(s, '#718096') for s in comp_stats['Status_Detalhado']]
+                    # Filtrar a base estritamente para o que está EM ABERTO
+                    df_comp_aberto = df_comp_total[df_comp_total['Status_Detalhado'] != 'Atendidas'].copy()
                     
-                    fig_comp_ind = go.Figure(go.Bar(
-                        x=comp_stats['Percentual'],
-                        y=comp_stats['Status_Detalhado'],
-                        orientation='h',
-                        text=comp_stats['Percentual'].astype(str) + '%',
-                        textposition='outside',
-                        textfont=dict(size=12, family='Arial Black'),
-                        marker_color=cores
-                    ))
+                    if not df_comp_aberto.empty:
+                        comp_stats = df_comp_aberto.groupby('Status_Detalhado').size().reset_index(name='Quantidade')
+                        
+                        # Total em aberto para recalcular os 100%
+                        total_aberto = comp_stats['Quantidade'].sum()
+                        comp_stats['Percentual'] = (comp_stats['Quantidade'] / total_aberto * 100).round(1)
+                        
+                        # Garantir a ordem das barras
+                        comp_stats['Status_Detalhado'] = pd.Categorical(comp_stats['Status_Detalhado'], categories=ordem_status_aberto, ordered=True)
+                        comp_stats = comp_stats.sort_values('Status_Detalhado')
+                        
+                        cores = [color_status_map.get(s, '#718096') for s in comp_stats['Status_Detalhado']]
+                        
+                        fig_comp_ind = go.Figure(go.Bar(
+                            x=comp_stats['Percentual'],
+                            y=comp_stats['Status_Detalhado'],
+                            orientation='h',
+                            text=comp_stats['Percentual'].astype(str) + '%',
+                            textposition='outside',
+                            textfont=dict(size=12, family='Arial Black'),
+                            marker_color=cores
+                        ))
+                        
+                        fig_comp_ind.update_layout(
+                            xaxis_title="Percentual (%) do Backlog Pendente", yaxis_title="",
+                            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=250,
+                            margin=dict(l=5, r=30, t=10, b=10),
+                            xaxis=dict(showgrid=True, gridcolor='#e2e8f0', range=[0, max(comp_stats['Percentual'].max() * 1.2, 100)]), 
+                            yaxis=dict(type='category', tickfont=dict(family='Arial Black', size=11))
+                        )
+                        st.plotly_chart(fig_comp_ind, use_container_width=True)
+                    else:
+                        st.info(f"Fila limpa! Nenhuma solicitação pendente para {comp}.")
                     
-                    fig_comp_ind.update_layout(
-                        xaxis_title="Percentual (%)", yaxis_title="",
-                        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=280,
-                        margin=dict(l=5, r=30, t=10, b=10),
-                        xaxis=dict(showgrid=True, gridcolor='#e2e8f0', range=[0, max(comp_stats['Percentual'].max() * 1.2, 100)]), 
-                        yaxis=dict(type='category', tickfont=dict(family='Arial Black', size=11))
-                    )
-                    st.plotly_chart(fig_comp_ind, use_container_width=True)
+                    # Rodapé com as Atendidas
+                    st.markdown(f"""
+                    <div style='text-align: center; font-size: 0.95rem; color: #2b6cb0; font-weight: bold; background-color: #f1f5f9; padding: 6px; border-radius: 4px; margin-top: -15px;'>
+                        ✅ {qtd_atendidas} Solicitações Atendidas (Finalizadas)
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
                 else:
                     st.info(f"Sem dados mapeados para {comp}.")
 
         st.markdown("""
         <hr style='margin: 15px 0px 8px 0px;'>
         <div style="font-size: 1.05rem; color: #4a5568; display: flex; justify-content: space-between; font-weight: 700;">
-            <span><b style="color: #2b4c7e;">→ Performance:</b> Gráficos individuais consideram o percentual do total distribuído por comprador.</span>
-            <span><b style="color: #388e3c;">Metodologia:</b> Status mapeados diretamente da base Protheus.</span>
+            <span><b style="color: #2b4c7e;">→ Performance:</b> Gráficos percentuais calculados exclusivamente sobre o backlog em aberto.</span>
+            <span><b style="color: #388e3c;">Metodologia:</b> Status mapeados diretamente da base Protheus Parente Andrade.</span>
         </div>
         """, unsafe_allow_html=True)
 
