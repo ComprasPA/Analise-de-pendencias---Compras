@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 st.set_page_config(layout="wide", page_title="Panorama Executivo de Suprimentos")
 
 # ==========================================
-# CSS RESPONSIVO (Ajuste automático para qualquer monitor sem scroll)
+# CSS CUSTOMIZADO (Seguro contra loop de carregamento e limpo)
 # ==========================================
 st.markdown("""
     <style>
@@ -17,20 +17,12 @@ st.markdown("""
         display: none !important;
     }
     
-    html, body, [data-testid="stAppViewContainer"] {
-        height: 100vh;
-        overflow: hidden !important;
-    }
-    
     .block-container {
-        padding-top: 0.2rem !important;
-        padding-bottom: 0.2rem !important;
-        padding-left: 0.8rem !important;
-        padding-right: 0.8rem !important;
+        padding-top: 0.5rem !important;
+        padding-bottom: 0.5rem !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
         max-width: 100% !important;
-        height: 100vh;
-        display: flex;
-        flex-direction: column;
     }
 
     .header-box {
@@ -92,7 +84,7 @@ st.markdown("""
 # ==========================================
 # PAINEL RETRÁTIL (Configurações e Upload)
 # ==========================================
-with st.expander("⚙️ Abrir / Fechar Configurações (Upload de Arquivo e Data Base)", expanded=False):
+with st.expander("⚙️ Abrir / Fechar Configurações (Upload de Arquivo e Data Base)", expanded=True):
     top_c1, top_c2 = st.columns([3, 1])
     with top_c1:
         uploaded_file = st.file_uploader("Upload do arquivo de pendências (.xlsx/.csv)", type=["xlsx", "xls", "csv"])
@@ -201,34 +193,43 @@ if uploaded_file is not None:
             st.markdown(f"<div class='gauge-footer' style='color: #388e3c;'>Dentro do SLA padrão (&lt;20 dias)</div>", unsafe_allow_html=True)
 
         # ==========================================
-        # PASSO 2: RENDERIZAÇÃO DOS GRÁFICOS E TABELA
+        # PASSO 2: RENDERIZAÇÃO DOS GRÁFICOS E TABELA (COM NOVO GRÁFICO DE STATUS DE PRAZO)
         # ==========================================
         st.markdown("<hr style='margin: 4px 0px;'>", unsafe_allow_html=True)
         
-        # 3 colunas: [Gráfico Criticidade] [Gráfico Centros de Custo] [Tabela Itens Críticos]
         col_g1, col_g2, col_tabela = st.columns([1, 1, 1.1])
 
         with col_g1:
-            st.markdown('<div class="section-header">SOLICITAÇÕES POR CRITICIDADE</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-header">STATUS DE PRAZO (SLA) EM ABERTO</div>', unsafe_allow_html=True)
             
-            if col_criticidade:
-                crit_count = df_aberto.groupby(col_criticidade).size().reset_index(name='Quantidade').sort_values(by='Quantidade', ascending=False)
-                crit_count[col_criticidade] = crit_count[col_criticidade].astype(str)
-                crit_count = crit_count.sort_values(by='Quantidade', ascending=True)
+            if col_status:
+                status_count = df_aberto.groupby(col_status).size().reset_index(name='Quantidade').sort_values(by='Quantidade', ascending=False)
+                status_count[col_status] = status_count[col_status].astype(str)
+                status_count = status_count.sort_values(by='Quantidade', ascending=True)
                 
-                fig_crit = go.Figure(go.Bar(
-                    x=crit_count['Quantidade'],
-                    y=crit_count[col_criticidade],
+                # Cores customizadas para os status de prazo
+                cores_status = []
+                for s in status_count[col_status]:
+                    if 'FORA' in s.upper():
+                        cores_status.append('#e53e3e') # Vermelho
+                    elif 'ATENÇÃO' in s.upper():
+                        cores_status.append('#d97706') # Laranja
+                    else:
+                        cores_status.append('#388e3c') # Verde (No Prazo)
+
+                fig_status = go.Figure(go.Bar(
+                    x=status_count['Quantidade'],
+                    y=status_count[col_status],
                     orientation='h',
-                    text=crit_count['Quantidade'],
+                    text=status_count['Quantidade'],
                     textposition='outside',
                     textfont=dict(size=9, color='#1f2937', family='Arial Black'),
-                    marker_color='#d97706'
+                    marker_color=cores_status
                 ))
                 
-                fig_crit.update_layout(
+                fig_status.update_layout(
                     xaxis_title="Qtd. Solicitações", 
-                    yaxis_title="Criticidade",
+                    yaxis_title="Status de Prazo",
                     xaxis_title_font=dict(size=9, family='Arial Black'),
                     yaxis_title_font=dict(size=9, family='Arial Black'),
                     plot_bgcolor="rgba(0,0,0,0)",
@@ -238,9 +239,9 @@ if uploaded_file is not None:
                     xaxis=dict(showgrid=True, gridcolor='#e2e8f0', tickfont=dict(size=8)),
                     yaxis=dict(type='category', tickfont=dict(size=8, family='Arial Black'))
                 )
-                st.plotly_chart(fig_crit, use_container_width=True)
+                st.plotly_chart(fig_status, use_container_width=True)
             else:
-                st.info("Coluna CRITICIDADE não encontrada.")
+                st.info("Coluna STATUS não encontrada.")
 
         with col_g2:
             st.markdown('<div class="section-header">TOP 10 CC (VOLUME DE ITENS)</div>', unsafe_allow_html=True)
@@ -296,8 +297,8 @@ if uploaded_file is not None:
         <hr style='margin: 3px 0px;'>
         <div style="font-size: 0.8rem; color: #4a5568; display: flex; justify-content: space-between; font-weight: 700;">
             <span><b style="color: #e53e3e;">→ Alerta Crítico:</b> Backlog superior a 20 dias</span>
-            <span><b style="color: #3273a8;">→ Indicadores:</b> Distribuição por Criticidade e Centros de Custo (Excluindo Finalizados)</span>
-            <span><b style="color: #388e3c;">Metodologia:</b> Contagem Protheus (6 dígitos)</span>
+            <span><b style="color: #3273a8;">→ Status de Prazo:</b> Reflete regras de SLA (3d úteis emergencial / 15d corridos rotineira)</span>
+            <span><b style="color: #388e3c;">Metodologia:</b> Contagem Protheus (6 dígitos, exceto Finalizados)</span>
         </div>
         """, unsafe_allow_html=True)
 
