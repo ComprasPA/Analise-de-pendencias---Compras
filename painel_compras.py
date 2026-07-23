@@ -134,13 +134,12 @@ if uploaded_file is not None:
         # Mapeamento do Comprador
         df['Comprador_Resp'] = df['CC_clean'].map(MAPA_COMPRADORES).fillna('Não Mapeado / Outros')
         
-        # Status Simplificado (Atendidas vs Pendentes)
-        df['Status_Simplificado'] = df[col_status].apply(
-            lambda x: 'Atendidas' if str(x).strip().upper() == 'FINALIZADO' else 'Pendentes'
-        )
+        # Base para gráficos de Backlog (Apenas em Aberto)
+        if col_status:
+            df_aberto = df[df[col_status].astype(str).str.strip().str.upper() != 'FINALIZADO'].copy()
+        else:
+            df_aberto = df.copy()
 
-        # Base para gráficos de Backlog (Sem as Finalizadas)
-        df_aberto = df[df['Status_Simplificado'] == 'Pendentes'].copy()
         df_aberto = df_aberto.dropna(subset=[col_sc])
         df_aberto[col_sc] = df_aberto[col_sc].astype(str).str.split('.').str[0].str.zfill(6)
 
@@ -278,7 +277,7 @@ if uploaded_file is not None:
                     text=status_count['Quantidade'], textposition='outside', textfont=dict(size=12, family='Arial Black'), marker_color=cores_status
                 ))
                 fig_status.update_layout(
-                    xaxis_title="Qtd. Solicitações", yaxis_title="Status",
+                    xaxis_title="Qtd. Solicitações em Aberto", yaxis_title="Status",
                     plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=350,
                     margin=dict(l=5, r=20, t=10, b=10), xaxis=dict(showgrid=True, gridcolor='#e2e8f0'), yaxis=dict(type='category', tickfont=dict(family='Arial Black'))
                 )
@@ -292,34 +291,66 @@ if uploaded_file is not None:
             st.dataframe(top_critical, use_container_width=True, height=350, hide_index=True)
 
         # ==========================================
-        # PASSO 4: TERCEIRA LINHA (DESEMPENHO COMPRADORES & CRITICIDADE FILTRADA)
+        # PASSO 4: TERCEIRA LINHA (DESEMPENHO DETALHADO % & CRITICIDADE)
         # ==========================================
         st.markdown("---")
         row3_c1, row3_c2 = st.columns(2)
 
         with row3_c1:
-            st.markdown('<div class="section-header">DESEMPENHO POR COMPRADOR (ATENDIDAS VS PENDENTES)</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-header">DESEMPENHO POR COMPRADOR (STATUS DE SLA E % PERCENTUAL)</div>', unsafe_allow_html=True)
             
-            # Base total de compradores nomeados (ignorando não mapeados para o visual ficar limpo)
+            # Base total de compradores nomeados (Pegamos da base integral 'df', não apenas da 'df_aberto', para ver a proporção de 'FINALIZADO')
             df_compradores = df[df['Comprador_Resp'] != 'Não Mapeado / Outros'].copy()
             
-            if not df_compradores.empty:
-                comp_stats = df_compradores.groupby(['Comprador_Resp', 'Status_Simplificado']).size().reset_index(name='Quantidade')
+            if not df_compradores.empty and col_status:
+                
+                # Função para mapear o status e isolar as atendidas das que estão abertas e detalhadas por prazo
+                def detalhar_status(x):
+                    x_str = str(x).strip().upper()
+                    if x_str == 'FINALIZADO': return 'Atendidas'
+                    elif 'FORA' in x_str: return 'Fora do Prazo'
+                    elif 'ATENÇÃO' in x_str: return 'Atenção'
+                    else: return 'No Prazo'
+                
+                df_compradores['Status_Detalhado'] = df_compradores[col_status].apply(detalhar_status)
+                comp_stats = df_compradores.groupby(['Comprador_Resp', 'Status_Detalhado']).size().reset_index(name='Quantidade')
+                
+                # Calculando as porcentagens referentes ao total de cada comprador
+                totais_comp = comp_stats.groupby('Comprador_Resp')['Quantidade'].transform('sum')
+                comp_stats['Percentual'] = (comp_stats['Quantidade'] / totais_comp * 100).round(1)
+                
+                # Formatando a label que vai flutuar no gráfico
+                comp_stats['Texto_Label'] = comp_stats.apply(lambda row: f"{row['Quantidade']} ({row['Percentual']}%)", axis=1)
+                
                 fig_comp = go.Figure()
                 
-                color_status_map = {'Atendidas': '#2b6cb0', 'Pendentes': '#ed8034'}
-                for status_val in ['Atendidas', 'Pendentes']:
-                    df_sub = comp_stats[comp_stats['Status_Simplificado'] == status_val]
+                # Definição das cores oficiais
+                color_status_map = {
+                    'Atendidas': '#2b6cb0',     # Azul
+                    'No Prazo': '#388e3c',      # Verde
+                    'Atenção': '#d97706',       # Laranja
+                    'Fora do Prazo': '#e53e3e'  # Vermelho
+                }
+                
+                # Ordem que as barras vão aparecer lado a lado
+                ordem_status = ['Atendidas', 'No Prazo', 'Atenção', 'Fora do Prazo']
+                
+                for status_val in ordem_status:
+                    df_sub = comp_stats[comp_stats['Status_Detalhado'] == status_val]
                     if not df_sub.empty:
                         fig_comp.add_trace(go.Bar(
-                            x=df_sub['Comprador_Resp'], y=df_sub['Quantidade'], name=status_val,
+                            x=df_sub['Comprador_Resp'], 
+                            y=df_sub['Quantidade'], 
+                            name=status_val,
                             marker_color=color_status_map.get(status_val),
-                            text=df_sub['Quantidade'], textposition='auto', textfont=dict(size=12, color='white', family='Arial Black')
+                            text=df_sub['Texto_Label'], 
+                            textposition='auto', 
+                            textfont=dict(size=11, color='white', family='Arial Black')
                         ))
                 
                 fig_comp.update_layout(
-                    barmode='group', xaxis_title="Compradores", yaxis_title="Volume Total",
-                    plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=400,
+                    barmode='group', xaxis_title="Compradores", yaxis_title="Volume e Percentual",
+                    plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=420,
                     legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(family='Arial Black')),
                     xaxis=dict(showgrid=False, tickfont=dict(size=12, family='Arial Black')), yaxis=dict(showgrid=True, gridcolor='#e2e8f0')
                 )
@@ -330,7 +361,7 @@ if uploaded_file is not None:
         with row3_c2:
             st.markdown('<div class="section-header">CRITICIDADE VS STATUS (ROTINEIRA E EMERGENCIAL)</div>', unsafe_allow_html=True)
             if col_criticidade and col_status:
-                # Filtrar apenas Rotineira e Emergencial
+                # Filtrar apenas Rotineira e Emergencial das requisições em Aberto
                 df_crit_stat = df_aberto[df_aberto[col_criticidade].astype(str).str.upper().isin(['ROTINEIRA', 'EMERGENCIAL'])]
                 
                 if not df_crit_stat.empty:
@@ -350,7 +381,7 @@ if uploaded_file is not None:
                     
                     fig_crit_stat.update_layout(
                         barmode='group', xaxis_title="Classificação", yaxis_title="Qtd. Solicitações em Aberto",
-                        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=400,
+                        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=420,
                         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(family='Arial Black')),
                         xaxis=dict(showgrid=False, tickfont=dict(size=12, family='Arial Black')), yaxis=dict(showgrid=True, gridcolor='#e2e8f0')
                     )
