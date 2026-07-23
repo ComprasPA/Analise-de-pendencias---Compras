@@ -256,7 +256,7 @@ if uploaded_file is not None:
         row2_c1, row2_c2 = st.columns(2)
 
         with row2_c1:
-            st.markdown('<div class="section-header">STATUS DE PRAZO DE SLA (EM ABERTO)</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-header">CONSOLIDAÇÃO GERAL: STATUS DE PRAZO (SLA)</div>', unsafe_allow_html=True)
             if col_status:
                 status_count = df_aberto.groupby(col_status).size().reset_index(name='Quantidade').sort_values(by='Quantidade', ascending=False)
                 status_count[col_status] = status_count[col_status].astype(str)
@@ -306,12 +306,63 @@ if uploaded_file is not None:
                 hide_index=True
             )
 
+        # ==========================================
+        # PASSO 4: TERCEIRA LINHA (CRUZAMENTO CRITICIDADE VS STATUS)
+        # ==========================================
+        st.markdown("---")
+        st.markdown('<div class="section-header">DISTRIBUIÇÃO DETALHADA: CRITICIDADE VS. STATUS DE PRAZO</div>', unsafe_allow_html=True)
+        
+        if col_criticidade and col_status:
+            # Agrupar dados por Criticidade e Status
+            df_crit_stat = df_aberto.groupby([col_criticidade, col_status]).size().reset_index(name='Quantidade')
+            
+            # Mapeamento de cores padronizado para os status
+            color_map = {
+                'NO PRAZO': '#388e3c',
+                'ATENÇÃO': '#d97706',
+                'FORA DO PRAZO': '#e53e3e'
+            }
+            
+            fig_crit_stat = go.Figure()
+            
+            # Adicionar uma barra para cada status (No Prazo, Atenção, Fora do Prazo) agrupando por Criticidade
+            for status_val in ['NO PRAZO', 'ATENÇÃO', 'FORA DO PRAZO']:
+                df_sub = df_crit_stat[df_crit_stat[col_status].str.upper() == status_val]
+                
+                if not df_sub.empty:
+                    fig_crit_stat.add_trace(go.Bar(
+                        x=df_sub[col_criticidade],
+                        y=df_sub['Quantidade'],
+                        name=status_val.title(),
+                        marker_color=color_map.get(status_val, '#718096'),
+                        text=df_sub['Quantidade'],
+                        textposition='auto',
+                        textfont=dict(size=12, color='white', family='Arial Black')
+                    ))
+            
+            fig_crit_stat.update_layout(
+                barmode='group',
+                xaxis_title="Classificação de Criticidade (Emergencial, Rotineira, etc.)",
+                yaxis_title="Qtd. Solicitações",
+                plot_bgcolor="rgba(0,0,0,0)",
+                paper_bgcolor="rgba(0,0,0,0)",
+                margin=dict(l=10, r=10, t=10, b=10),
+                height=400,
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(family='Arial Black')),
+                xaxis=dict(showgrid=False, tickfont=dict(size=12, family='Arial Black')),
+                yaxis=dict(showgrid=True, gridcolor='#e2e8f0', tickfont=dict(size=11))
+            )
+            
+            st.plotly_chart(fig_crit_stat, use_container_width=True)
+        else:
+            st.info("Colunas CRITICIDADE ou STATUS não encontradas.")
+
         st.markdown("""
         <hr style='margin: 15px 0px 8px 0px;'>
         <div style="font-size: 1.05rem; color: #4a5568; display: flex; justify-content: space-between; font-weight: 700;">
             <span><b style="color: #e53e3e;">→ Alerta Crítico:</b> Backlog superior a 20 dias</span>
-            <span><b style="color: #3273a8;">→ Status de Prazo:</b> SLA (3d úteis emergencial / 15d corridos rotineira)</span>
-            <span><b style="color: #388e3c;">Metodologia:</b> Contagem consolidada Protheus (6 dígitos)</span>
+            <span><b style="color: #3273a8;">→ Status e Criticidade:</b> SLA (3d úteis emergencial / 15d corridos rotineira)</span>
+            <span><b style="color: #388e3c;">Metodologia:</b> Contagem consolidada Protheus (Excluindo Finalizados)</span>
         </div>
         """, unsafe_allow_html=True)
 
