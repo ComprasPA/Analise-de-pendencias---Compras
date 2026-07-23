@@ -253,7 +253,8 @@ if uploaded_file is not None:
         row3_c1, row3_c2 = st.columns(2)
 
         with row3_c1:
-            st.markdown('<div class="section-header">CONSOLIDAÇÃO GERAL: STATUS DE PRAZO (SLA)</div>', unsafe_allow_html=True)
+            # Título atualizado para refletir explicitamente que a contagem é de ITENS
+            st.markdown('<div class="section-header">CONSOLIDAÇÃO GERAL: STATUS DE PRAZO (QTD. ITENS)</div>', unsafe_allow_html=True)
             if col_status:
                 status_count = df_aberto.groupby(col_status).size().reset_index(name='Quantidade').sort_values(by='Quantidade', ascending=False)
                 status_count[col_status] = status_count[col_status].astype(str)
@@ -262,16 +263,20 @@ if uploaded_file is not None:
                 cores_status = ['#e53e3e' if 'FORA' in s.upper() else '#d97706' if 'ATENÇÃO' in s.upper() else '#388e3c' for s in status_count[col_status]]
                 fig_status = go.Figure(go.Bar(
                     x=status_count['Quantidade'], y=status_count[col_status], orientation='h',
-                    text=status_count['Quantidade'], textposition='outside', textfont=dict(size=12, family='Arial Black'), marker_color=cores_status
+                    text=status_count['Quantidade'], 
+                    textposition='outside', 
+                    textfont=dict(size=12, color='#1f2937', family='Arial Black'), # Sempre preto/escuro pois fica fora
+                    marker_color=cores_status
                 ))
                 fig_status.update_layout(
-                    xaxis_title="Qtd. Solicitações em Aberto", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=320,
+                    xaxis_title="Qtd. Itens em Aberto", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=320,
                     margin=dict(l=5, r=20, t=10, b=10), xaxis=dict(showgrid=True, gridcolor='#e2e8f0'), yaxis=dict(type='category', tickfont=dict(family='Arial Black'))
                 )
                 st.plotly_chart(fig_status, use_container_width=True)
 
         with row3_c2:
-            st.markdown('<div class="section-header">CRITICIDADE VS STATUS (ROTINEIRA E EMERGENCIAL)</div>', unsafe_allow_html=True)
+            # Título atualizado para refletir explicitamente que a contagem é de ITENS
+            st.markdown('<div class="section-header">CRITICIDADE VS STATUS (QTD. ITENS)</div>', unsafe_allow_html=True)
             if col_criticidade and col_status:
                 df_crit_stat = df_aberto[df_aberto[col_criticidade].astype(str).str.upper().isin(['ROTINEIRA', 'EMERGENCIAL'])]
                 if not df_crit_stat.empty:
@@ -284,26 +289,29 @@ if uploaded_file is not None:
                             fig_crit_stat.add_trace(go.Bar(
                                 x=df_sub[col_criticidade], y=df_sub['Quantidade'], name=status_val.title(),
                                 marker_color=color_map.get(status_val, '#718096'),
-                                text=df_sub['Quantidade'], textposition='auto', textfont=dict(size=12, color='white', family='Arial Black')
+                                text=df_sub['Quantidade'], 
+                                textposition='auto', 
+                                textfont=dict(size=12, family='Arial Black'),
+                                insidetextfont=dict(color='white'),       # Se couber dentro: Branco
+                                outsidetextfont=dict(color='#1f2937')     # Se for ejetado para fora: Escuro
                             ))
                     fig_crit_stat.update_layout(
-                        barmode='group', xaxis_title="", yaxis_title="Qtd. Solicitações", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=320,
+                        barmode='group', xaxis_title="", yaxis_title="Qtd. Itens em Aberto", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=320,
                         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(family='Arial Black')),
                         xaxis=dict(showgrid=False, tickfont=dict(size=12, family='Arial Black')), yaxis=dict(showgrid=True, gridcolor='#e2e8f0')
                     )
                     st.plotly_chart(fig_crit_stat, use_container_width=True)
 
         # ==========================================
-        # PASSO 4: DESEMPENHO POR COMPRADOR (BACKLOG EM ABERTO)
+        # PASSO 4: DESEMPENHO POR COMPRADOR (PERCENTUAIS)
         # ==========================================
         st.markdown("---")
-        st.markdown('<div class="section-header" style="background-color: #2b4c7e;">DESEMPENHO INDIVIDUAL POR COMPRADOR (% DO BACKLOG EM ABERTO)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header" style="background-color: #2b4c7e;">DESEMPENHO INDIVIDUAL POR COMPRADOR (% DOS ITENS EM ABERTO)</div>', unsafe_allow_html=True)
         
         row4_c1, row4_c2, row4_c3 = st.columns(3)
         compradores = ['Ednilson', 'Dayana', 'Luiz']
         colunas_st = [row4_c1, row4_c2, row4_c3]
         
-        # Mapa de cores apenas para os status pendentes
         color_status_map = {'No Prazo': '#388e3c', 'Atenção': '#d97706', 'Fora do Prazo': '#e53e3e'}
         ordem_status_aberto = ['Fora do Prazo', 'Atenção', 'No Prazo']
         
@@ -311,25 +319,18 @@ if uploaded_file is not None:
             with col_st:
                 st.markdown(f'<div style="text-align: center; font-weight: bold; font-size: 1.15rem; margin-bottom: 5px; color: #1f3b58;">👤 {comp}</div>', unsafe_allow_html=True)
                 
-                # Resgatar a base total deste comprador específico
                 df_comp_total = df[df['Comprador_Resp'] == comp].copy()
                 
                 if not df_comp_total.empty and 'Status_Detalhado' in df_comp_total.columns:
                     
-                    # Contagem para o Rodapé Informativo (Atendidas)
                     qtd_atendidas = len(df_comp_total[df_comp_total['Status_Detalhado'] == 'Atendidas'])
-                    
-                    # Filtrar a base estritamente para o que está EM ABERTO
                     df_comp_aberto = df_comp_total[df_comp_total['Status_Detalhado'] != 'Atendidas'].copy()
                     
                     if not df_comp_aberto.empty:
                         comp_stats = df_comp_aberto.groupby('Status_Detalhado').size().reset_index(name='Quantidade')
-                        
-                        # Total em aberto para recalcular os 100%
                         total_aberto = comp_stats['Quantidade'].sum()
                         comp_stats['Percentual'] = (comp_stats['Quantidade'] / total_aberto * 100).round(1)
                         
-                        # Garantir a ordem das barras
                         comp_stats['Status_Detalhado'] = pd.Categorical(comp_stats['Status_Detalhado'], categories=ordem_status_aberto, ordered=True)
                         comp_stats = comp_stats.sort_values('Status_Detalhado')
                         
@@ -341,7 +342,7 @@ if uploaded_file is not None:
                             orientation='h',
                             text=comp_stats['Percentual'].astype(str) + '%',
                             textposition='outside',
-                            textfont=dict(size=12, family='Arial Black'),
+                            textfont=dict(size=12, color='#1f2937', family='Arial Black'), # Sempre escuro pois fica fora
                             marker_color=cores
                         ))
                         
@@ -349,17 +350,16 @@ if uploaded_file is not None:
                             xaxis_title="Percentual (%) do Backlog Pendente", yaxis_title="",
                             plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=250,
                             margin=dict(l=5, r=30, t=10, b=10),
-                            xaxis=dict(showgrid=True, gridcolor='#e2e8f0', range=[0, max(comp_stats['Percentual'].max() * 1.2, 100)]), 
+                            xaxis=dict(showgrid=True, gridcolor='#e2e8f0', range=[0, max(comp_stats['Percentual'].max() * 1.25, 100)]), 
                             yaxis=dict(type='category', tickfont=dict(family='Arial Black', size=11))
                         )
                         st.plotly_chart(fig_comp_ind, use_container_width=True)
                     else:
-                        st.info(f"Fila limpa! Nenhuma solicitação pendente para {comp}.")
+                        st.info(f"Fila limpa! Nenhum item pendente para {comp}.")
                     
-                    # Rodapé com as Atendidas
                     st.markdown(f"""
                     <div style='text-align: center; font-size: 0.95rem; color: #2b6cb0; font-weight: bold; background-color: #f1f5f9; padding: 6px; border-radius: 4px; margin-top: -15px;'>
-                        ✅ {qtd_atendidas} Solicitações Atendidas (Finalizadas)
+                        ✅ {qtd_atendidas} Itens Atendidos (Finalizados)
                     </div>
                     """, unsafe_allow_html=True)
                     
