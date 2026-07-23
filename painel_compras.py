@@ -7,36 +7,33 @@ import plotly.graph_objects as go
 st.set_page_config(layout="wide", page_title="Panorama Executivo de Suprimentos")
 
 # ==========================================
-# CSS CUSTOMIZADO (Seguro contra loop de carregamento e limpo)
+# CSS CUSTOMIZADO (Visual Executivo e Responsivo)
 # ==========================================
 st.markdown("""
     <style>
-    /* Oculta elementos padrão do Streamlit */
     header[data-testid="stHeader"], [data-testid="stDecoration"], .viewerBadge_container__1QSob, [data-testid="manage-app-button"], #MainMenu, footer {
         visibility: hidden;
         display: none !important;
     }
-    
     .block-container {
-        padding-top: 0.5rem !important;
-        padding-bottom: 0.5rem !important;
-        padding-left: 1rem !important;
-        padding-right: 1rem !important;
+        padding-top: 0.6rem;
+        padding-bottom: 0.6rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
         max-width: 100% !important;
     }
-
     .header-box {
         background-color: #1f3b58;
         color: white;
-        padding: 6px 14px;
+        padding: 8px 16px;
         border-radius: 4px;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 3px;
+        margin-bottom: 6px;
     }
     .header-title {
-        font-size: 1.15rem;
+        font-size: 1.2rem;
         font-weight: bold;
     }
     .header-sub {
@@ -48,10 +45,10 @@ st.markdown("""
         text-align: center;
         font-weight: bold;
         font-size: 0.85rem;
-        padding: 3px;
+        padding: 4px;
         text-transform: uppercase;
         letter-spacing: 1px;
-        margin-bottom: 4px;
+        margin-bottom: 8px;
         border-radius: 2px;
     }
     .section-header {
@@ -60,43 +57,44 @@ st.markdown("""
         text-align: center;
         font-weight: bold;
         font-size: 0.85rem;
-        padding: 3px;
+        padding: 4px;
         text-transform: uppercase;
         border-radius: 2px;
-        margin-bottom: 2px;
+        margin-bottom: 4px;
     }
     .gauge-footer {
         text-align: center;
         color: #1e293b;
         font-size: 0.9rem;
         font-weight: 800;
-        margin-top: -4px;
+        margin-top: -2px;
         text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.15);
     }
     .stDataFrame td, .stDataFrame th {
         font-size: 0.9rem !important;
         font-weight: 800 !important;
-        padding: 1px 3px !important;
+        padding: 2px 4px !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# PAINEL RETRÁTIL (Configurações e Upload)
+# PAINEL DE CONFIGURAÇÕES (Sempre visível para upload)
 # ==========================================
-with st.expander("⚙️ Abrir / Fechar Configurações (Upload de Arquivo e Data Base)", expanded=True):
-    top_c1, top_c2 = st.columns([3, 1])
-    with top_c1:
-        uploaded_file = st.file_uploader("Upload do arquivo de pendências (.xlsx/.csv)", type=["xlsx", "xls", "csv"])
-    with top_c2:
-        data_base = st.date_input("Data base para cálculo de SLA:", datetime.date.today())
+st.markdown("### ⚙️ Painel Executivo de Suprimentos - Configurações")
+col_up1, col_up2 = st.columns([3, 1])
+with col_up1:
+    uploaded_file = st.file_uploader("Faça o upload do arquivo de pendências (.xlsx / .csv)", type=["xlsx", "xls", "csv"])
+with col_up2:
+    data_base = st.date_input("Data base para cálculo de SLA:", datetime.date.today())
+
+st.markdown("---")
 
 # ==========================================
 # PROCESSAMENTO ANALÍTICO DE DADOS
 # ==========================================
 if uploaded_file is not None:
     try:
-        # Leitura da aba Solicitações do layout Protheus
         if uploaded_file.name.endswith('.csv'):
             df = pd.read_csv(uploaded_file, sep=None, engine='python', encoding='utf-8')
         else:
@@ -111,21 +109,18 @@ if uploaded_file is not None:
         col_sc = 'Solicitação' if 'Solicitação' in df.columns else ('Cod SC. SCM' if 'Cod SC. SCM' in df.columns else None)
         col_cc = 'Centro de Custo' if 'Centro de Custo' in df.columns else None
         col_dt = 'DT Emissao' if 'DT Emissao' in df.columns else None
-        col_sla = 'SLA' if 'SLA' in df.columns else None
 
         if not col_sc or not col_cc or not col_dt:
-            st.error(f"⚠️ Erro: Colunas essenciais não encontradas. Colunas: {list(df.columns)}")
+            st.error(f"⚠️ Erro: Colunas essenciais não encontradas. Colunas disponíveis: {list(df.columns)}")
             st.stop()
 
-        # Regra solicitada: Considerar apenas solicitações que NÃO estejam com status 'FINALIZADO'
+        # Considerar apenas solicitações que NÃO estejam com status 'FINALIZADO'
         if col_status:
             df_aberto = df[df[col_status].astype(str).str.strip().str.upper() != 'FINALIZADO'].copy()
         else:
             df_aberto = df.copy()
 
         df_aberto = df_aberto.dropna(subset=[col_sc])
-
-        # Formata o Número da SC para ter exatamente 6 dígitos, preenchendo com zeros à esquerda
         df_aberto[col_sc] = df_aberto[col_sc].astype(str).str.split('.').str[0].str.zfill(6)
 
         hoje = pd.to_datetime(data_base)
@@ -157,10 +152,10 @@ if uploaded_file is not None:
             fig = go.Figure(go.Indicator(
                 mode = "gauge+number",
                 value = valor,
-                number = {'suffix': sufixo, 'font': {'size': 22, 'color': '#1f3b58', 'family': 'Arial Black'}},
-                title = {'text': titulo, 'font': {'size': 11, 'color': '#111827', 'family': 'Arial Black'}},
+                number = {'suffix': sufixo, 'font': {'size': 24, 'color': '#1f3b58', 'family': 'Arial Black'}},
+                title = {'text': titulo, 'font': {'size': 12, 'color': '#111827', 'family': 'Arial Black'}},
                 gauge = {
-                    'axis': {'range': [None, max_val], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 9, 'family': 'Arial Black'}},
+                    'axis': {'range': [None, max_val], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 10, 'family': 'Arial Black'}},
                     'bar': {'color': cor_barra},
                     'bgcolor': "rgba(0,0,0,0)",
                     'borderwidth': 0,
@@ -170,7 +165,7 @@ if uploaded_file is not None:
                     ],
                 }
             ))
-            fig.update_layout(height=95, margin=dict(l=10, r=10, t=18, b=0), paper_bgcolor='rgba(0,0,0,0)')
+            fig.update_layout(height=110, margin=dict(l=10, r=10, t=25, b=0), paper_bgcolor='rgba(0,0,0,0)')
             return fig
 
         gauge_col1, gauge_col2, gauge_col3 = st.columns(3)
@@ -193,9 +188,9 @@ if uploaded_file is not None:
             st.markdown(f"<div class='gauge-footer' style='color: #388e3c;'>Dentro do SLA padrão (&lt;20 dias)</div>", unsafe_allow_html=True)
 
         # ==========================================
-        # PASSO 2: RENDERIZAÇÃO DOS GRÁFICOS E TABELA (COM NOVO GRÁFICO DE STATUS DE PRAZO)
+        # PASSO 2: RENDERIZAÇÃO PANORÂMICA (GRÁFICO STATUS SLA + TOP 10 CC + TABELA CRÍTICOS)
         # ==========================================
-        st.markdown("<hr style='margin: 4px 0px;'>", unsafe_allow_html=True)
+        st.markdown("<hr style='margin: 8px 0px;'>", unsafe_allow_html=True)
         
         col_g1, col_g2, col_tabela = st.columns([1, 1, 1.1])
 
@@ -207,15 +202,14 @@ if uploaded_file is not None:
                 status_count[col_status] = status_count[col_status].astype(str)
                 status_count = status_count.sort_values(by='Quantidade', ascending=True)
                 
-                # Cores customizadas para os status de prazo
                 cores_status = []
                 for s in status_count[col_status]:
                     if 'FORA' in s.upper():
-                        cores_status.append('#e53e3e') # Vermelho
+                        cores_status.append('#e53e3e')
                     elif 'ATENÇÃO' in s.upper():
-                        cores_status.append('#d97706') # Laranja
+                        cores_status.append('#d97706')
                     else:
-                        cores_status.append('#388e3c') # Verde (No Prazo)
+                        cores_status.append('#388e3c')
 
                 fig_status = go.Figure(go.Bar(
                     x=status_count['Quantidade'],
@@ -223,21 +217,21 @@ if uploaded_file is not None:
                     orientation='h',
                     text=status_count['Quantidade'],
                     textposition='outside',
-                    textfont=dict(size=9, color='#1f2937', family='Arial Black'),
+                    textfont=dict(size=10, color='#1f2937', family='Arial Black'),
                     marker_color=cores_status
                 ))
                 
                 fig_status.update_layout(
                     xaxis_title="Qtd. Solicitações", 
                     yaxis_title="Status de Prazo",
-                    xaxis_title_font=dict(size=9, family='Arial Black'),
-                    yaxis_title_font=dict(size=9, family='Arial Black'),
+                    xaxis_title_font=dict(size=10, family='Arial Black'),
+                    yaxis_title_font=dict(size=10, family='Arial Black'),
                     plot_bgcolor="rgba(0,0,0,0)",
                     paper_bgcolor="rgba(0,0,0,0)",
                     margin=dict(l=2, r=15, t=2, b=2),
-                    height=185,
-                    xaxis=dict(showgrid=True, gridcolor='#e2e8f0', tickfont=dict(size=8)),
-                    yaxis=dict(type='category', tickfont=dict(size=8, family='Arial Black'))
+                    height=200,
+                    xaxis=dict(showgrid=True, gridcolor='#e2e8f0', tickfont=dict(size=9)),
+                    yaxis=dict(type='category', tickfont=dict(size=9, family='Arial Black'))
                 )
                 st.plotly_chart(fig_status, use_container_width=True)
             else:
@@ -259,21 +253,21 @@ if uploaded_file is not None:
                 orientation='h',
                 text=cc_volume['Quantidade'],
                 textposition='outside',
-                textfont=dict(size=9, color='#1f2937', family='Arial Black'),
+                textfont=dict(size=10, color='#1f2937', family='Arial Black'),
                 marker_color=cores_barras
             ))
             
             fig1.update_layout(
                 xaxis_title="Qtd. Itens", 
                 yaxis_title="Centro de Custo",
-                xaxis_title_font=dict(size=9, family='Arial Black'),
-                yaxis_title_font=dict(size=9, family='Arial Black'),
+                xaxis_title_font=dict(size=10, family='Arial Black'),
+                yaxis_title_font=dict(size=10, family='Arial Black'),
                 plot_bgcolor="rgba(0,0,0,0)",
                 paper_bgcolor="rgba(0,0,0,0)",
                 margin=dict(l=2, r=15, t=2, b=2),
-                height=185,
-                xaxis=dict(showgrid=True, gridcolor='#e2e8f0', tickfont=dict(size=8)),
-                yaxis=dict(type='category', tickfont=dict(size=8, family='Arial Black'))
+                height=200,
+                xaxis=dict(showgrid=True, gridcolor='#e2e8f0', tickfont=dict(size=9)),
+                yaxis=dict(type='category', tickfont=dict(size=9, family='Arial Black'))
             )
             st.plotly_chart(fig1, use_container_width=True)
 
@@ -289,15 +283,15 @@ if uploaded_file is not None:
             st.dataframe(
                 top_critical, 
                 use_container_width=True,
-                height=185,
+                height=200,
                 hide_index=True
             )
 
         st.markdown("""
-        <hr style='margin: 3px 0px;'>
-        <div style="font-size: 0.8rem; color: #4a5568; display: flex; justify-content: space-between; font-weight: 700;">
+        <hr style='margin: 4px 0px;'>
+        <div style="font-size: 0.85rem; color: #4a5568; display: flex; justify-content: space-between; font-weight: 700;">
             <span><b style="color: #e53e3e;">→ Alerta Crítico:</b> Backlog superior a 20 dias</span>
-            <span><b style="color: #3273a8;">→ Status de Prazo:</b> Reflete regras de SLA (3d úteis emergencial / 15d corridos rotineira)</span>
+            <span><b style="color: #3273a8;">→ Status de Prazo:</b> Reflete regras de SLA (3d úteis emergencial / 15d rotineira)</span>
             <span><b style="color: #388e3c;">Metodologia:</b> Contagem Protheus (6 dígitos, exceto Finalizados)</span>
         </div>
         """, unsafe_allow_html=True)
@@ -305,4 +299,4 @@ if uploaded_file is not None:
     except Exception as e:
         st.error(f"⚠️ Erro analítico no processamento do arquivo. Detalhe técnico: {e}")
 else:
-    st.info("💡 Clique em **⚙️ Abrir / Fechar Configurações** no topo para anexar o arquivo de pendências e selecionar a data base.")
+    st.info("💡 Faça o upload do arquivo de pendências (`.xlsx` ou `.csv`) no topo da página para carregar o panorama executivo.")
