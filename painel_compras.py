@@ -79,16 +79,14 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# PAINEL DE CONFIGURAÇÕES
+# PAINEL DE CONFIGURAÇÕES (RETRÁTIL)
 # ==========================================
-st.markdown("### ⚙️ Painel Executivo de Suprimentos - Configurações")
-col_up1, col_up2 = st.columns([3, 1])
-with col_up1:
-    uploaded_file = st.file_uploader("Faça o upload do arquivo de pendências (.xlsx / .csv) para atualizar a base", type=["xlsx", "xls", "csv"])
-with col_up2:
-    data_base = st.date_input("Data base para cálculo de SLA:", datetime.date.today())
-
-st.markdown("---")
+with st.expander("⚙️ Abrir / Fechar Configurações (Upload de Arquivo e Data Base)", expanded=False):
+    col_up1, col_up2 = st.columns([3, 1])
+    with col_up1:
+        uploaded_file = st.file_uploader("Faça o upload do arquivo de pendências (.xlsx / .csv) para atualizar a base", type=["xlsx", "xls", "csv"])
+    with col_up2:
+        data_base = st.date_input("Data base para cálculo de SLA:", datetime.date.today())
 
 # ==========================================
 # MAPEAMENTO DOS COMPRADORES POR CENTRO DE CUSTO
@@ -130,7 +128,6 @@ elif os.path.exists(ARQUIVO_MEMORIA):
         xls = pd.ExcelFile(ARQUIVO_MEMORIA)
         sheet_name = 'Solicitações' if 'Solicitações' in xls.sheet_names else xls.sheet_names[0]
         df = pd.read_excel(ARQUIVO_MEMORIA, sheet_name=sheet_name)
-        st.info("📌 Exibindo a última base de dados atualizada no sistema.")
     except Exception as e:
         st.error(f"Erro ao ler a base salva no servidor: {e}")
 
@@ -442,11 +439,11 @@ if df is not None:
         <hr style='margin: 15px 0px 8px 0px;'>
         <div style="font-size: 1.05rem; color: #4a5568; display: flex; justify-content: space-between; font-weight: 700;">
             <span><b style="color: #2b4c7e;">→ Base Salva:</b> O último arquivo enviado fica salvo como base de consulta para toda a equipe.</span>
-            <span><b style="color: #388e3c;">Metodologia:</b> Gráficos atualizados via integração analítica Protheus.</span>
+            <span><b style="color: #388e3c;">Metodologia:</b> Gráficos atualizados via integração analítica Protheus Parente Andrade.</span>
         </div>
         """, unsafe_allow_html=True)
 
     except Exception as e:
         st.error(f"⚠️ Erro analítico no processamento. Detalhe técnico: {e}")
 else:
-    st.info("💡 Faça o upload do arquivo de pendências (`.xlsx` ou `.csv`) no topo da página para iniciar a base de dados.")
+    st.info("💡 Clique em **⚙️ Abrir / Fechar Configurações** no topo para atualizar a base de dados.")
