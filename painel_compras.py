@@ -111,7 +111,7 @@ if uploaded_file is not None:
         # Salva o arquivo fisicamente no servidor para os próximos acessos
         with open(ARQUIVO_MEMORIA, "wb") as f:
             f.write(uploaded_file.getbuffer())
-        st.success("✅ Base atualizada com sucesso! Esta base agora é a padrão para todos os usuários.")
+        st.success("✅ Base atualizada com sucesso por Silvio Silveira! Esta base agora é a padrão para todos os usuários.")
         
         if uploaded_file.name.endswith('.csv'):
             df = pd.read_csv(uploaded_file, sep=None, engine='python', encoding='utf-8')
@@ -363,10 +363,10 @@ if df is not None:
                 # Base total do comprador (Finalizadas + Pendentes)
                 df_comp_total = df[df['Comprador_Resp'] == comp].copy()
                 
-                # ------ REGRA DE EXCEÇÃO: LUIZ APENAS A PARTIR DE 01/07/2026 ------
+                # ------ REGRA DE EXCEÇÃO: LUIZ APENAS A PARTIR DE 06/07/2026 ------
                 if comp == 'Luiz' and col_dt in df_comp_total.columns:
-                    st.markdown("<div style='text-align: center; font-size: 0.75rem; font-weight: bold; color: #e53e3e; margin-bottom: 8px;'>*(Análise iniciada em 01/07/2026)</div>", unsafe_allow_html=True)
-                    df_comp_total = df_comp_total[df_comp_total[col_dt] >= pd.to_datetime('2026-07-01')]
+                    st.markdown("<div style='text-align: center; font-size: 0.75rem; font-weight: bold; color: #e53e3e; margin-bottom: 8px;'>*(Análise iniciada em 06/07/2026)</div>", unsafe_allow_html=True)
+                    df_comp_total = df_comp_total[df_comp_total[col_dt] >= pd.to_datetime('2026-07-06')]
                 else:
                     st.markdown("<div style='text-align: center; font-size: 0.75rem; color: transparent; margin-bottom: 8px;'>.</div>", unsafe_allow_html=True)
                 
@@ -405,11 +405,14 @@ if df is not None:
                         
                         cores = [color_status_map.get(s, '#718096') for s in comp_stats['Status_Detalhado']]
                         
+                        # Combinando Quantidade e Percentual na mesma Label
+                        comp_stats['Texto_Label'] = comp_stats.apply(lambda row: f"{int(row['Quantidade'])} ({row['Percentual']}%)", axis=1)
+                        
                         fig_comp_ind = go.Figure(go.Bar(
                             x=comp_stats['Percentual'],
                             y=comp_stats['Status_Detalhado'],
                             orientation='h',
-                            text=comp_stats['Percentual'].astype(str) + '%',
+                            text=comp_stats['Texto_Label'],
                             textposition='outside',
                             textfont=dict(size=12, color='#1f2937', family='Arial Black'), 
                             marker_color=cores
@@ -419,7 +422,7 @@ if df is not None:
                             xaxis_title="% do Backlog Restante", yaxis_title="",
                             plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=150,
                             margin=dict(l=5, r=30, t=0, b=10),
-                            xaxis=dict(showgrid=True, gridcolor='#e2e8f0', range=[0, max(comp_stats['Percentual'].max() * 1.25, 100)], tickfont=dict(size=9)), 
+                            xaxis=dict(showgrid=True, gridcolor='#e2e8f0', range=[0, max(comp_stats['Percentual'].max() * 1.35, 100)], tickfont=dict(size=9)), 
                             yaxis=dict(type='category', tickfont=dict(family='Arial Black', size=11))
                         )
                         st.plotly_chart(fig_comp_ind, use_container_width=True)
