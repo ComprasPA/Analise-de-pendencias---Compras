@@ -286,7 +286,7 @@ if df is not None:
                 number = {'suffix': sufixo, 'font': {'size': 20, 'color': cor_texto_grafico, 'family': 'Arial Black'}},
                 title = {'text': titulo, 'font': {'size': title_size, 'color': cor_texto_grafico, 'family': 'Arial Black'}},
                 gauge = {
-                    'axis': {'range': [None, max_val], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 8, 'color': cor_texto_grafico, 'family': 'Arial Black'}},
+                    'axis': {'range': [None, max_val], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 9, 'color': cor_texto_grafico, 'family': 'Arial Black'}},
                     'bar': {'color': cor_barra}, 'bgcolor': "rgba(0,0,0,0)", 'borderwidth': 0,
                     'steps': [{'range': [0, max_val * 0.6], 'color': '#2a3b4c' if tema_selecionado != 'Claro' else '#f1f5f9'}, 
                               {'range': [max_val * 0.6, max_val], 'color': '#1f2937' if tema_selecionado != 'Claro' else '#e2e8f0'}],
@@ -529,13 +529,13 @@ if df is not None:
                     </div>
                     """, unsafe_allow_html=True)
 
-                    # 4. Velocímetros de SLA com escala ajustada para o Emergencial suportar até 10 dias (exibindo o 5 perfeitamente)
+                    # 4. Velocímetros de SLA com escala do emergencial ajustada para exibir perfeitamente valores como 5 (escala de 0 a 12)
                     cor_rot = "#ff6b6b" if sla_rot_val > 15 else "#339af0"
                     fig_rot = go.Figure(go.Indicator(
                         mode = "gauge+number", value = sla_rot_val,
                         number = {'font': {'size': 20, 'color': cor_texto_grafico, 'family': 'Arial Black'}},
                         gauge = {
-                            'axis': {'range': [0, 30], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 8, 'color': cor_texto_grafico, 'family': 'Arial Black'}},
+                            'axis': {'range': [0, 30], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 9, 'color': cor_texto_grafico, 'family': 'Arial Black'}},
                             'bar': {'color': cor_rot}, 'bgcolor': "rgba(0,0,0,0)", 'borderwidth': 0,
                             'steps': [{'range': [0, 15], 'color': '#2a3b4c' if tema_selecionado != 'Claro' else '#e2e8f0'}, 
                                       {'range': [15, 30], 'color': '#4a2525' if tema_selecionado != 'Claro' else '#fed7d7'}],
@@ -549,10 +549,10 @@ if df is not None:
                         mode = "gauge+number", value = sla_emg_val,
                         number = {'font': {'size': 20, 'color': cor_texto_grafico, 'family': 'Arial Black'}},
                         gauge = {
-                            'axis': {'range': [0, 10], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 8, 'color': cor_texto_grafico, 'family': 'Arial Black'}},
+                            'axis': {'range': [0, 12], 'dtick': 2, 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 10, 'color': cor_texto_grafico, 'family': 'Arial Black'}},
                             'bar': {'color': cor_emg}, 'bgcolor': "rgba(0,0,0,0)", 'borderwidth': 0,
                             'steps': [{'range': [0, 3], 'color': '#2a3b4c' if tema_selecionado != 'Claro' else '#e2e8f0'}, 
-                                      {'range': [3, 10], 'color': '#4a2525' if tema_selecionado != 'Claro' else '#fed7d7'}],
+                                      {'range': [3, 12], 'color': '#4a2525' if tema_selecionado != 'Claro' else '#fed7d7'}],
                             'threshold': {'line': {'color': 'red', 'width': 4}, 'thickness': 0.75, 'value': 3}
                         }
                     ))
