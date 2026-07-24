@@ -8,9 +8,45 @@ import os
 st.set_page_config(layout="wide", page_title="Panorama Executivo de Suprimentos")
 
 # ==========================================
-# CSS CUSTOMIZADO (Visual Executivo Completo)
+# PAINEL DE CONFIGURAÇÕES (RETRÁTIL)
 # ==========================================
-st.markdown("""
+with st.expander("⚙️ Abrir / Fechar Configurações (Upload, Data Base e Tema)", expanded=False):
+    col_cfg1, col_cfg2, col_cfg3 = st.columns([2, 1, 1])
+    with col_cfg1:
+        uploaded_file = st.file_uploader("Upload do arquivo de pendências (.xlsx / .csv)", type=["xlsx", "xls", "csv"])
+    with col_cfg2:
+        data_base = st.date_input("Data base SLA:", datetime.date.today())
+    with col_cfg3:
+        tema_selecionado = st.selectbox(
+            "Selecione o Tema:",
+            ["Padrão do Sistema", "Claro", "Escuro", "Black (Preto Absoluto)"],
+            index=0
+        )
+
+# ==========================================
+# CSS CUSTOMIZADO DINÂMICO (CONFORME O TEMA)
+# ==========================================
+if tema_selecionado == "Black (Preto Absoluto)":
+    css_tema = """
+        <style>
+        .stApp { background-color: #000000 !important; color: #e2e8f0 !important; }
+        .header-box { background-color: #111111 !important; border: 1px solid #333333; }
+        .resumo-bar, .section-header { background-color: #1a1a1a !important; color: #ffffff !important; border: 1px solid #333333; }
+        div[data-testid="stVerticalBlock"] > div[style*="background-color: white"] { background-color: #121212 !important; border: 1px solid #333333 !important; color: #ffffff !important; }
+        </style>
+    """
+elif tema_selecionado == "Escuro":
+    css_tema = """
+        <style>
+        .stApp { background-color: #0e1117 !important; color: #fafafa !important; }
+        .header-box { background-color: #1f3b58 !important; }
+        .resumo-bar, .section-header { background-color: #2b4c7e !important; }
+        </style>
+    """
+else:
+    css_tema = "" # Padrão do sistema ou claro
+
+st.markdown(f"""
     <style>
     header[data-testid="stHeader"], [data-testid="stDecoration"], .viewerBadge_container__1QSob, [data-testid="manage-app-button"], #MainMenu, footer {
         visibility: hidden;
@@ -24,7 +60,6 @@ st.markdown("""
         max-width: 100% !important;
     }
     .header-box {
-        background-color: #1f3b58;
         color: white;
         padding: 12px 20px;
         border-radius: 4px;
@@ -33,15 +68,9 @@ st.markdown("""
         align-items: center;
         margin-bottom: 10px;
     }
-    .header-title {
-        font-size: 1.4rem;
-        font-weight: bold;
-    }
-    .header-sub {
-        font-size: 1.1rem;
-    }
+    .header-title { font-size: 1.4rem; font-weight: bold; }
+    .header-sub { font-size: 1.1rem; }
     .resumo-bar {
-        background-color: #2b4c7e;
         color: white;
         text-align: center;
         font-weight: bold;
@@ -53,7 +82,6 @@ st.markdown("""
         border-radius: 2px;
     }
     .section-header {
-        background-color: #1f3b58;
         color: white;
         text-align: center;
         font-weight: bold;
@@ -76,17 +104,8 @@ st.markdown("""
         padding: 4px 6px !important;
     }
     </style>
+    {css_tema}
 """, unsafe_allow_html=True)
-
-# ==========================================
-# PAINEL DE CONFIGURAÇÕES (RETRÁTIL)
-# ==========================================
-with st.expander("⚙️ Abrir / Fechar Configurações (Upload de Arquivo e Data Base)", expanded=False):
-    col_up1, col_up2 = st.columns([3, 1])
-    with col_up1:
-        uploaded_file = st.file_uploader("Faça o upload do arquivo de pendências (.xlsx / .csv) para atualizar a base", type=["xlsx", "xls", "csv"])
-    with col_up2:
-        data_base = st.date_input("Data base para cálculo de SLA:", datetime.date.today())
 
 # ==========================================
 # MAPEAMENTO DOS COMPRADORES POR CENTRO DE CUSTO
@@ -232,13 +251,13 @@ if df is not None:
 
         with row1_c1:
             st.markdown(f"""
-            <div style="background-color: white; border: 1px solid #cbd5e1; border-radius: 4px; padding: 10px; text-align: center; height: 150px; display: flex; flex-direction: column; justify-content: center;">
-                <div style="color: #1f3b58; font-size: 0.9rem; font-family: 'Arial Black'; margin-bottom: 5px;">VOLUMETRIA EM ABERTO</div>
+            <div style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 10px; text-align: center; height: 150px; display: flex; flex-direction: column; justify-content: center;">
+                <div style="font-size: 0.9rem; font-family: 'Arial Black'; margin-bottom: 5px;">VOLUMETRIA EM ABERTO</div>
                 <div style="font-size: 1.8rem; font-weight: bold; color: #2b6cb0; line-height: 1;">{total_sc_unicas_aberto}</div>
-                <div style="font-size: 0.7rem; color: #475569; font-weight: bold; text-transform: uppercase; margin-bottom: 3px;">Solicitações (SCs)</div>
+                <div style="font-size: 0.7rem; font-weight: bold; text-transform: uppercase; margin-bottom: 3px;">Solicitações (SCs)</div>
                 <div style="border-top: 1px dashed #cbd5e1; margin: 4px 0;"></div>
                 <div style="font-size: 1.8rem; font-weight: bold; color: #ed8034; line-height: 1;">{total_linhas_aberto}</div>
-                <div style="font-size: 0.7rem; color: #475569; font-weight: bold; text-transform: uppercase;">Total de Itens</div>
+                <div style="font-size: 0.7rem; font-weight: bold; text-transform: uppercase;">Total de Itens</div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -272,7 +291,7 @@ if df is not None:
                 x=cc_volume.sort_values(by='Quantidade', ascending=True)['Quantidade'],
                 y=cc_volume.sort_values(by='Quantidade', ascending=True)[col_cc],
                 orientation='h', text=cc_volume.sort_values(by='Quantidade', ascending=True)['Quantidade'],
-                textposition='outside', textfont=dict(size=11, color='#1f2937', family='Arial Black'), marker_color=cores_barras[::-1]
+                textposition='outside', textfont=dict(size=11, family='Arial Black'), marker_color=cores_barras[::-1]
             ))
             fig_cc_it.update_layout(
                 xaxis_title="Qtd. Itens", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
@@ -290,7 +309,7 @@ if df is not None:
                 x=cc_scs.sort_values(by='Qtd_SCs', ascending=True)['Qtd_SCs'],
                 y=cc_scs.sort_values(by='Qtd_SCs', ascending=True)[col_cc],
                 orientation='h', text=cc_scs.sort_values(by='Qtd_SCs', ascending=True)['Qtd_SCs'],
-                textposition='outside', textfont=dict(size=11, color='#1f2937', family='Arial Black'), marker_color=cores_barras_sc[::-1]
+                textposition='outside', textfont=dict(size=11, family='Arial Black'), marker_color=cores_barras_sc[::-1]
             ))
             fig_cc_sc.update_layout(
                 xaxis_title="Qtd. Requisições (SCs)", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
@@ -322,7 +341,7 @@ if df is not None:
                 fig_status = go.Figure(go.Bar(
                     x=status_count['Quantidade'], y=status_count[col_status], orientation='h',
                     text=status_count['Quantidade'], textposition='outside', 
-                    textfont=dict(size=12, color='#1f2937', family='Arial Black'), 
+                    textfont=dict(size=12, family='Arial Black'), 
                     marker_color=cores_status
                 ))
                 fig_status.update_layout(
@@ -346,9 +365,7 @@ if df is not None:
                                 x=df_sub[col_criticidade], y=df_sub['Quantidade'], name=status_val.title(),
                                 marker_color=color_map.get(status_val, '#718096'),
                                 text=df_sub['Quantidade'], textposition='auto', 
-                                textfont=dict(size=12, family='Arial Black'),
-                                insidetextfont=dict(color='white'),       
-                                outsidetextfont=dict(color='#1f2937')     
+                                textfont=dict(size=12, family='Arial Black')
                             ))
                     fig_crit_stat.update_layout(
                         barmode='group', xaxis_title="", yaxis_title="Qtd. Itens em Aberto", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=320,
@@ -374,10 +391,8 @@ if df is not None:
             with col_st:
                 st.markdown(f'<div style="text-align: center; font-weight: bold; font-size: 1.15rem; margin-bottom: 2px; color: #1f3b58;">👤 {comp}</div>', unsafe_allow_html=True)
                 
-                # Base total do comprador (Finalizadas + Pendentes)
                 df_comp_total = df[df['Comprador_Resp'] == comp].copy()
                 
-                # ------ REGRA DE EXCEÇÃO: LUIZ APENAS A PARTIR DE 06/07/2026 ------
                 if comp == 'Luiz' and col_dt_emissao in df_comp_total.columns:
                     st.markdown("<div style='text-align: center; font-size: 0.75rem; font-weight: bold; color: #e53e3e; margin-bottom: 4px;'>*(Análise iniciada em 06/07/2026)</div>", unsafe_allow_html=True)
                     df_comp_total = df_comp_total[df_comp_total[col_dt_emissao] >= pd.to_datetime('2026-07-06')]
@@ -390,7 +405,6 @@ if df is not None:
                     qtd_atendidas = len(df_comp_total[df_comp_total['Status_Detalhado'] == 'Atendidas'])
                     taxa_rendimento_comp = (qtd_atendidas / total_emitidas * 100) if total_emitidas > 0 else 0
                     
-                    # ----- FILTRAR APENAS ROTINEIRA E EMERGENCIAL PARA O SLA MÉDIO (NÚMEROS INTEIROS) -----
                     if col_criticidade:
                         df_comp_crit = df_comp_total[df_comp_total[col_criticidade].astype(str).str.upper().isin(['ROTINEIRA', 'EMERGENCIAL'])]
                     else:
@@ -399,12 +413,12 @@ if df is not None:
                     sla_rot_val = int(round(df_comp_crit[df_comp_crit[col_criticidade].astype(str).str.upper() == 'ROTINEIRA']['Days'].mean(), 0)) if not df_comp_crit.empty and not pd.isna(df_comp_crit[df_comp_crit[col_criticidade].astype(str).str.upper() == 'ROTINEIRA']['Days'].mean()) else 0
                     sla_emg_val = int(round(df_comp_crit[df_comp_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean(), 0)) if not df_comp_crit.empty and not pd.isna(df_comp_crit[df_comp_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean()) else 0
 
-                    # ----- 1. VELOCÍMETRO DE RENDIMENTO -----
+                    # 1. Velocídio de Rendimento
                     cor_gauge_comp = '#388e3c' if taxa_rendimento_comp >= 75 else ('#d97706' if taxa_rendimento_comp >= 50 else '#e53e3e')
                     fig_gauge = criar_gauge("RENDIMENTO (ATENDIDAS / TOTAL)", taxa_rendimento_comp, 100, cor_gauge_comp, sufixo="%", altura=120)
                     st.plotly_chart(fig_gauge, use_container_width=True)
 
-                    # ----- 2. GRÁFICO DE BARRAS PERCENTUAIS DO BACKLOG PENDENTE -----
+                    # 2. Gráfico de Barras do Backlog
                     df_comp_aberto = df_comp_total[df_comp_total['Status_Detalhado'] != 'Atendidas'].copy()
                     
                     if not df_comp_aberto.empty:
@@ -424,7 +438,7 @@ if df is not None:
                             orientation='h',
                             text=comp_stats['Texto_Label'],
                             textposition='outside',
-                            textfont=dict(size=11, color='#1f2937', family='Arial Black'), 
+                            textfont=dict(size=11, family='Arial Black'), 
                             marker_color=cores
                         ))
                         
@@ -439,14 +453,14 @@ if df is not None:
                     else:
                         st.info(f"Fila limpa! Nenhum item pendente para {comp}.")
                     
-                    # ----- 3. CAIXA DE ITENS ATENDIDOS -----
+                    # 3. Caixa de Itens Atendidos com espaçamento seguro
                     st.markdown(f"""
-                    <div style='text-align: center; font-size: 0.9rem; color: #2b6cb0; font-weight: bold; background-color: #f1f5f9; padding: 5px; border-radius: 4px; margin-top: 5px; margin-bottom: 12px;'>
+                    <div style='text-align: center; font-size: 0.9rem; color: #2b6cb0; font-weight: bold; background-color: #f1f5f9; padding: 6px; border-radius: 4px; margin-top: 12px; margin-bottom: 16px;'>
                         ✅ {qtd_atendidas} de {total_emitidas} Itens Atendidos
                     </div>
                     """, unsafe_allow_html=True)
 
-                    # ----- 4. VELOCÍMETROS DE SLA (ALINHADOS E COM ESPAÇAMENTO ADEQUADO) -----
+                    # 4. Velocímetros de SLA limpos e perfeitamente alinhados
                     cor_rot = "#e53e3e" if sla_rot_val > 15 else "#2b6cb0"
                     fig_rot = go.Figure(go.Indicator(
                         mode = "gauge+number", value = sla_rot_val,
@@ -478,10 +492,10 @@ if df is not None:
                     sub_c1, sub_c2 = st.columns(2)
                     with sub_c1:
                         st.plotly_chart(fig_rot, use_container_width=True)
-                        st.markdown("<div style='text-align: center; font-size: 0.75rem; color: #475569; font-weight: bold; margin-top: -10px;'>Limite: 15 dias</div>", unsafe_allow_html=True)
+                        st.markdown("<div style='text-align: center; font-size: 0.75rem; color: #475569; font-weight: bold; margin-top: -8px;'>Limite: 15 dias</div>", unsafe_allow_html=True)
                     with sub_c2:
                         st.plotly_chart(fig_emg, use_container_width=True)
-                        st.markdown("<div style='text-align: center; font-size: 0.75rem; color: #475569; font-weight: bold; margin-top: -10px;'>Limite: 3 dias</div>", unsafe_allow_html=True)
+                        st.markdown("<div style='text-align: center; font-size: 0.75rem; color: #475569; font-weight: bold; margin-top: -8px;'>Limite: 3 dias</div>", unsafe_allow_html=True)
                     
                 else:
                     st.info(f"Sem dados mapeados para {comp}.")
