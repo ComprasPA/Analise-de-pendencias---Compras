@@ -316,7 +316,7 @@ if df is not None:
 
         def render_gauge(col, titulo, valor, max_val, cor):
             with col:
-                st.plotly_chart(criar_gauge(titulo, valor, max_val, cor, altura=130), use_container_width=True)
+                st.plotly_chart(criar_gauge(titulo, valor, max_val, cor, altura=130), use_container_width=True, config={'displayModeBar': False})
                 perc = (valor / max_val * 100) if max_val > 0 else 0
                 st.markdown(f"<div class='gauge-footer' style='color: {cor};'>{perc:.1f}%</div>", unsafe_allow_html=True)
 
@@ -351,7 +351,7 @@ if df is not None:
                 font=dict(color=cor_texto_grafico),
                 margin=dict(l=5, r=10, t=10, b=10), height=320, xaxis=dict(showgrid=True, gridcolor='#333333' if tema_selecionado != 'Claro' else '#e2e8f0'), yaxis=dict(type='category', tickfont=dict(family='Arial Black', size=10, color=cor_texto_grafico))
             )
-            st.plotly_chart(fig_cc_it, use_container_width=True)
+            st.plotly_chart(fig_cc_it, use_container_width=True, config={'displayModeBar': False})
 
         with row2_c2:
             st.markdown('<div class="section-header">TOP 10 CC (QTD. REQUISIÇÕES)</div>', unsafe_allow_html=True)
@@ -370,7 +370,7 @@ if df is not None:
                 font=dict(color=cor_texto_grafico),
                 margin=dict(l=5, r=10, t=10, b=10), height=320, xaxis=dict(showgrid=True, gridcolor='#333333' if tema_selecionado != 'Claro' else '#e2e8f0'), yaxis=dict(type='category', tickfont=dict(family='Arial Black', size=10, color=cor_texto_grafico))
             )
-            st.plotly_chart(fig_cc_sc, use_container_width=True)
+            st.plotly_chart(fig_cc_sc, use_container_width=True, config={'displayModeBar': False})
 
         with row2_c3:
             st.markdown('<div class="section-header">ITENS CRÍTICOS (MAIORES SLAS)</div>', unsafe_allow_html=True)
@@ -416,7 +416,7 @@ if df is not None:
                     font=dict(color=cor_texto_grafico),
                     margin=dict(l=5, r=20, t=10, b=10), xaxis=dict(showgrid=True, gridcolor='#333333' if tema_selecionado != 'Claro' else '#e2e8f0'), yaxis=dict(type='category', tickfont=dict(family='Arial Black', color=cor_texto_grafico))
                 )
-                st.plotly_chart(fig_direta, use_container_width=True)
+                st.plotly_chart(fig_direta, use_container_width=True, config={'displayModeBar': False})
             else:
                 st.info("Nenhum registro de Compra Direta encontrado.")
 
@@ -443,7 +443,7 @@ if df is not None:
                         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(family='Arial Black', color=cor_texto_grafico)),
                         xaxis=dict(showgrid=False, tickfont=dict(size=12, family='Arial Black', color=cor_texto_grafico)), yaxis=dict(showgrid=True, gridcolor='#333333' if tema_selecionado != 'Claro' else '#e2e8f0')
                     )
-                    st.plotly_chart(fig_crit_stat, use_container_width=True)
+                    st.plotly_chart(fig_crit_stat, use_container_width=True, config={'displayModeBar': False})
 
         # ==========================================
         # PASSO 4: DESEMPENHO POR COMPRADOR
@@ -484,7 +484,7 @@ if df is not None:
                     # 1. Velocímetro de Rendimento
                     cor_gauge_comp = '#388e3c' if taxa_rendimento_comp >= 75 else ('#d97706' if taxa_rendimento_comp >= 50 else '#e53e3e')
                     fig_gauge = criar_gauge("RENDIMENTO (ATENDIDAS / TOTAL)", taxa_rendimento_comp, 100, cor_gauge_comp, sufixo="%", altura=120, title_size=11)
-                    st.plotly_chart(fig_gauge, use_container_width=True)
+                    st.plotly_chart(fig_gauge, use_container_width=True, config={'displayModeBar': False})
 
                     # 2. Gráfico de Barras do Backlog
                     df_comp_aberto = df_comp_total[df_comp_total['Status_Detalhado'] != 'Atendidas'].copy()
@@ -518,7 +518,7 @@ if df is not None:
                             xaxis=dict(showgrid=True, gridcolor='#333333' if tema_selecionado != 'Claro' else '#e2e8f0', range=[0, max(comp_stats['Percentual'].max() * 1.35, 100)], tickfont=dict(size=9, color=cor_texto_grafico)), 
                             yaxis=dict(type='category', tickfont=dict(family='Arial Black', size=10, color=cor_texto_grafico))
                         )
-                        st.plotly_chart(fig_comp_ind, use_container_width=True)
+                        st.plotly_chart(fig_comp_ind, use_container_width=True, config={'displayModeBar': False})
                     else:
                         st.info(f"Fila limpa! Nenhum item pendente para {comp}.")
                     
@@ -561,11 +561,11 @@ if df is not None:
                     sub_c1, sub_c2 = st.columns(2)
                     with sub_c1:
                         st.markdown("<div style='margin-top: 30px;'></div>", unsafe_allow_html=True)
-                        st.plotly_chart(fig_rot, use_container_width=True)
+                        st.plotly_chart(fig_rot, use_container_width=True, config={'displayModeBar': False})
                         st.markdown(f"<div style='text-align: center; font-size: 0.8rem; font-weight: bold; color: {cor_texto_grafico}; margin-top: -2px;'>SLA ROTINEIRA</div><div style='text-align: center; font-size: 0.75rem; font-weight: bold; color: #94a3b8; margin-top: 2px;'>Limite: 15 dias</div>", unsafe_allow_html=True)
                     with sub_c2:
                         st.markdown("<div style='margin-top: 30px;'></div>", unsafe_allow_html=True)
-                        st.plotly_chart(fig_emg, use_container_width=True)
+                        st.plotly_chart(fig_emg, use_container_width=True, config={'displayModeBar': False})
                         st.markdown(f"<div style='text-align: center; font-size: 0.8rem; font-weight: bold; color: {cor_texto_grafico}; margin-top: -2px;'>SLA EMERGENCIAL</div><div style='text-align: center; font-size: 0.75rem; font-weight: bold; color: #94a3b8; margin-top: 2px;'>Limite: 3 dias</div>", unsafe_allow_html=True)
                     
                 else:
