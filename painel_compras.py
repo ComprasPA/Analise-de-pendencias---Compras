@@ -522,14 +522,14 @@ if df is not None:
                     else:
                         st.info(f"Fila limpa! Nenhum item pendente para {comp}.")
                     
-                    # 3. Caixa de Itens Atendidos
+                    # 3. Caixa de Itens Atendidos (com margem superior aumentada para afastar e dar evidência total ao velocímetro)
                     st.markdown(f"""
-                    <div style='text-align: center; font-size: 0.9rem; font-weight: bold; background-color: {'#1a202c' if tema_selecionado != 'Claro' else '#f1f5f9'}; color: {'#63b3ed' if tema_selecionado != 'Claro' else '#2b6cb0'}; padding: 6px; border-radius: 4px; margin-top: 10px; margin-bottom: 0px; border: 1px solid {'#333333' if tema_selecionado != 'Claro' else 'transparent'};'>
+                    <div style='text-align: center; font-size: 0.9rem; font-weight: bold; background-color: {'#1a202c' if tema_selecionado != 'Claro' else '#f1f5f9'}; color: {'#63b3ed' if tema_selecionado != 'Claro' else '#2b6cb0'}; padding: 6px; border-radius: 4px; margin-top: 45px; margin-bottom: 0px; border: 1px solid {'#333333' if tema_selecionado != 'Claro' else 'transparent'};'>
                         ✅ {qtd_atendidas} de {total_emitidas} Itens Atendidos
                     </div>
                     """, unsafe_allow_html=True)
 
-                    # 4. Velocímetros de SLA com escala do emergencial ajustada para exibir perfeitamente valores como 5 (escala de 0 a 12)
+                    # 4. Velocímetros de SLA com escala do emergencial ajustada para exibir perfeitamente o 5 (escala de 0 a 12)
                     cor_rot = "#ff6b6b" if sla_rot_val > 15 else "#339af0"
                     fig_rot = go.Figure(go.Indicator(
                         mode = "gauge+number", value = sla_rot_val,
