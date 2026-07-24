@@ -498,14 +498,14 @@ if df is not None:
                     else:
                         st.info(f"Fila limpa! Nenhum item pendente para {comp}.")
                     
-                    # 3. Caixa de Itens Atendidos com espaçamento superior ampliado
+                    # 3. Caixa de Itens Atendidos com espaçamento exato
                     st.markdown(f"""
-                    <div style='text-align: center; font-size: 0.9rem; font-weight: bold; background-color: {'#1a202c' if tema_selecionado != 'Claro' else '#f1f5f9'}; color: {'#63b3ed' if tema_selecionado != 'Claro' else '#2b6cb0'}; padding: 6px; border-radius: 4px; margin-top: 20px; margin-bottom: 20px; border: 1px solid {'#333333' if tema_selecionado != 'Claro' else 'transparent'};'>
+                    <div style='text-align: center; font-size: 0.9rem; font-weight: bold; background-color: {'#1a202c' if tema_selecionado != 'Claro' else '#f1f5f9'}; color: {'#63b3ed' if tema_selecionado != 'Claro' else '#2b6cb0'}; padding: 6px; border-radius: 4px; margin-top: 30px; margin-bottom: 25px; border: 1px solid {'#333333' if tema_selecionado != 'Claro' else 'transparent'};'>
                         ✅ {qtd_atendidas} de {total_emitidas} Itens Atendidos
                     </div>
                     """, unsafe_allow_html=True)
 
-                    # 4. Velocímetros de SLA (Com afastamento seguro abaixo da caixa de atendidos)
+                    # 4. Velocímetros de SLA (Com 30px de respiro abaixo da caixa de atendidos)
                     cor_rot = "#ff6b6b" if sla_rot_val > 15 else "#339af0"
                     fig_rot = go.Figure(go.Indicator(
                         mode = "gauge+number", value = sla_rot_val,
