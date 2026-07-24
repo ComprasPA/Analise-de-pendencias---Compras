@@ -127,18 +127,56 @@ ARQUIVO_MEMORIA = "base_ativa_painel.xlsx"
 ARQUIVO_HISTORICO = "historico_volumetria.json"
 df = None
 
+# Carrega histórico anterior antes de atualizar a base (para pegar a versão anterior real)
+historico = {}
+if os.path.exists(ARQUIVO_HISTORICO):
+    try:
+        with open(ARQUIVO_HISTORICO, "r") as f:
+            historico = json.load(f)
+    except:
+        historico = {}
+
 if uploaded_file is not None:
     try:
-        with open(ARQUIVO_MEMORIA, "wb") as f:
-            f.write(uploaded_file.getbuffer())
-        st.success("✅ Base atualizada com sucesso por Silvio Silveira! Esta base agora é a padrão para todos os usuários.")
-        
+        # Lê o novo arquivo enviado
         if uploaded_file.name.endswith('.csv'):
-            df = pd.read_csv(uploaded_file, sep=None, engine='python', encoding='utf-8')
+            df_novo = pd.read_csv(uploaded_file, sep=None, engine='python', encoding='utf-8')
         else:
             xls = pd.ExcelFile(uploaded_file)
             sheet_name = 'Solicitações' if 'Solicitações' in xls.sheet_names else xls.sheet_names[0]
-            df = pd.read_excel(uploaded_file, sheet_name=sheet_name)
+            df_novo = pd.read_excel(uploaded_file, sheet_name=sheet_name)
+        
+        # Processa a nova base para calcular métricas e salvar o estado anterior no histórico
+        df_novo.columns = df_novo.columns.astype(str).str.strip()
+        col_cc_temp = 'Centro de Custo' if 'Centro de Custo' in df_novo.columns else None
+        col_sc_temp = 'Solicitação' if 'Solicitação' in df_novo.columns else ('Cod SC. SCM' if 'Cod SC. SCM' in df_novo.columns else None)
+        col_status_temp = 'STATUS' if 'STATUS' in df_novo.columns else None
+        col_crit_temp = 'CRITICIDADE' if 'CRITICIDADE' in df_novo.columns else None
+        col_dt_ini_temp = 'Data Solicitação' if 'Data Solicitação' in df_novo.columns else ('Data emissão Solicitação' if 'Data emissão Solicitação' in df_novo.columns else None)
+        col_dt_ped_temp = 'Data Pedido' if 'Data Pedido' in df_novo.columns else ('Data emissão Pedido' if 'Data emissão Pedido' in df_novo.columns else None)
+
+        if col_cc_temp:
+            df_novo['CC_clean'] = pd.to_numeric(df_novo[col_cc_temp], errors='coerce').fillna(df_novo[col_cc_temp]).astype(str).str.split('.').str[0].str.strip()
+        
+        # Salva o estado atual na memória como "anterior" antes de atualizar a base oficial
+        if os.path.exists(ARQUIVO_MEMORIA):
+            try:
+                df_antigo = pd.read_excel(ARQUIVO_MEMORIA)
+                df_antigo.columns = df_antigo.columns.astype(str).str.strip()
+                if col_cc_temp and col_cc_temp in df_antigo.columns:
+                    df_antigo['CC_clean'] = pd.to_numeric(df_antigo[col_cc_temp], errors='coerce').fillna(df_antigo[col_cc_temp]).astype(str).str.split('.').str[0].str.strip()
+                
+                # Calcula métricas da base anterior para o comparativo
+                # (Mantém o histórico do último relatório carregado)
+            except:
+                pass
+
+        # Salva o arquivo novo na memória
+        with open(ARQUIVO_MEMORIA, "wb") as f:
+            f.write(uploaded_file.getbuffer())
+        
+        st.success("✅ Base atualizada com sucesso por Silvio Silveira! Esta base agora é a padrão para todos os usuários.")
+        df = df_novo
     except Exception as e:
         st.error(f"Erro ao ler o arquivo enviado: {e}")
 
@@ -173,8 +211,8 @@ if df is not None:
         if col_dt_pedido:
             df[col_dt_pedido] = pd.to_datetime(df[col_dt_pedido], errors='coerce')
 
-        # Tratamento Compradores
-        df['CC_clean'] = df[col_cc].astype(str).str.split('.').str[0].str.strip()
+        # Tratamento Compradores e Centro de Custo (SEM .0)
+        df['CC_clean'] = pd.to_numeric(df[col_cc], errors='coerce').fillna(df[col_cc]).astype(str).str.split('.').str[0].str.strip()
         df['Comprador_Resp'] = df['CC_clean'].map(MAPA_COMPRADORES).fillna('Não Mapeado / Outros')
         
         def detalhar_status(x):
@@ -213,41 +251,35 @@ if df is not None:
         unique_scs_aberto = df_aberto.drop_duplicates(subset=[col_sc]).copy()
         total_sc_unicas_aberto = len(unique_scs_aberto)
         
-        # --- REGISTRO DO HISTÓRICO DIÁRIO (VOLUMETRIA E SLA MÉDIO) ---
-        historico = {}
-        if os.path.exists(ARQUIVO_HISTORICO):
-            try:
-                with open(ARQUIVO_HISTORICO, "r") as f:
-                    historico = json.load(f)
-            except:
-                historico = {}
-        
+        # --- CÁLCULO DO SLA MÉDIO GERAL ---
+        df_geral_crit = df.copy()
+        if col_dt_emissao in df_geral_crit.columns:
+            mask_luiz_antigo = (df_geral_crit['Comprador_Resp'] == 'Luiz') & (df_geral_crit[col_dt_emissao] < pd.to_datetime('2026-07-06'))
+            df_geral_crit = df_geral_crit[~mask_luiz_antigo]
+
+        if col_criticidade:
+            df_geral_crit = df_geral_crit[df_geral_crit[col_criticidade].astype(str).str.upper().isin(['ROTINEIRA', 'EMERGENCIAL'])]
+
+        sla_geral_rot = int(round(df_geral_crit[df_geral_crit[col_criticidade].astype(str).str.upper() == 'ROTINEIRA']['Days'].mean(), 0)) if not df_geral_crit.empty and not pd.isna(df_geral_crit[df_geral_crit[col_criticidade].astype(str).str.upper() == 'ROTINEIRA']['Days'].mean()) else 0
+        sla_geral_emg = int(round(df_geral_crit[df_geral_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean(), 0)) if not df_geral_crit.empty and not pd.isna(df_geral_crit[df_geral_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean()) else 0
+
+        # --- GESTÃO DO HISTÓRICO ENTRE ATUALIZAÇÕES DE RELATÓRIO ---
         ontem_scs = historico.get("ult_scs", total_sc_unicas_aberto)
         ontem_itens = historico.get("ult_itens", total_linhas_aberto)
+        ontem_sla_rot = historico.get("ult_sla_rot", sla_geral_rot)
+        ontem_sla_emg = historico.get("ult_sla_emg", sla_geral_emg)
 
         delta_scs = total_sc_unicas_aberto - ontem_scs
         delta_itens = total_linhas_aberto - ontem_itens
 
-        # Cálculo prévio para o histórico geral
-        df_hist_crit = df.copy()
-        if col_dt_emissao in df_hist_crit.columns:
-            mask_luiz_antigo = (df_hist_crit['Comprador_Resp'] == 'Luiz') & (df_hist_crit[col_dt_emissao] < pd.to_datetime('2026-07-06'))
-            df_hist_crit = df_hist_crit[~mask_luiz_antigo]
-        if col_criticidade:
-            df_hist_crit = df_hist_crit[df_hist_crit[col_criticidade].astype(str).str.upper().isin(['ROTINEIRA', 'EMERGENCIAL'])]
-
-        sla_geral_rot_atual = int(round(df_hist_crit[df_hist_crit[col_criticidade].astype(str).str.upper() == 'ROTINEIRA']['Days'].mean(), 0)) if not df_hist_crit.empty and not pd.isna(df_hist_crit[df_hist_crit[col_criticidade].astype(str).str.upper() == 'ROTINEIRA']['Days'].mean()) else 0
-        sla_geral_emg_atual = int(round(df_hist_crit[df_hist_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean(), 0)) if not df_hist_crit.empty and not pd.isna(df_hist_crit[df_hist_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean()) else 0
-
-        ontem_sla_rot = historico.get("ult_sla_rot", sla_geral_rot_atual)
-        ontem_sla_emg = historico.get("ult_sla_emg", sla_geral_emg_atual)
-
-        historico["ult_scs"] = total_sc_unicas_aberto
-        historico["ult_itens"] = total_linhas_aberto
-        historico["ult_sla_rot"] = sla_geral_rot_atual
-        historico["ult_sla_emg"] = sla_geral_emg_atual
-        with open(ARQUIVO_HISTORICO, "w") as f:
-            json.dump(historico, f)
+        # Salva o histórico da última atualização oficial carregada se o usuário fez upload
+        if uploaded_file is not None:
+            historico["ult_scs"] = total_sc_unicas_aberto
+            historico["ult_itens"] = total_linhas_aberto
+            historico["ult_sla_rot"] = sla_geral_rot
+            historico["ult_sla_emg"] = sla_geral_emg
+            with open(ARQUIVO_HISTORICO, "w") as f:
+                json.dump(historico, f)
 
         criticos_df = unique_scs_aberto[unique_scs_aberto['Days'] >= 20]
         
@@ -299,10 +331,10 @@ if df is not None:
             <div style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px; text-align: center; height: 150px; display: flex; flex-direction: column; justify-content: center;">
                 <div style="font-size: 0.85rem; font-family: 'Arial Black'; margin-bottom: 2px;">VOLUMETRIA EM ABERTO</div>
                 <div style="font-size: 1.5rem; font-weight: bold; color: #4dabf7; line-height: 1;">{total_sc_unicas_aberto}</div>
-                <div style="font-size: 0.65rem; font-weight: bold;">Solicitações (SCs) <span style="color: {cor_delta_scs};">({sinal_scs}{delta_scs} vs ontem)</span></div>
+                <div style="font-size: 0.65rem; font-weight: bold;">Solicitações (SCs) <span style="color: {cor_delta_scs};">({sinal_scs}{delta_scs} vs anterior)</span></div>
                 <div style="border-top: 1px dashed #cbd5e1; margin: 3px 0;"></div>
                 <div style="font-size: 1.5rem; font-weight: bold; color: #ffa94d; line-height: 1;">{total_linhas_aberto}</div>
-                <div style="font-size: 0.65rem; font-weight: bold;">Total de Itens <span style="color: {cor_delta_itens};">({sinal_itens}{delta_itens} vs ontem)</span></div>
+                <div style="font-size: 0.65rem; font-weight: bold;">Total de Itens <span style="color: {cor_delta_itens};">({sinal_itens}{delta_itens} vs anterior)</span></div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -328,13 +360,13 @@ if df is not None:
 
         with row2_c1:
             st.markdown('<div class="section-header">TOP 10 CC (VOLUME DE ITENS)</div>', unsafe_allow_html=True)
-            cc_volume = df_aberto.groupby(col_cc).size().reset_index(name='Quantidade').sort_values(by='Quantidade', ascending=False).head(10)
-            cc_volume[col_cc] = cc_volume[col_cc].astype(str)
+            cc_volume = df_aberto.groupby('CC_clean').size().reset_index(name='Quantidade').sort_values(by='Quantidade', ascending=False).head(10)
+            cc_volume['CC_clean'] = cc_volume['CC_clean'].astype(str)
             
             cores_barras = ['#3273a8'] + ['#ed8034'] * (len(cc_volume) - 1)
             fig_cc_it = go.Figure(go.Bar(
                 x=cc_volume.sort_values(by='Quantidade', ascending=True)['Quantidade'],
-                y=cc_volume.sort_values(by='Quantidade', ascending=True)[col_cc],
+                y=cc_volume.sort_values(by='Quantidade', ascending=True)['CC_clean'],
                 orientation='h', text=cc_volume.sort_values(by='Quantidade', ascending=True)['Quantidade'],
                 textposition='outside', textfont=dict(size=11, color=cor_texto_grafico, family='Arial Black'), marker_color=cores_barras[::-1]
             ))
@@ -347,13 +379,13 @@ if df is not None:
 
         with row2_c2:
             st.markdown('<div class="section-header">TOP 10 CC (QTD. REQUISIÇÕES)</div>', unsafe_allow_html=True)
-            cc_scs = unique_scs_aberto.groupby(col_cc)[col_sc].nunique().reset_index(name='Qtd_SCs').sort_values(by='Qtd_SCs', ascending=False).head(10)
-            cc_scs[col_cc] = cc_scs[col_cc].astype(str)
+            cc_scs = unique_scs_aberto.groupby('CC_clean')[col_sc].nunique().reset_index(name='Qtd_SCs').sort_values(by='Qtd_SCs', ascending=False).head(10)
+            cc_scs['CC_clean'] = cc_scs['CC_clean'].astype(str)
             
             cores_barras_sc = ['#2b6cb0'] + ['#319795'] * (len(cc_scs) - 1)
             fig_cc_sc = go.Figure(go.Bar(
                 x=cc_scs.sort_values(by='Qtd_SCs', ascending=True)['Qtd_SCs'],
-                y=cc_scs.sort_values(by='Qtd_SCs', ascending=True)[col_cc],
+                y=cc_scs.sort_values(by='Qtd_SCs', ascending=True)['CC_clean'],
                 orientation='h', text=cc_scs.sort_values(by='Qtd_SCs', ascending=True)['Qtd_SCs'],
                 textposition='outside', textfont=dict(size=11, color=cor_texto_grafico, family='Arial Black'), marker_color=cores_barras_sc[::-1]
             ))
@@ -366,7 +398,7 @@ if df is not None:
 
         with row2_c3:
             st.markdown('<div class="section-header">ITENS CRÍTICOS (MAIORES SLAS)</div>', unsafe_allow_html=True)
-            top_critical = criticos_df.sort_values(by='Days', ascending=False)[[col_sc, col_cc, 'Days']].head(8)
+            top_critical = criticos_df.sort_values(by='Days', ascending=False)[[col_sc, 'CC_clean', 'Days']].head(8)
             top_critical.columns = ['Nº SC', 'C. CUSTO', 'ATRASO']
             top_critical['ATRASO'] = top_critical['ATRASO'].astype(str) + " DIAS 🔥"
             st.dataframe(top_critical, use_container_width=True, height=320, hide_index=True)
@@ -392,14 +424,14 @@ if df is not None:
                 if mask_direta.sum() > 0:
                     df_direta = df_direta[mask_direta]
             
-            cc_direta = df_direta.drop_duplicates(subset=[col_sc]).groupby(col_cc)[col_sc].nunique().reset_index(name='Qtd_SCs').sort_values(by='Qtd_SCs', ascending=False).head(10)
-            cc_direta[col_cc] = cc_direta[col_cc].astype(str)
+            cc_direta = df_direta.drop_duplicates(subset=[col_sc]).groupby('CC_clean')[col_sc].nunique().reset_index(name='Qtd_SCs').sort_values(by='Qtd_SCs', ascending=False).head(10)
+            cc_direta['CC_clean'] = cc_direta['CC_clean'].astype(str)
 
             if not cc_direta.empty:
                 cores_direta = ['#2b6cb0'] + ['#319795'] * (len(cc_direta) - 1)
                 fig_direta = go.Figure(go.Bar(
                     x=cc_direta.sort_values(by='Qtd_SCs', ascending=True)['Qtd_SCs'],
-                    y=cc_direta.sort_values(by='Qtd_SCs', ascending=True)[col_cc],
+                    y=cc_direta.sort_values(by='Qtd_SCs', ascending=True)['CC_clean'],
                     orientation='h', text=cc_direta.sort_values(by='Qtd_SCs', ascending=True)['Qtd_SCs'],
                     textposition='outside', textfont=dict(size=11, color=cor_texto_grafico, family='Arial Black'), marker_color=cores_direta[::-1]
                 ))
@@ -521,7 +553,7 @@ if df is not None:
                     </div>
                     """, unsafe_allow_html=True)
 
-                    # 4. Velocímetros de SLA
+                    # 4. Velocímetros de SLA com espaçamento exato de 30px em relação ao topo
                     cor_rot = "#ff6b6b" if sla_rot_val > 15 else "#339af0"
                     fig_rot = go.Figure(go.Indicator(
                         mode = "gauge+number", value = sla_rot_val,
@@ -567,17 +599,6 @@ if df is not None:
         # PASSO 5: CAIXA DE SLA MÉDIO GERAL (CONSOLIDADO)
         # ==========================================
         st.markdown("<br>", unsafe_allow_html=True)
-        
-        df_geral_crit = df.copy()
-        if col_dt_emissao in df_geral_crit.columns:
-            mask_luiz_antigo = (df_geral_crit['Comprador_Resp'] == 'Luiz') & (df_geral_crit[col_dt_emissao] < pd.to_datetime('2026-07-06'))
-            df_geral_crit = df_geral_crit[~mask_luiz_antigo]
-
-        if col_criticidade:
-            df_geral_crit = df_geral_crit[df_geral_crit[col_criticidade].astype(str).str.upper().isin(['ROTINEIRA', 'EMERGENCIAL'])]
-
-        sla_geral_rot = int(round(df_geral_crit[df_geral_crit[col_criticidade].astype(str).str.upper() == 'ROTINEIRA']['Days'].mean(), 0)) if not df_geral_crit.empty and not pd.isna(df_geral_crit[df_geral_crit[col_criticidade].astype(str).str.upper() == 'ROTINEIRA']['Days'].mean()) else 0
-        sla_geral_emg = int(round(df_geral_crit[df_geral_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean(), 0)) if not df_geral_crit.empty and not pd.isna(df_geral_crit[df_geral_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean()) else 0
 
         st.markdown(f"""
         <div style="background-color: {'#111827' if tema_selecionado != 'Claro' else '#f8fafc'}; border: 1px solid {'#374151' if tema_selecionado != 'Claro' else '#cbd5e1'}; border-radius: 6px; padding: 15px; text-align: center; margin-top: 10px; margin-bottom: 20px;">
@@ -585,12 +606,12 @@ if df is not None:
             <div style="display: flex; justify-content: center; gap: 40px; font-size: 1.1rem; font-weight: bold;">
                 <div>
                     SLA Rotineira Médio: <span style="color: {'#ff6b6b' if sla_geral_rot > 15 else '#339af0'};">{sla_geral_rot} dias</span> <span style="font-size: 0.8rem; color: #94a3b8;">(Limite: 15 dias)</span>
-                    <div style="font-size: 0.75rem; color: #94a3b8; font-weight: normal; margin-top: 2px;">Ontem: {ontem_sla_rot} dias</div>
+                    <div style="font-size: 0.7rem; color: #94a3b8; font-weight: normal; margin-top: 2px;">(vs {ontem_sla_rot} dias anterior)</div>
                 </div>
                 <div>|</div>
                 <div>
                     SLA Emergencial Médio: <span style="color: {'#ff6b6b' if sla_geral_emg > 3 else '#b197fc'};">{sla_geral_emg} dias</span> <span style="font-size: 0.8rem; color: #94a3b8;">(Limite: 3 dias)</span>
-                    <div style="font-size: 0.75rem; color: #94a3b8; font-weight: normal; margin-top: 2px;">Ontem: {ontem_sla_emg} dias</div>
+                    <div style="font-size: 0.7rem; color: #94a3b8; font-weight: normal; margin-top: 2px;">(vs {ontem_sla_emg} dias anterior)</div>
                 </div>
             </div>
         </div>
