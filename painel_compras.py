@@ -356,31 +356,47 @@ if df is not None:
             st.dataframe(top_critical, use_container_width=True, height=320, hide_index=True)
 
         # ==========================================
-        # PASSO 3: GERAL SLA & CRITICIDADE (2 COLUNAS)
+        # PASSO 3: TOP 10 COMPRA DIRETA POR CUSTO (QTD. REQUISIÇÕES)
         # ==========================================
         st.markdown("---")
         row3_c1, row3_c2 = st.columns(2)
 
+        # Identificação da coluna de Tipo ou Compra Direta
+        col_tipo = None
+        for c in ['Tipo SC', 'Tipo', 'Grupo', 'Subgrupo']:
+            if c in df.columns:
+                col_tipo = c
+                break
+
         with row3_c1:
-            st.markdown('<div class="section-header">CONSOLIDAÇÃO GERAL: STATUS DE PRAZO (QTD. ITENS)</div>', unsafe_allow_html=True)
-            if col_status:
-                status_count = df_aberto.groupby(col_status).size().reset_index(name='Quantidade').sort_values(by='Quantidade', ascending=False)
-                status_count[col_status] = status_count[col_status].astype(str)
-                status_count = status_count.sort_values(by='Quantidade', ascending=True)
-                
-                cores_status = ['#e53e3e' if 'FORA' in s.upper() else '#d97706' if 'ATENÇÃO' in s.upper() else '#388e3c' for s in status_count[col_status]]
-                fig_status = go.Figure(go.Bar(
-                    x=status_count['Quantidade'], y=status_count[col_status], orientation='h',
-                    text=status_count['Quantidade'], textposition='outside', 
-                    textfont=dict(size=12, color=cor_texto_grafico, family='Arial Black'), 
-                    marker_color=cores_status
+            st.markdown('<div class="section-header">TOP 10 COMPRA DIRETA (QTD. REQUISIÇÕES)</div>', unsafe_allow_html=True)
+            
+            # Filtro para Compra Direta (se houver coluna específica ou termo)
+            df_direta = df_aberto.copy()
+            if col_tipo:
+                mask_direta = df_direta[col_tipo].astype(str).str.upper().str.contains('DIRETA', na=False)
+                if mask_direta.sum() > 0:
+                    df_direta = df_direta[mask_direta]
+            
+            cc_direta = df_direta.drop_duplicates(subset=[col_sc]).groupby(col_cc)[col_sc].nunique().reset_index(name='Qtd_SCs').sort_values(by='Qtd_SCs', ascending=False).head(10)
+            cc_direta[col_cc] = cc_direta[col_cc].astype(str)
+
+            if not cc_direta.empty:
+                cores_direta = ['#2b6cb0'] + ['#319795'] * (len(cc_direta) - 1)
+                fig_direta = go.Figure(go.Bar(
+                    x=cc_direta.sort_values(by='Qtd_SCs', ascending=True)['Qtd_SCs'],
+                    y=cc_direta.sort_values(by='Qtd_SCs', ascending=True)[col_cc],
+                    orientation='h', text=cc_direta.sort_values(by='Qtd_SCs', ascending=True)['Qtd_SCs'],
+                    textposition='outside', textfont=dict(size=11, color=cor_texto_grafico, family='Arial Black'), marker_color=cores_direta[::-1]
                 ))
-                fig_status.update_layout(
-                    xaxis_title="Qtd. Itens em Aberto", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=320,
+                fig_direta.update_layout(
+                    xaxis_title="Qtd. Requisições (Compra Direta)", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=320,
                     font=dict(color=cor_texto_grafico),
                     margin=dict(l=5, r=20, t=10, b=10), xaxis=dict(showgrid=True, gridcolor='#333333' if tema_selecionado != 'Claro' else '#e2e8f0'), yaxis=dict(type='category', tickfont=dict(family='Arial Black', color=cor_texto_grafico))
                 )
-                st.plotly_chart(fig_status, use_container_width=True)
+                st.plotly_chart(fig_direta, use_container_width=True)
+            else:
+                st.info("Nenhum registro de Compra Direta encontrado.")
 
         with row3_c2:
             st.markdown('<div class="section-header">CRITICIDADE VS STATUS (QTD. ITENS)</div>', unsafe_allow_html=True)
