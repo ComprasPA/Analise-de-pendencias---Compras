@@ -498,14 +498,14 @@ if df is not None:
                     else:
                         st.info(f"Fila limpa! Nenhum item pendente para {comp}.")
                     
-                    # 3. Caixa de Itens Atendidos (subida de 12px / 30px)
+                    # 3. Caixa de Itens Atendidos
                     st.markdown(f"""
-                    <div style='text-align: center; font-size: 0.9rem; font-weight: bold; background-color: {'#1a202c' if tema_selecionado != 'Claro' else '#f1f5f9'}; color: {'#63b3ed' if tema_selecionado != 'Claro' else '#2b6cb0'}; padding: 6px; border-radius: 4px; margin-top: 12px; margin-bottom: 30px; border: 1px solid {'#333333' if tema_selecionado != 'Claro' else 'transparent'};'>
+                    <div style='text-align: center; font-size: 0.9rem; font-weight: bold; background-color: {'#1a202c' if tema_selecionado != 'Claro' else '#f1f5f9'}; color: {'#63b3ed' if tema_selecionado != 'Claro' else '#2b6cb0'}; padding: 6px; border-radius: 4px; margin-top: 10px; margin-bottom: 0px; border: 1px solid {'#333333' if tema_selecionado != 'Claro' else 'transparent'};'>
                         ✅ {qtd_atendidas} de {total_emitidas} Itens Atendidos
                     </div>
                     """, unsafe_allow_html=True)
 
-                    # 4. Velocímetros de SLA com passagens ajustadas
+                    # 4. Velocímetros de SLA com espaçamento exato de 30px em relação ao topo
                     cor_rot = "#ff6b6b" if sla_rot_val > 15 else "#339af0"
                     fig_rot = go.Figure(go.Indicator(
                         mode = "gauge+number", value = sla_rot_val,
@@ -536,9 +536,11 @@ if df is not None:
 
                     sub_c1, sub_c2 = st.columns(2)
                     with sub_c1:
+                        st.markdown("<div style='margin-top: 30px;'></div>", unsafe_allow_html=True)
                         st.plotly_chart(fig_rot, use_container_width=True)
                         st.markdown(f"<div style='text-align: center; font-size: 0.8rem; font-weight: bold; color: {cor_texto_grafico}; margin-top: -2px;'>SLA ROTINEIRA</div><div style='text-align: center; font-size: 0.75rem; font-weight: bold; color: #94a3b8; margin-top: 2px;'>Limite: 15 dias</div>", unsafe_allow_html=True)
                     with sub_c2:
+                        st.markdown("<div style='margin-top: 30px;'></div>", unsafe_allow_html=True)
                         st.plotly_chart(fig_emg, use_container_width=True)
                         st.markdown(f"<div style='text-align: center; font-size: 0.8rem; font-weight: bold; color: {cor_texto_grafico}; margin-top: -2px;'>SLA EMERGENCIAL</div><div style='text-align: center; font-size: 0.75rem; font-weight: bold; color: #94a3b8; margin-top: 2px;'>Limite: 3 dias</div>", unsafe_allow_html=True)
                     
