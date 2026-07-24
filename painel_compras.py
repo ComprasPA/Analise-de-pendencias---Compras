@@ -3,6 +3,7 @@ import pandas as pd
 import datetime
 import plotly.graph_objects as go
 import os
+import json
 
 # 1. CONFIGURAÇÃO DA PÁGINA (Wide com barra de rolagem habilitada)
 st.set_page_config(layout="wide", page_title="Panorama Executivo de Suprimentos")
@@ -118,6 +119,7 @@ MAPA_COMPRADORES = {
 # PROCESSAMENTO ANALÍTICO DE DADOS (MEMÓRIA GLOBAL)
 # ==========================================
 ARQUIVO_MEMORIA = "base_ativa_painel.xlsx"
+ARQUIVO_HISTORICO = "historico_volumetria.json"
 df = None
 
 if uploaded_file is not None:
@@ -206,6 +208,30 @@ if df is not None:
         unique_scs_aberto = df_aberto.drop_duplicates(subset=[col_sc]).copy()
         total_sc_unicas_aberto = len(unique_scs_aberto)
         
+        # --- REGISTRO DO HISTÓRICO DIÁRIO (ONTEM VS HOJE) ---
+        data_hoje_str = hoje.strftime("%Y-%m-%d")
+        historico = {}
+        if os.path.exists(ARQUIVO_HISTORICO):
+            try:
+                with open(ARQUIVO_HISTORICO, "r") as f:
+                    historico = json.load(f)
+            except:
+                historico = {}
+        
+        # Pega o valor do dia anterior salvo ou assume o atual se não houver registro
+        ontem_scs = historico.get("ult_scs", total_sc_unicas_aberto)
+        ontem_itens = historico.get("ult_itens", total_linhas_aberto)
+
+        # Atualiza histórico se mudou o dia ou a base
+        delta_scs = total_sc_unicas_aberto - ontem_scs
+        delta_itens = total_linhas_aberto - ontem_itens
+
+        # Salva o valor atual para o próximo comparativo
+        historico["ult_scs"] = total_sc_unicas_aberto
+        historico["ult_itens"] = total_linhas_aberto
+        with open(ARQUIVO_HISTORICO, "w") as f:
+            json.dump(historico, f)
+
         criticos_df = unique_scs_aberto[unique_scs_aberto['Days'] >= 20]
         
         # Consolidações para os Velocímetros da Linha 1
@@ -246,14 +272,21 @@ if df is not None:
         row1_c1, row1_c2, row1_c3, row1_c4, row1_c5, row1_c6 = st.columns([1.5, 1, 1, 1, 1, 1])
 
         with row1_c1:
+            # Formatação do Delta (Ontem vs Hoje)
+            cor_delta_scs = "#e53e3e" if delta_scs > 0 else "#388e3c"
+            sinal_scs = "+" if delta_scs > 0 else ""
+            
+            cor_delta_itens = "#e53e3e" if delta_itens > 0 else "#388e3c"
+            sinal_itens = "+" if delta_itens > 0 else ""
+
             st.markdown(f"""
-            <div style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 10px; text-align: center; height: 150px; display: flex; flex-direction: column; justify-content: center;">
-                <div style="font-size: 0.9rem; font-family: 'Arial Black'; margin-bottom: 5px;">VOLUMETRIA EM ABERTO</div>
-                <div style="font-size: 1.8rem; font-weight: bold; color: #2b6cb0; line-height: 1;">{total_sc_unicas_aberto}</div>
-                <div style="font-size: 0.7rem; font-weight: bold; text-transform: uppercase; margin-bottom: 3px;">Solicitações (SCs)</div>
-                <div style="border-top: 1px dashed #cbd5e1; margin: 4px 0;"></div>
-                <div style="font-size: 1.8rem; font-weight: bold; color: #ed8034; line-height: 1;">{total_linhas_aberto}</div>
-                <div style="font-size: 0.7rem; font-weight: bold; text-transform: uppercase;">Total de Itens</div>
+            <div style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px; text-align: center; height: 150px; display: flex; flex-direction: column; justify-content: center;">
+                <div style="font-size: 0.85rem; font-family: 'Arial Black'; margin-bottom: 2px;">VOLUMETRIA EM ABERTO</div>
+                <div style="font-size: 1.5rem; font-weight: bold; color: #2b6cb0; line-height: 1;">{total_sc_unicas_aberto}</div>
+                <div style="font-size: 0.65rem; color: #475569; font-weight: bold;">Solicitações (SCs) <span style="color: {cor_delta_scs};">({sinal_scs}{delta_scs} vs ontem)</span></div>
+                <div style="border-top: 1px dashed #cbd5e1; margin: 3px 0;"></div>
+                <div style="font-size: 1.5rem; font-weight: bold; color: #ed8034; line-height: 1;">{total_linhas_aberto}</div>
+                <div style="font-size: 0.65rem; color: #475569; font-weight: bold;">Total de Itens <span style="color: {cor_delta_itens};">({sinal_itens}{delta_itens} vs ontem)</span></div>
             </div>
             """, unsafe_allow_html=True)
 
