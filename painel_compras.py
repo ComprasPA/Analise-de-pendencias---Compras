@@ -361,7 +361,6 @@ if df is not None:
         st.markdown("---")
         row3_c1, row3_c2 = st.columns(2)
 
-        # Identificação da coluna de Tipo ou Compra Direta
         col_tipo = None
         for c in ['Tipo SC', 'Tipo', 'Grupo', 'Subgrupo']:
             if c in df.columns:
@@ -371,7 +370,6 @@ if df is not None:
         with row3_c1:
             st.markdown('<div class="section-header">TOP 10 COMPRA DIRETA (QTD. REQUISIÇÕES)</div>', unsafe_allow_html=True)
             
-            # Filtro para Compra Direta (se houver coluna específica ou termo)
             df_direta = df_aberto.copy()
             if col_tipo:
                 mask_direta = df_direta[col_tipo].astype(str).str.upper().str.contains('DIRETA', na=False)
@@ -442,6 +440,7 @@ if df is not None:
                 
                 df_comp_total = df[df['Comprador_Resp'] == comp].copy()
                 
+                # ------ REGRA DE EXCEÇÃO: LUIZ APENAS A PARTIR DE 06/07/2026 ------
                 if comp == 'Luiz' and col_dt_emissao in df_comp_total.columns:
                     st.markdown("<div style='text-align: center; font-size: 0.75rem; font-weight: bold; color: #ff6b6b; margin-bottom: 4px;'>*(Análise iniciada em 06/07/2026)</div>", unsafe_allow_html=True)
                     df_comp_total = df_comp_total[df_comp_total[col_dt_emissao] >= pd.to_datetime('2026-07-06')]
