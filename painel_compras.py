@@ -25,7 +25,7 @@ with st.expander("⚙️ Abrir / Fechar Configurações (Upload, Data Base e Tem
         )
 
 # ==========================================
-# CSS CUSTOMIZADO DINÂMICO (AJUSTE DE CONTRASTE PARA TEMAS ESCUROS)
+# CSS CUSTOMIZADO DINÂMICO (AJUSTE DE CONTRASTE E ALINHAMENTO DA TABELA)
 # ==========================================
 if tema_selecionado == "Black (Preto Absoluto)":
     css_tema = """
@@ -97,12 +97,14 @@ st.markdown(f"""
         margin-top: -5px;
         text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.10);
     }}
+    /* Ajuste e alinhamento compacto para a tabela de itens críticos */
     .stDataFrame td, .stDataFrame th {{
-        font-size: 1rem !important;
-        font-weight: 800 !important;
-        padding: 4px 6px !important;
+        font-size: 0.95rem !important;
+        font-weight: 700 !important;
+        padding: 5px 8px !important;
+        text-align: left !important;
     }}
-    {css_tema}
+    {{css_tema}}
     </style>
 """, unsafe_allow_html=True)
 
@@ -332,7 +334,7 @@ if df is not None:
         # PASSO 2: CENTROS DE CUSTO & ITENS CRÍTICOS (3 COLUNAS)
         # ==========================================
         st.markdown("---")
-        row2_c1, row2_c2, row2_c3 = st.columns([1, 1, 1.1])
+        row2_c1, row2_c2, row2_c3 = st.columns([1, 1, 0.7])
 
         with row2_c1:
             st.markdown('<div class="section-header">TOP 10 CC (VOLUME DE ITENS)</div>', unsafe_allow_html=True)
@@ -373,7 +375,7 @@ if df is not None:
             st.plotly_chart(fig_cc_sc, use_container_width=True, config={'displayModeBar': False})
 
         with row2_c3:
-            st.markdown('<div class="section-header">ITENS CRÍTICOS (MAIORES SLAS)</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-header">ITENS CRÍTICOS</div>', unsafe_allow_html=True)
             top_critical = criticos_df.sort_values(by='Days', ascending=False)[[col_sc, 'CC_clean', 'Days']].head(8)
             top_critical.columns = ['Nº SC', 'C. CUSTO', 'ATRASO']
             top_critical['ATRASO'] = top_critical['ATRASO'].astype(str) + " DIAS 🔥"
@@ -529,7 +531,7 @@ if df is not None:
                     </div>
                     """, unsafe_allow_html=True)
 
-                    # 4. Velocímetros de SLA com escala do emergencial ajustada exatamente para o intervalo de 0 a 20 (permitindo acomodar valores altos como 15 ou 12 perfeitamente sem cortes)
+                    # 4. Velocímetros de SLA
                     cor_rot = "#ff6b6b" if sla_rot_val > 15 else "#339af0"
                     fig_rot = go.Figure(go.Indicator(
                         mode = "gauge+number", value = sla_rot_val,
