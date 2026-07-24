@@ -137,7 +137,6 @@ if df is not None:
         col_sc = 'Solicitação' if 'Solicitação' in df.columns else ('Cod SC. SCM' if 'Cod SC. SCM' in df.columns else None)
         col_cc = 'Centro de Custo' if 'Centro de Custo' in df.columns else None
         
-        # Mapeamento exato das colunas de data baseadas na sua última instrução
         col_dt_emissao = 'Data Solicitação' if 'Data Solicitação' in df.columns else ('Data emissão Solicitação' if 'Data emissão Solicitação' in df.columns else None)
         col_dt_pedido = 'Data Pedido' if 'Data Pedido' in df.columns else ('Data emissão Pedido' if 'Data emissão Pedido' in df.columns else None)
 
@@ -168,7 +167,7 @@ if df is not None:
         else:
             df['Status_Detalhado'] = 'No Prazo'
 
-        # --- CÁLCULO INTELIGENTE DO SLA (Abertura até Fechamento OU Abertura até Hoje) ---
+        # --- CÁLCULO INTELIGENTE DO SLA ---
         def calcular_sla(row):
             status = str(row.get(col_status, '')).strip().upper()
             dt_ini = row[col_dt_emissao]
@@ -359,10 +358,10 @@ if df is not None:
                     st.plotly_chart(fig_crit_stat, use_container_width=True)
 
         # ==========================================
-        # PASSO 4: DESEMPENHO POR COMPRADOR (RENDIMENTO + SLA MÉDIO REDUZIDO + BACKLOG)
+        # PASSO 4: DESEMPENHO POR COMPRADOR
         # ==========================================
         st.markdown("---")
-        st.markdown('<div class="section-header" style="background-color: #2b4c7e;">DESEMPENHO INDIVIDUAL POR COMPRADOR (RENDIMENTO, SLA MÉDIO E BACKLOG)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header" style="background-color: #2b4c7e;">DESEMPENHO INDIVIDUAL POR COMPRADOR</div>', unsafe_allow_html=True)
         
         row4_c1, row4_c2, row4_c3 = st.columns(3)
         compradores = ['Ednilson', 'Dayana', 'Luiz']
@@ -391,37 +390,21 @@ if df is not None:
                     qtd_atendidas = len(df_comp_total[df_comp_total['Status_Detalhado'] == 'Atendidas'])
                     taxa_rendimento_comp = (qtd_atendidas / total_emitidas * 100) if total_emitidas > 0 else 0
                     
-                    # ----- FILTRAR APENAS ROTINEIRA E EMERGENCIAL PARA O SLA MÉDIO -----
+                    # ----- FILTRAR APENAS ROTINEIRA E EMERGENCIAL PARA O SLA MÉDIO (NÚMEROS INTEIROS) -----
                     if col_criticidade:
                         df_comp_crit = df_comp_total[df_comp_total[col_criticidade].astype(str).str.upper().isin(['ROTINEIRA', 'EMERGENCIAL'])]
                     else:
                         df_comp_crit = pd.DataFrame()
                         
-                    sla_rot_val = df_comp_crit[df_comp_crit[col_criticidade].astype(str).str.upper() == 'ROTINEIRA']['Days'].mean() if not df_comp_crit.empty else 0
-                    sla_emg_val = df_comp_crit[df_comp_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean() if not df_comp_crit.empty else 0
-                    
-                    sla_rot_val = 0 if pd.isna(sla_rot_val) else round(sla_rot_val, 1)
-                    sla_emg_val = 0 if pd.isna(sla_emg_val) else round(sla_emg_val, 1)
+                    sla_rot_val = int(round(df_comp_crit[df_comp_crit[col_criticidade].astype(str).str.upper() == 'ROTINEIRA']['Days'].mean(), 0)) if not df_comp_crit.empty and not pd.isna(df_comp_crit[df_comp_crit[col_criticidade].astype(str).str.upper() == 'ROTINEIRA']['Days'].mean()) else 0
+                    sla_emg_val = int(round(df_comp_crit[df_comp_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean(), 0)) if not df_comp_crit.empty and not pd.isna(df_comp_crit[df_comp_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean()) else 0
 
                     # ----- 1. VELOCÍMETRO DE RENDIMENTO -----
                     cor_gauge_comp = '#388e3c' if taxa_rendimento_comp >= 75 else ('#d97706' if taxa_rendimento_comp >= 50 else '#e53e3e')
                     fig_gauge = criar_gauge("RENDIMENTO (ATENDIDAS / TOTAL)", taxa_rendimento_comp, 100, cor_gauge_comp, sufixo="%", altura=120)
                     st.plotly_chart(fig_gauge, use_container_width=True)
 
-                    # ----- 2. VELOCÍMETROS DE SLA MÉDIO REDUZIDOS PELA METADE (ALTURA 65) -----
-                    sub_c1, sub_c2 = st.columns(2)
-                    with sub_c1:
-                        fig_rot = criar_gauge("SLA ROTINEIRA", sla_rot_val, max(sla_rot_val * 1.5, 30), "#2b6cb0", altura=65)
-                        st.plotly_chart(fig_rot, use_container_width=True)
-                        st.markdown(f"<div style='text-align: center; font-size: 0.75rem; font-weight: bold; color: #2b6cb0; margin-top: -12px;'>{sla_rot_val} dias</div>", unsafe_allow_html=True)
-                    with sub_c2:
-                        fig_emg = criar_gauge("SLA EMERGENCIAL", sla_emg_val, max(sla_emg_val * 1.5, 10), "#805ad5", altura=65)
-                        st.plotly_chart(fig_emg, use_container_width=True)
-                        st.markdown(f"<div style='text-align: center; font-size: 0.75rem; font-weight: bold; color: #805ad5; margin-top: -12px;'>{sla_emg_val} dias</div>", unsafe_allow_html=True)
-
-                    st.markdown("<div style='margin: 2px 0;'></div>", unsafe_allow_html=True)
-
-                    # ----- 3. GRÁFICO DE BARRAS PERCENTUAIS DO BACKLOG PENDENTE -----
+                    # ----- 2. GRÁFICO DE BARRAS PERCENTUAIS DO BACKLOG PENDENTE -----
                     df_comp_aberto = df_comp_total[df_comp_total['Status_Detalhado'] != 'Atendidas'].copy()
                     
                     if not df_comp_aberto.empty:
@@ -456,11 +439,24 @@ if df is not None:
                     else:
                         st.info(f"Fila limpa! Nenhum item pendente para {comp}.")
                     
+                    # ----- 3. CAIXA DE ITENS ATENDIDOS -----
                     st.markdown(f"""
                     <div style='text-align: center; font-size: 0.9rem; color: #2b6cb0; font-weight: bold; background-color: #f1f5f9; padding: 5px; border-radius: 4px; margin-top: 5px;'>
                         ✅ {qtd_atendidas} de {total_emitidas} Itens Atendidos
                     </div>
                     """, unsafe_allow_html=True)
+
+                    # ----- 4. VELOCÍMETROS DE SLA MÉDIO ABAIXO DOS ATENDIDOS (TAMANHO 1.3x E NÚMEROS INTEIROS) -----
+                    sub_c1, sub_c2 = st.columns(2)
+                    with sub_c1:
+                        # Altura ajustada em ~1.3x (aprox 85) e max_val inteiro
+                        fig_rot = criar_gauge("SLA ROTINEIRA", sla_rot_val, max(int(sla_rot_val * 1.5), 30), "#2b6cb0", altura=85)
+                        st.plotly_chart(fig_rot, use_container_width=True)
+                        st.markdown(f"<div style='text-align: center; font-size: 0.8rem; font-weight: bold; color: #2b6cb0; margin-top: -10px;'>{sla_rot_val} dias</div>", unsafe_allow_html=True)
+                    with sub_c2:
+                        fig_emg = criar_gauge("SLA EMERGENCIAL", sla_emg_val, max(int(sla_emg_val * 1.5), 10), "#805ad5", altura=85)
+                        st.plotly_chart(fig_emg, use_container_width=True)
+                        st.markdown(f"<div style='text-align: center; font-size: 0.8rem; font-weight: bold; color: #805ad5; margin-top: -10px;'>{sla_emg_val} dias</div>", unsafe_allow_html=True)
                     
                 else:
                     st.info(f"Sem dados mapeados para {comp}.")
