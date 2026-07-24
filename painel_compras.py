@@ -268,7 +268,7 @@ if df is not None:
                               {'range': [max_val * 0.6, max_val], 'color': '#1f2937' if tema_selecionado != 'Claro' else '#e2e8f0'}],
                 }
             ))
-            fig.update_layout(height=altura, margin=dict(l=10, r=10, t=35, b=5), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+            fig.update_layout(height=altura, margin=dict(l=10, r=10, t=30, b=5), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
             return fig
 
         row1_c1, row1_c2, row1_c3, row1_c4, row1_c5, row1_c6 = st.columns([1.5, 1, 1, 1, 1, 1])
@@ -505,12 +505,11 @@ if df is not None:
                     </div>
                     """, unsafe_allow_html=True)
 
-                    # 4. Velocímetros de SLA (Com padronização exata de margens e títulos perfeitamente alinhados)
+                    # 4. Velocímetros de SLA (Sem título em cima, com título e limite perfeitamente alinhados embaixo)
                     cor_rot = "#ff6b6b" if sla_rot_val > 15 else "#339af0"
                     fig_rot = go.Figure(go.Indicator(
                         mode = "gauge+number", value = sla_rot_val,
                         number = {'font': {'size': 20, 'color': cor_texto_grafico, 'family': 'Arial Black'}},
-                        title = {'text': "SLA ROTINEIRA", 'font': {'size': 11, 'color': cor_texto_grafico, 'family': 'Arial Black'}},
                         gauge = {
                             'axis': {'range': [0, 30], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 8, 'color': cor_texto_grafico, 'family': 'Arial Black'}},
                             'bar': {'color': cor_rot}, 'bgcolor': "rgba(0,0,0,0)", 'borderwidth': 0,
@@ -519,13 +518,12 @@ if df is not None:
                             'threshold': {'line': {'color': 'red', 'width': 4}, 'thickness': 0.75, 'value': 15}
                         }
                     ))
-                    fig_rot.update_layout(height=140, margin=dict(l=5, r=5, t=45, b=5), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+                    fig_rot.update_layout(height=110, margin=dict(l=5, r=5, t=10, b=5), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
 
                     cor_emg = "#ff6b6b" if sla_emg_val > 3 else "#b197fc"
                     fig_emg = go.Figure(go.Indicator(
                         mode = "gauge+number", value = sla_emg_val,
                         number = {'font': {'size': 20, 'color': cor_texto_grafico, 'family': 'Arial Black'}},
-                        title = {'text': "SLA EMERGENCIAL", 'font': {'size': 11, 'color': cor_texto_grafico, 'family': 'Arial Black'}},
                         gauge = {
                             'axis': {'range': [0, 10], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 8, 'color': cor_texto_grafico, 'family': 'Arial Black'}},
                             'bar': {'color': cor_emg}, 'bgcolor': "rgba(0,0,0,0)", 'borderwidth': 0,
@@ -534,15 +532,15 @@ if df is not None:
                             'threshold': {'line': {'color': 'red', 'width': 4}, 'thickness': 0.75, 'value': 3}
                         }
                     ))
-                    fig_emg.update_layout(height=140, margin=dict(l=5, r=5, t=45, b=5), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+                    fig_emg.update_layout(height=110, margin=dict(l=5, r=5, t=10, b=5), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
 
                     sub_c1, sub_c2 = st.columns(2)
                     with sub_c1:
                         st.plotly_chart(fig_rot, use_container_width=True)
-                        st.markdown("<div style='text-align: center; font-size: 0.75rem; font-weight: bold; margin-top: -8px;'>Limite: 15 dias</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='text-align: center; font-size: 0.8rem; font-weight: bold; color: {cor_texto_grafico}; margin-top: -5px;'>SLA ROTINEIRA</div><div style='text-align: center; font-size: 0.75rem; font-weight: bold; color: #94a3b8; margin-top: 2px;'>Limite: 15 dias</div>", unsafe_allow_html=True)
                     with sub_c2:
                         st.plotly_chart(fig_emg, use_container_width=True)
-                        st.markdown("<div style='text-align: center; font-size: 0.75rem; font-weight: bold; margin-top: -8px;'>Limite: 3 dias</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='text-align: center; font-size: 0.8rem; font-weight: bold; color: {cor_texto_grafico}; margin-top: -5px;'>SLA EMERGENCIAL</div><div style='text-align: center; font-size: 0.75rem; font-weight: bold; color: #94a3b8; margin-top: 2px;'>Limite: 3 dias</div>", unsafe_allow_html=True)
                     
                 else:
                     st.info(f"Sem dados mapeados para {comp}.")
