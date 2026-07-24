@@ -214,18 +214,18 @@ if df is not None:
         <div class="resumo-bar">DIAGNÓSTICO E VALIDAÇÃO ESTRATÉGICA (VOLUMETRIA, STATUS E CRITICIDADE)</div>
         """, unsafe_allow_html=True)
 
-        def criar_gauge(titulo, valor, max_val, cor_barra, sufixo="", altura=130):
+        def criar_gauge(titulo, valor, max_val, cor_barra, sufixo="", altura=130, title_size=10):
             fig = go.Figure(go.Indicator(
                 mode = "gauge+number", value = valor,
                 number = {'suffix': sufixo, 'font': {'size': 20, 'color': '#1f3b58', 'family': 'Arial Black'}},
-                title = {'text': titulo, 'font': {'size': 10, 'color': '#111827', 'family': 'Arial Black'}},
+                title = {'text': titulo, 'font': {'size': title_size, 'color': '#111827', 'family': 'Arial Black'}},
                 gauge = {
                     'axis': {'range': [None, max_val], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 8, 'family': 'Arial Black'}},
                     'bar': {'color': cor_barra}, 'bgcolor': "rgba(0,0,0,0)", 'borderwidth': 0,
                     'steps': [{'range': [0, max_val * 0.6], 'color': '#f1f5f9'}, {'range': [max_val * 0.6, max_val], 'color': '#e2e8f0'}],
                 }
             ))
-            fig.update_layout(height=altura, margin=dict(l=10, r=10, t=20, b=5), paper_bgcolor='rgba(0,0,0,0)')
+            fig.update_layout(height=altura, margin=dict(l=10, r=10, t=30, b=5), paper_bgcolor='rgba(0,0,0,0)')
             return fig
 
         row1_c1, row1_c2, row1_c3, row1_c4, row1_c5, row1_c6 = st.columns([1.5, 1, 1, 1, 1, 1])
@@ -446,17 +446,42 @@ if df is not None:
                     </div>
                     """, unsafe_allow_html=True)
 
-                    # ----- 4. VELOCÍMETROS DE SLA MÉDIO ABAIXO DOS ATENDIDOS (TAMANHO 1.3x E NÚMEROS INTEIROS) -----
+                    # ----- 4. VELOCÍMETROS DE SLA (COM GAUGE PLOTLY E THRESHOLDS DE LIMITE) -----
+                    # Rotineira: Limite 15 dias (Max 30) -> Azul se <= 15, Vermelho se > 15
+                    cor_rot = "#e53e3e" if sla_rot_val > 15 else "#2b6cb0"
+                    fig_rot = go.Figure(go.Indicator(
+                        mode = "gauge+number", value = sla_rot_val,
+                        number = {'font': {'size': 18, 'color': '#1f3b58', 'family': 'Arial Black'}},
+                        title = {'text': "SLA ROTINEIRA (LIMITE 15D)", 'font': {'size': 11, 'color': '#111827', 'family': 'Arial Black'}},
+                        gauge = {
+                            'axis': {'range': [0, 30], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 8, 'family': 'Arial Black'}},
+                            'bar': {'color': cor_rot}, 'bgcolor': "rgba(0,0,0,0)", 'borderwidth': 0,
+                            'steps': [{'range': [0, 15], 'color': '#e2e8f0'}, {'range': [15, 30], 'color': '#fed7d7'}],
+                            'threshold': {'line': {'color': 'red', 'width': 4}, 'thickness': 0.75, 'value': 15}
+                        }
+                    ))
+                    fig_rot.update_layout(height=110, margin=dict(l=10, r=10, t=30, b=5), paper_bgcolor='rgba(0,0,0,0)')
+
+                    # Emergencial: Limite 3 dias (Max 10) -> Azul/Roxo se <= 3, Vermelho se > 3
+                    cor_emg = "#e53e3e" if sla_emg_val > 3 else "#805ad5"
+                    fig_emg = go.Figure(go.Indicator(
+                        mode = "gauge+number", value = sla_emg_val,
+                        number = {'font': {'size': 18, 'color': '#1f3b58', 'family': 'Arial Black'}},
+                        title = {'text': "SLA EMERGENCIAL (LIMITE 3D)", 'font': {'size': 11, 'color': '#111827', 'family': 'Arial Black'}},
+                        gauge = {
+                            'axis': {'range': [0, 10], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 8, 'family': 'Arial Black'}},
+                            'bar': {'color': cor_emg}, 'bgcolor': "rgba(0,0,0,0)", 'borderwidth': 0,
+                            'steps': [{'range': [0, 3], 'color': '#e2e8f0'}, {'range': [3, 10], 'color': '#fed7d7'}],
+                            'threshold': {'line': {'color': 'red', 'width': 4}, 'thickness': 0.75, 'value': 3}
+                        }
+                    ))
+                    fig_emg.update_layout(height=110, margin=dict(l=10, r=10, t=30, b=5), paper_bgcolor='rgba(0,0,0,0)')
+
                     sub_c1, sub_c2 = st.columns(2)
                     with sub_c1:
-                        # Altura ajustada em ~1.3x (aprox 85) e max_val inteiro
-                        fig_rot = criar_gauge("SLA ROTINEIRA", sla_rot_val, max(int(sla_rot_val * 1.5), 30), "#2b6cb0", altura=85)
                         st.plotly_chart(fig_rot, use_container_width=True)
-                        st.markdown(f"<div style='text-align: center; font-size: 0.8rem; font-weight: bold; color: #2b6cb0; margin-top: -10px;'>{sla_rot_val} dias</div>", unsafe_allow_html=True)
                     with sub_c2:
-                        fig_emg = criar_gauge("SLA EMERGENCIAL", sla_emg_val, max(int(sla_emg_val * 1.5), 10), "#805ad5", altura=85)
                         st.plotly_chart(fig_emg, use_container_width=True)
-                        st.markdown(f"<div style='text-align: center; font-size: 0.8rem; font-weight: bold; color: #805ad5; margin-top: -10px;'>{sla_emg_val} dias</div>", unsafe_allow_html=True)
                     
                 else:
                     st.info(f"Sem dados mapeados para {comp}.")
@@ -465,7 +490,7 @@ if df is not None:
         <hr style='margin: 15px 0px 8px 0px;'>
         <div style="font-size: 1.05rem; color: #4a5568; display: flex; justify-content: space-between; font-weight: 700;">
             <span><b style="color: #2b4c7e;">→ Base Salva:</b> O último arquivo enviado fica salvo como base de consulta para toda a equipe.</span>
-            <span><b style="color: #388e3c;">Metodologia:</b> SLA calculado entre 'Data Solicitação' e 'Data Pedido' (ou data atual para pendentes).</span>
+            <span><b style="color: #388e3c;">Metodologia:</b> Limites vigentes: Rotineira (&lt;= 15 dias) | Emergencial (&lt;= 3 dias).</span>
         </div>
         """, unsafe_allow_html=True)
 
