@@ -25,7 +25,7 @@ with st.expander("⚙️ Abrir / Fechar Configurações (Upload, Data Base e Tem
         )
 
 # ==========================================
-# CSS CUSTOMIZADO DINÂMICO (AJUSTE DE CONTRASTE E ALINHAMENTO DA TABELA)
+# CSS CUSTOMIZADO DINÂMICO
 # ==========================================
 if tema_selecionado == "Black (Preto Absoluto)":
     css_tema = """
@@ -97,14 +97,12 @@ st.markdown(f"""
         margin-top: -5px;
         text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.10);
     }}
-    /* Ajuste e alinhamento compacto para a tabela de itens críticos */
     .stDataFrame td, .stDataFrame th {{
         font-size: 0.95rem !important;
         font-weight: 700 !important;
         padding: 5px 8px !important;
-        text-align: left !important;
     }}
-    {{css_tema}}
+    {css_tema}
     </style>
 """, unsafe_allow_html=True)
 
