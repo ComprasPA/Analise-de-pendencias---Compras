@@ -440,12 +440,9 @@ if df is not None:
                 
                 df_comp_total = df[df['Comprador_Resp'] == comp].copy()
                 
-                # ------ REGRA DE EXCEÇÃO: LUIZ APENAS A PARTIR DE 06/07/2026 ------
+                # ------ REGRA DE EXCEÇÃO: LUIZ APENAS A PARTIR DE 06/07/2026 (SEM EXIBIR AVISO NA TELA) ------
                 if comp == 'Luiz' and col_dt_emissao in df_comp_total.columns:
-                    st.markdown("<div style='text-align: center; font-size: 0.75rem; font-weight: bold; color: #ff6b6b; margin-bottom: 4px;'>*(Análise iniciada em 06/07/2026)</div>", unsafe_allow_html=True)
                     df_comp_total = df_comp_total[df_comp_total[col_dt_emissao] >= pd.to_datetime('2026-07-06')]
-                else:
-                    st.markdown("<div style='text-align: center; font-size: 0.75rem; color: transparent; margin-bottom: 4px;'>.</div>", unsafe_allow_html=True)
                 
                 if not df_comp_total.empty and 'Status_Detalhado' in df_comp_total.columns:
                     
