@@ -460,7 +460,6 @@ if df is not None:
         
         for comp, col_st in zip(compradores, colunas_st):
             with col_st:
-                # Nome do Comprador
                 st.markdown(f'<div style="text-align: center; font-weight: bold; font-size: 1.15rem; margin-bottom: 2px;">👤 {comp}</div>', unsafe_allow_html=True)
                 
                 df_comp_total = df[df['Comprador_Resp'] == comp].copy()
@@ -482,19 +481,12 @@ if df is not None:
                     sla_rot_val = int(round(df_comp_crit[df_comp_crit[col_criticidade].astype(str).str.upper() == 'ROTINEIRA']['Days'].mean(), 0)) if not df_comp_crit.empty and not pd.isna(df_comp_crit[df_comp_crit[col_criticidade].astype(str).str.upper() == 'ROTINEIRA']['Days'].mean()) else 0
                     sla_emg_val = int(round(df_comp_crit[df_comp_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean(), 0)) if not df_comp_crit.empty and not pd.isna(df_comp_crit[df_comp_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean()) else 0
 
-                    # 1. Caixa de Itens Atendidos (LOGO ABAIXO DO NOME DO COMPRADOR)
-                    st.markdown(f"""
-                    <div style='text-align: center; font-size: 0.9rem; font-weight: bold; background-color: {'#1a202c' if tema_selecionado != 'Claro' else '#f1f5f9'}; color: {'#63b3ed' if tema_selecionado != 'Claro' else '#2b6cb0'}; padding: 6px; border-radius: 4px; margin-top: 8px; margin-bottom: 12px; border: 1px solid {'#333333' if tema_selecionado != 'Claro' else 'transparent'};'>
-                        ✅ {qtd_atendidas} de {total_emitidas} Itens Atendidos
-                    </div>
-                    """, unsafe_allow_html=True)
-
-                    # 2. Velocímetro de Rendimento
+                    # 1. Velocímetro de Rendimento
                     cor_gauge_comp = '#388e3c' if taxa_rendimento_comp >= 75 else ('#d97706' if taxa_rendimento_comp >= 50 else '#e53e3e')
                     fig_gauge = criar_gauge("RENDIMENTO (ATENDIDAS / TOTAL)", taxa_rendimento_comp, 100, cor_gauge_comp, sufixo="%", altura=120, title_size=11)
                     st.plotly_chart(fig_gauge, use_container_width=True, config={'displayModeBar': False})
 
-                    # 3. Gráfico de Barras do Backlog
+                    # 2. Gráfico de Barras do Backlog
                     df_comp_aberto = df_comp_total[df_comp_total['Status_Detalhado'] != 'Atendidas'].copy()
                     
                     if not df_comp_aberto.empty:
@@ -529,8 +521,15 @@ if df is not None:
                         st.plotly_chart(fig_comp_ind, use_container_width=True, config={'displayModeBar': False})
                     else:
                         st.info(f"Fila limpa! Nenhum item pendente para {comp}.")
+                    
+                    # 3. Caixa de Itens Atendidos (LOGO ABAIXO DO GRÁFICO DO BACKLOG)
+                    st.markdown(f"""
+                    <div style='text-align: center; font-size: 0.9rem; font-weight: bold; background-color: {'#1a202c' if tema_selecionado != 'Claro' else '#f1f5f9'}; color: {'#63b3ed' if tema_selecionado != 'Claro' else '#2b6cb0'}; padding: 6px; border-radius: 4px; margin-top: 10px; margin-bottom: 0px; border: 1px solid {'#333333' if tema_selecionado != 'Claro' else 'transparent'};'>
+                        ✅ {qtd_atendidas} de {total_emitidas} Itens Atendidos
+                    </div>
+                    """, unsafe_allow_html=True)
 
-                    # 4. Velocímetros de SLA
+                    # 4. Velocímetros de SLA com espaçamento exato de 30px em relação ao topo
                     cor_rot = "#ff6b6b" if sla_rot_val > 15 else "#339af0"
                     fig_rot = go.Figure(go.Indicator(
                         mode = "gauge+number", value = sla_rot_val,
