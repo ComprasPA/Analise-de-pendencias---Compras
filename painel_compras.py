@@ -213,7 +213,7 @@ if df is not None:
         unique_scs_aberto = df_aberto.drop_duplicates(subset=[col_sc]).copy()
         total_sc_unicas_aberto = len(unique_scs_aberto)
         
-        # --- REGISTRO DO HISTÓRICO DIÁRIO (ONTEM VS HOJE) ---
+        # --- REGISTRO DO HISTÓRICO DIÁRIO (VOLUMETRIA E SLA MÉDIO) ---
         historico = {}
         if os.path.exists(ARQUIVO_HISTORICO):
             try:
@@ -228,8 +228,24 @@ if df is not None:
         delta_scs = total_sc_unicas_aberto - ontem_scs
         delta_itens = total_linhas_aberto - ontem_itens
 
+        # Cálculo prévio para o histórico geral
+        df_hist_crit = df.copy()
+        if col_dt_emissao in df_hist_crit.columns:
+            mask_luiz_antigo = (df_hist_crit['Comprador_Resp'] == 'Luiz') & (df_hist_crit[col_dt_emissao] < pd.to_datetime('2026-07-06'))
+            df_hist_crit = df_hist_crit[~mask_luiz_antigo]
+        if col_criticidade:
+            df_hist_crit = df_hist_crit[df_hist_crit[col_criticidade].astype(str).str.upper().isin(['ROTINEIRA', 'EMERGENCIAL'])]
+
+        sla_geral_rot_atual = int(round(df_hist_crit[df_hist_crit[col_criticidade].astype(str).str.upper() == 'ROTINEIRA']['Days'].mean(), 0)) if not df_hist_crit.empty and not pd.isna(df_hist_crit[df_hist_crit[col_criticidade].astype(str).str.upper() == 'ROTINEIRA']['Days'].mean()) else 0
+        sla_geral_emg_atual = int(round(df_hist_crit[df_hist_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean(), 0)) if not df_hist_crit.empty and not pd.isna(df_hist_crit[df_hist_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean()) else 0
+
+        ontem_sla_rot = historico.get("ult_sla_rot", sla_geral_rot_atual)
+        ontem_sla_emg = historico.get("ult_sla_emg", sla_geral_emg_atual)
+
         historico["ult_scs"] = total_sc_unicas_aberto
         historico["ult_itens"] = total_linhas_aberto
+        historico["ult_sla_rot"] = sla_geral_rot_atual
+        historico["ult_sla_emg"] = sla_geral_emg_atual
         with open(ARQUIVO_HISTORICO, "w") as f:
             json.dump(historico, f)
 
@@ -505,7 +521,7 @@ if df is not None:
                     </div>
                     """, unsafe_allow_html=True)
 
-                    # 4. Velocímetros de SLA com espaçamento exato de 30px em relação ao topo
+                    # 4. Velocímetros de SLA
                     cor_rot = "#ff6b6b" if sla_rot_val > 15 else "#339af0"
                     fig_rot = go.Figure(go.Indicator(
                         mode = "gauge+number", value = sla_rot_val,
@@ -552,9 +568,7 @@ if df is not None:
         # ==========================================
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # Cálculo do SLA Médio Geral considerando rotineira e emergencial de toda a base (respeitando a regra do Luiz)
         df_geral_crit = df.copy()
-        # Aplica a regra do Luiz na base geral se houver
         if col_dt_emissao in df_geral_crit.columns:
             mask_luiz_antigo = (df_geral_crit['Comprador_Resp'] == 'Luiz') & (df_geral_crit[col_dt_emissao] < pd.to_datetime('2026-07-06'))
             df_geral_crit = df_geral_crit[~mask_luiz_antigo]
@@ -567,11 +581,17 @@ if df is not None:
 
         st.markdown(f"""
         <div style="background-color: {'#111827' if tema_selecionado != 'Claro' else '#f8fafc'}; border: 1px solid {'#374151' if tema_selecionado != 'Claro' else '#cbd5e1'}; border-radius: 6px; padding: 15px; text-align: center; margin-top: 10px; margin-bottom: 20px;">
-            <div style="font-size: 1rem; font-family: 'Arial Black'; color: {'#60a5fa' if tema_selecionado != 'Claro' else '#1f3b58'}; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;">📊 SLA MÉDIO GERAL CONSOLIDADO (TODOS OS COMPRADORES)</div>
+            <div style="font-size: 1rem; font-family: 'Arial Black'; color: {'#60a5fa' if tema_selecionado != 'Claro' else '#1f3b58'}; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;">📊 SLA MÉDIO GERAL CONSOLIDADO</div>
             <div style="display: flex; justify-content: center; gap: 40px; font-size: 1.1rem; font-weight: bold;">
-                <div>SLA Rotineira Médio: <span style="color: {'#ff6b6b' if sla_geral_rot > 15 else '#339af0'};">{sla_geral_rot} dias</span> <span style="font-size: 0.8rem; color: #94a3b8;">(Limite: 15 dias)</span></div>
+                <div>
+                    SLA Rotineira Médio: <span style="color: {'#ff6b6b' if sla_geral_rot > 15 else '#339af0'};">{sla_geral_rot} dias</span> <span style="font-size: 0.8rem; color: #94a3b8;">(Limite: 15 dias)</span>
+                    <div style="font-size: 0.75rem; color: #94a3b8; font-weight: normal; margin-top: 2px;">Ontem: {ontem_sla_rot} dias</div>
+                </div>
                 <div>|</div>
-                <div>SLA Emergencial Médio: <span style="color: {'#ff6b6b' if sla_geral_emg > 3 else '#b197fc'};">{sla_geral_emg} dias</span> <span style="font-size: 0.8rem; color: #94a3b8;">(Limite: 3 dias)</span></div>
+                <div>
+                    SLA Emergencial Médio: <span style="color: {'#ff6b6b' if sla_geral_emg > 3 else '#b197fc'};">{sla_geral_emg} dias</span> <span style="font-size: 0.8rem; color: #94a3b8;">(Limite: 3 dias)</span>
+                    <div style="font-size: 0.75rem; color: #94a3b8; font-weight: normal; margin-top: 2px;">Ontem: {ontem_sla_emg} dias</div>
+                </div>
             </div>
         </div>
         """, unsafe_allow_html=True)
