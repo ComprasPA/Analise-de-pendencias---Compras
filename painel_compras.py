@@ -28,38 +28,34 @@ with st.expander("⚙️ Abrir / Fechar Configurações (Upload, Data Base e Tem
 # ==========================================
 if tema_selecionado == "Black (Preto Absoluto)":
     css_tema = """
-        <style>
         .stApp { background-color: #000000 !important; color: #e2e8f0 !important; }
         .header-box { background-color: #111111 !important; border: 1px solid #333333; }
         .resumo-bar, .section-header { background-color: #1a1a1a !important; color: #ffffff !important; border: 1px solid #333333; }
         div[data-testid="stVerticalBlock"] > div[style*="background-color: white"] { background-color: #121212 !important; border: 1px solid #333333 !important; color: #ffffff !important; }
-        </style>
     """
 elif tema_selecionado == "Escuro":
     css_tema = """
-        <style>
         .stApp { background-color: #0e1117 !important; color: #fafafa !important; }
         .header-box { background-color: #1f3b58 !important; }
         .resumo-bar, .section-header { background-color: #2b4c7e !important; }
-        </style>
     """
 else:
-    css_tema = "" # Padrão do sistema ou claro
+    css_tema = ""
 
 st.markdown(f"""
     <style>
-    header[data-testid="stHeader"], [data-testid="stDecoration"], .viewerBadge_container__1QSob, [data-testid="manage-app-button"], #MainMenu, footer {
+    header[data-testid="stHeader"], [data-testid="stDecoration"], .viewerBadge_container__1QSob, [data-testid="manage-app-button"], #MainMenu, footer {{
         visibility: hidden;
         display: none !important;
-    }
-    .block-container {
+    }}
+    .block-container {{
         padding-top: 1rem;
         padding-bottom: 2rem;
         padding-left: 1.5rem;
         padding-right: 1.5rem;
         max-width: 100% !important;
-    }
-    .header-box {
+    }}
+    .header-box {{
         color: white;
         padding: 12px 20px;
         border-radius: 4px;
@@ -67,10 +63,10 @@ st.markdown(f"""
         justify-content: space-between;
         align-items: center;
         margin-bottom: 10px;
-    }
-    .header-title { font-size: 1.4rem; font-weight: bold; }
-    .header-sub { font-size: 1.1rem; }
-    .resumo-bar {
+    }}
+    .header-title {{ font-size: 1.4rem; font-weight: bold; }}
+    .header-sub {{ font-size: 1.1rem; }}
+    .resumo-bar {{
         color: white;
         text-align: center;
         font-weight: bold;
@@ -80,8 +76,8 @@ st.markdown(f"""
         letter-spacing: 1px;
         margin-bottom: 15px;
         border-radius: 2px;
-    }
-    .section-header {
+    }}
+    .section-header {{
         color: white;
         text-align: center;
         font-weight: bold;
@@ -90,21 +86,21 @@ st.markdown(f"""
         text-transform: uppercase;
         border-radius: 2px;
         margin-bottom: 8px;
-    }
-    .gauge-footer {
+    }}
+    .gauge-footer {{
         text-align: center;
         font-size: 1.05rem;
         font-weight: 800;
         margin-top: -5px;
         text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.10);
-    }
-    .stDataFrame td, .stDataFrame th {
+    }}
+    .stDataFrame td, .stDataFrame th {{
         font-size: 1rem !important;
         font-weight: 800 !important;
         padding: 4px 6px !important;
-    }
-    </style>
+    }}
     {css_tema}
+    </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
@@ -413,7 +409,7 @@ if df is not None:
                     sla_rot_val = int(round(df_comp_crit[df_comp_crit[col_criticidade].astype(str).str.upper() == 'ROTINEIRA']['Days'].mean(), 0)) if not df_comp_crit.empty and not pd.isna(df_comp_crit[df_comp_crit[col_criticidade].astype(str).str.upper() == 'ROTINEIRA']['Days'].mean()) else 0
                     sla_emg_val = int(round(df_comp_crit[df_comp_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean(), 0)) if not df_comp_crit.empty and not pd.isna(df_comp_crit[df_comp_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean()) else 0
 
-                    # 1. Velocídio de Rendimento
+                    # 1. Velocímetro de Rendimento
                     cor_gauge_comp = '#388e3c' if taxa_rendimento_comp >= 75 else ('#d97706' if taxa_rendimento_comp >= 50 else '#e53e3e')
                     fig_gauge = criar_gauge("RENDIMENTO (ATENDIDAS / TOTAL)", taxa_rendimento_comp, 100, cor_gauge_comp, sufixo="%", altura=120)
                     st.plotly_chart(fig_gauge, use_container_width=True)
