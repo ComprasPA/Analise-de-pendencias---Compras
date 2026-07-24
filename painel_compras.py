@@ -441,12 +441,12 @@ if df is not None:
                     
                     # ----- 3. CAIXA DE ITENS ATENDIDOS -----
                     st.markdown(f"""
-                    <div style='text-align: center; font-size: 0.9rem; color: #2b6cb0; font-weight: bold; background-color: #f1f5f9; padding: 5px; border-radius: 4px; margin-top: 5px;'>
+                    <div style='text-align: center; font-size: 0.9rem; color: #2b6cb0; font-weight: bold; background-color: #f1f5f9; padding: 5px; border-radius: 4px; margin-top: 5px; margin-bottom: 12px;'>
                         ✅ {qtd_atendidas} de {total_emitidas} Itens Atendidos
                     </div>
                     """, unsafe_allow_html=True)
 
-                    # ----- 4. VELOCÍMETROS DE SLA (GAUGE LIMPO COM TÍTULOS E LIMITES ABAIXO) -----
+                    # ----- 4. VELOCÍMETROS DE SLA (ALINHADOS E COM ESPAÇAMENTO ADEQUADO) -----
                     cor_rot = "#e53e3e" if sla_rot_val > 15 else "#2b6cb0"
                     fig_rot = go.Figure(go.Indicator(
                         mode = "gauge+number", value = sla_rot_val,
