@@ -136,17 +136,13 @@ if df is not None:
         col_criticidade = 'CRITICIDADE' if 'CRITICIDADE' in df.columns else None
         col_sc = 'Solicitação' if 'Solicitação' in df.columns else ('Cod SC. SCM' if 'Cod SC. SCM' in df.columns else None)
         col_cc = 'Centro de Custo' if 'Centro de Custo' in df.columns else None
-        col_dt_emissao = 'DT Emissao' if 'DT Emissao' in df.columns else None
         
-        # Procurando possíveis colunas para a Data do Pedido (Fechamento)
-        col_dt_pedido = None
-        for cand in ['DT Pedido', 'Data Pedido', 'DT EMISSAO PC', 'Data Emissao PC', 'DT PC', 'DT FECHAMENTO', 'Data Fechamento']:
-            if cand in df.columns:
-                col_dt_pedido = cand
-                break
+        # Mapeamento exato das colunas de data baseadas na sua última instrução
+        col_dt_emissao = 'Data Solicitação' if 'Data Solicitação' in df.columns else ('Data emissão Solicitação' if 'Data emissão Solicitação' in df.columns else None)
+        col_dt_pedido = 'Data Pedido' if 'Data Pedido' in df.columns else ('Data emissão Pedido' if 'Data emissão Pedido' in df.columns else None)
 
         if not col_sc or not col_cc or not col_dt_emissao:
-            st.error(f"⚠️ Erro: Colunas essenciais não encontradas. Colunas disponíveis: {list(df.columns)}")
+            st.error(f"⚠️ Erro: Coluna de solicitação, centro de custo ou 'Data Solicitação' não encontrada. Colunas disponíveis: {list(df.columns)}")
             st.stop()
 
         # Conversão de Datas
@@ -179,12 +175,10 @@ if df is not None:
             if pd.isna(dt_ini):
                 return 0
             
-            # Se foi finalizado e temos a data do pedido, calcula o SLA real de atendimento
             if status == 'FINALIZADO' and col_dt_pedido and not pd.isna(row[col_dt_pedido]):
                 dias = (row[col_dt_pedido] - dt_ini).days
                 return max(dias, 0)
             else:
-                # Se está em aberto ou sem data de pedido, corre até a data de hoje
                 dias = (hoje - dt_ini).days
                 return max(dias, 0)
 
@@ -475,7 +469,7 @@ if df is not None:
         <hr style='margin: 15px 0px 8px 0px;'>
         <div style="font-size: 1.05rem; color: #4a5568; display: flex; justify-content: space-between; font-weight: 700;">
             <span><b style="color: #2b4c7e;">→ Base Salva:</b> O último arquivo enviado fica salvo como base de consulta para toda a equipe.</span>
-            <span><b style="color: #388e3c;">Metodologia:</b> SLA calculado entre Abertura e Fechamento (ou data atual para pendentes).</span>
+            <span><b style="color: #388e3c;">Metodologia:</b> SLA calculado entre 'Data Solicitação' e 'Data Pedido' (ou data atual para pendentes).</span>
         </div>
         """, unsafe_allow_html=True)
 
