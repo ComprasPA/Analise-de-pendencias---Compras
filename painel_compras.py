@@ -105,7 +105,6 @@ MAPA_COMPRADORES = {
 ARQUIVO_MEMORIA = "base_ativa_painel.xlsx"
 df = None
 
-# 1. Se o usuário acabou de fazer um upload
 if uploaded_file is not None:
     try:
         with open(ARQUIVO_MEMORIA, "wb") as f:
@@ -121,7 +120,6 @@ if uploaded_file is not None:
     except Exception as e:
         st.error(f"Erro ao ler o arquivo enviado: {e}")
 
-# 2. Se não tem upload agora, busca o arquivo salvo no servidor
 elif os.path.exists(ARQUIVO_MEMORIA):
     try:
         xls = pd.ExcelFile(ARQUIVO_MEMORIA)
@@ -130,7 +128,6 @@ elif os.path.exists(ARQUIVO_MEMORIA):
     except Exception as e:
         st.error(f"Erro ao ler a base salva no servidor: {e}")
 
-# 3. Executa a construção do painel apenas se o df foi carregado
 if df is not None:
     try:
         df.columns = df.columns.astype(str).str.strip()
@@ -139,18 +136,25 @@ if df is not None:
         col_criticidade = 'CRITICIDADE' if 'CRITICIDADE' in df.columns else None
         col_sc = 'Solicitação' if 'Solicitação' in df.columns else ('Cod SC. SCM' if 'Cod SC. SCM' in df.columns else None)
         col_cc = 'Centro de Custo' if 'Centro de Custo' in df.columns else None
-        col_dt = 'DT Emissao' if 'DT Emissao' in df.columns else None
+        col_dt_emissao = 'DT Emissao' if 'DT Emissao' in df.columns else None
+        
+        # Procurando possíveis colunas para a Data do Pedido (Fechamento)
+        col_dt_pedido = None
+        for cand in ['DT Pedido', 'Data Pedido', 'DT EMISSAO PC', 'Data Emissao PC', 'DT PC', 'DT FECHAMENTO', 'Data Fechamento']:
+            if cand in df.columns:
+                col_dt_pedido = cand
+                break
 
-        if not col_sc or not col_cc or not col_dt:
+        if not col_sc or not col_cc or not col_dt_emissao:
             st.error(f"⚠️ Erro: Colunas essenciais não encontradas. Colunas disponíveis: {list(df.columns)}")
             st.stop()
 
-        # Converte a data
-        if col_dt:
-            df[col_dt] = pd.to_datetime(df[col_dt], errors='coerce')
-
+        # Conversão de Datas
         hoje = pd.to_datetime(data_base)
-        df['Days'] = (hoje - df[col_dt]).dt.days
+        df[col_dt_emissao] = pd.to_datetime(df[col_dt_emissao], errors='coerce')
+        
+        if col_dt_pedido:
+            df[col_dt_pedido] = pd.to_datetime(df[col_dt_pedido], errors='coerce')
 
         # Tratamento Compradores
         df['CC_clean'] = df[col_cc].astype(str).str.split('.').str[0].str.strip()
@@ -165,10 +169,28 @@ if df is not None:
         
         if col_status:
             df['Status_Detalhado'] = df[col_status].apply(detalhar_status)
-            df_aberto = df[df['Status_Detalhado'] != 'Atendidas'].copy()
         else:
-            df_aberto = df.copy()
+            df['Status_Detalhado'] = 'No Prazo'
 
+        # --- CÁLCULO INTELIGENTE DO SLA (Abertura até Fechamento OU Abertura até Hoje) ---
+        def calcular_sla(row):
+            status = str(row.get(col_status, '')).strip().upper()
+            dt_ini = row[col_dt_emissao]
+            if pd.isna(dt_ini):
+                return 0
+            
+            # Se foi finalizado e temos a data do pedido, calcula o SLA real de atendimento
+            if status == 'FINALIZADO' and col_dt_pedido and not pd.isna(row[col_dt_pedido]):
+                dias = (row[col_dt_pedido] - dt_ini).days
+                return max(dias, 0)
+            else:
+                # Se está em aberto ou sem data de pedido, corre até a data de hoje
+                dias = (hoje - dt_ini).days
+                return max(dias, 0)
+
+        df['Days'] = df.apply(calcular_sla, axis=1)
+
+        df_aberto = df[df['Status_Detalhado'] != 'Atendidas'].copy()
         df_aberto = df_aberto.dropna(subset=[col_sc])
         df_aberto[col_sc] = df_aberto[col_sc].astype(str).str.split('.').str[0].str.zfill(6)
 
@@ -199,18 +221,18 @@ if df is not None:
         <div class="resumo-bar">DIAGNÓSTICO E VALIDAÇÃO ESTRATÉGICA (VOLUMETRIA, STATUS E CRITICIDADE)</div>
         """, unsafe_allow_html=True)
 
-        def criar_gauge(titulo, valor, max_val, cor_barra, sufixo=""):
+        def criar_gauge(titulo, valor, max_val, cor_barra, sufixo="", altura=130):
             fig = go.Figure(go.Indicator(
                 mode = "gauge+number", value = valor,
-                number = {'suffix': sufixo, 'font': {'size': 22, 'color': '#1f3b58', 'family': 'Arial Black'}},
+                number = {'suffix': sufixo, 'font': {'size': 20, 'color': '#1f3b58', 'family': 'Arial Black'}},
                 title = {'text': titulo, 'font': {'size': 10, 'color': '#111827', 'family': 'Arial Black'}},
                 gauge = {
-                    'axis': {'range': [None, max_val], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 9, 'family': 'Arial Black'}},
+                    'axis': {'range': [None, max_val], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 8, 'family': 'Arial Black'}},
                     'bar': {'color': cor_barra}, 'bgcolor': "rgba(0,0,0,0)", 'borderwidth': 0,
                     'steps': [{'range': [0, max_val * 0.6], 'color': '#f1f5f9'}, {'range': [max_val * 0.6, max_val], 'color': '#e2e8f0'}],
                 }
             ))
-            fig.update_layout(height=130, margin=dict(l=10, r=10, t=25, b=5), paper_bgcolor='rgba(0,0,0,0)')
+            fig.update_layout(height=altura, margin=dict(l=10, r=10, t=20, b=5), paper_bgcolor='rgba(0,0,0,0)')
             return fig
 
         row1_c1, row1_c2, row1_c3, row1_c4, row1_c5, row1_c6 = st.columns([1.5, 1, 1, 1, 1, 1])
@@ -229,7 +251,7 @@ if df is not None:
 
         def render_gauge(col, titulo, valor, max_val, cor):
             with col:
-                st.plotly_chart(criar_gauge(titulo, valor, max_val, cor), use_container_width=True)
+                st.plotly_chart(criar_gauge(titulo, valor, max_val, cor, altura=130), use_container_width=True)
                 perc = (valor / max_val * 100) if max_val > 0 else 0
                 st.markdown(f"<div class='gauge-footer' style='color: {cor};'>{perc:.1f}%</div>", unsafe_allow_html=True)
 
@@ -343,7 +365,7 @@ if df is not None:
                     st.plotly_chart(fig_crit_stat, use_container_width=True)
 
         # ==========================================
-        # PASSO 4: DESEMPENHO POR COMPRADOR (RENDIMENTO + SLA MÉDIO + BACKLOG)
+        # PASSO 4: DESEMPENHO POR COMPRADOR (RENDIMENTO + SLA MÉDIO REDUZIDO + BACKLOG)
         # ==========================================
         st.markdown("---")
         st.markdown('<div class="section-header" style="background-color: #2b4c7e;">DESEMPENHO INDIVIDUAL POR COMPRADOR (RENDIMENTO, SLA MÉDIO E BACKLOG)</div>', unsafe_allow_html=True)
@@ -363,9 +385,9 @@ if df is not None:
                 df_comp_total = df[df['Comprador_Resp'] == comp].copy()
                 
                 # ------ REGRA DE EXCEÇÃO: LUIZ APENAS A PARTIR DE 06/07/2026 ------
-                if comp == 'Luiz' and col_dt in df_comp_total.columns:
+                if comp == 'Luiz' and col_dt_emissao in df_comp_total.columns:
                     st.markdown("<div style='text-align: center; font-size: 0.75rem; font-weight: bold; color: #e53e3e; margin-bottom: 4px;'>*(Análise iniciada em 06/07/2026)</div>", unsafe_allow_html=True)
-                    df_comp_total = df_comp_total[df_comp_total[col_dt] >= pd.to_datetime('2026-07-06')]
+                    df_comp_total = df_comp_total[df_comp_total[col_dt_emissao] >= pd.to_datetime('2026-07-06')]
                 else:
                     st.markdown("<div style='text-align: center; font-size: 0.75rem; color: transparent; margin-bottom: 4px;'>.</div>", unsafe_allow_html=True)
                 
@@ -386,25 +408,24 @@ if df is not None:
                     
                     sla_rot_val = 0 if pd.isna(sla_rot_val) else round(sla_rot_val, 1)
                     sla_emg_val = 0 if pd.isna(sla_emg_val) else round(sla_emg_val, 1)
-                    sla_geral_val = round(df_comp_crit['Days'].mean(), 1) if not df_comp_crit.empty and not pd.isna(df_comp_crit['Days'].mean()) else 0
 
                     # ----- 1. VELOCÍMETRO DE RENDIMENTO -----
                     cor_gauge_comp = '#388e3c' if taxa_rendimento_comp >= 75 else ('#d97706' if taxa_rendimento_comp >= 50 else '#e53e3e')
-                    fig_gauge = criar_gauge("RENDIMENTO (ATENDIDAS / TOTAL)", taxa_rendimento_comp, 100, cor_gauge_comp, sufixo="%")
+                    fig_gauge = criar_gauge("RENDIMENTO (ATENDIDAS / TOTAL)", taxa_rendimento_comp, 100, cor_gauge_comp, sufixo="%", altura=120)
                     st.plotly_chart(fig_gauge, use_container_width=True)
 
-                    # ----- 2. NOVOS VELOCÍMETROS DE SLA MÉDIO (ROTINEIRA E EMERGENCIAL) -----
+                    # ----- 2. VELOCÍMETROS DE SLA MÉDIO REDUZIDOS PELA METADE (ALTURA 65) -----
                     sub_c1, sub_c2 = st.columns(2)
                     with sub_c1:
-                        fig_rot = criar_gauge("SLA MÉD. ROTINEIRA", sla_rot_val, max(sla_rot_val * 1.5, 30), "#2b6cb0")
+                        fig_rot = criar_gauge("SLA ROTINEIRA", sla_rot_val, max(sla_rot_val * 1.5, 30), "#2b6cb0", altura=65)
                         st.plotly_chart(fig_rot, use_container_width=True)
-                        st.markdown(f"<div style='text-align: center; font-size: 0.8rem; font-weight: bold; color: #2b6cb0; margin-top: -15px;'>{sla_rot_val} dias</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='text-align: center; font-size: 0.75rem; font-weight: bold; color: #2b6cb0; margin-top: -12px;'>{sla_rot_val} dias</div>", unsafe_allow_html=True)
                     with sub_c2:
-                        fig_emg = criar_gauge("SLA MÉD. EMERGENCIAL", sla_emg_val, max(sla_emg_val * 1.5, 10), "#805ad5")
+                        fig_emg = criar_gauge("SLA EMERGENCIAL", sla_emg_val, max(sla_emg_val * 1.5, 10), "#805ad5", altura=65)
                         st.plotly_chart(fig_emg, use_container_width=True)
-                        st.markdown(f"<div style='text-align: center; font-size: 0.8rem; font-weight: bold; color: #805ad5; margin-top: -15px;'>{sla_emg_val} dias</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='text-align: center; font-size: 0.75rem; font-weight: bold; color: #805ad5; margin-top: -12px;'>{sla_emg_val} dias</div>", unsafe_allow_html=True)
 
-                    st.markdown("<div style='margin: 5px 0;'></div>", unsafe_allow_html=True)
+                    st.markdown("<div style='margin: 2px 0;'></div>", unsafe_allow_html=True)
 
                     # ----- 3. GRÁFICO DE BARRAS PERCENTUAIS DO BACKLOG PENDENTE -----
                     df_comp_aberto = df_comp_total[df_comp_total['Status_Detalhado'] != 'Atendidas'].copy()
@@ -454,7 +475,7 @@ if df is not None:
         <hr style='margin: 15px 0px 8px 0px;'>
         <div style="font-size: 1.05rem; color: #4a5568; display: flex; justify-content: space-between; font-weight: 700;">
             <span><b style="color: #2b4c7e;">→ Base Salva:</b> O último arquivo enviado fica salvo como base de consulta para toda a equipe.</span>
-            <span><b style="color: #388e3c;">Metodologia:</b> SLAs calculados com base nas solicitações Rotineiras e Emergenciais.</span>
+            <span><b style="color: #388e3c;">Metodologia:</b> SLA calculado entre Abertura e Fechamento (ou data atual para pendentes).</span>
         </div>
         """, unsafe_allow_html=True)
 
