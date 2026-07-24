@@ -295,25 +295,6 @@ if df is not None:
             fig.update_layout(height=altura, margin=dict(l=10, r=10, t=30, b=5), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
             return fig
 
-        # Função específica para o velocímetro de Rendimento Tricolor (Vermelho, Amarelo, Verde)
-        def criar_gauge_rendimento(valor, altura=120):
-            fig = go.Figure(go.Indicator(
-                mode = "gauge+number", value = valor,
-                number = {'suffix': "%", 'font': {'size': 20, 'color': cor_texto_grafico, 'family': 'Arial Black'}},
-                title = {'text': "RENDIMENTO (ATENDIDAS / TOTAL)", 'font': {'size': 11, 'color': cor_texto_grafico, 'family': 'Arial Black'}},
-                gauge = {
-                    'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 8, 'color': cor_texto_grafico, 'family': 'Arial Black'}},
-                    'bar': {'color': '#111827' if tema_selecionado != 'Claro' else '#334155'}, 'bgcolor': "rgba(0,0,0,0)", 'borderwidth': 0,
-                    'steps': [
-                        {'range': [0, 50], 'color': '#ff4d4d'},    # Vermelho (0 - 50%)
-                        {'range': [50, 75], 'color': '#facc15'},   # Amarelo (50 - 75%)
-                        {'range': [75, 100], 'color': '#4ade80'}   # Verde (75 - 100%)
-                    ],
-                }
-            ))
-            fig.update_layout(height=altura, margin=dict(l=10, r=10, t=30, b=5), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
-            return fig
-
         row1_c1, row1_c2, row1_c3, row1_c4, row1_c5, row1_c6 = st.columns([1.5, 1, 1, 1, 1, 1])
 
         with row1_c1:
@@ -500,8 +481,9 @@ if df is not None:
                     sla_rot_val = int(round(df_comp_crit[df_comp_crit[col_criticidade].astype(str).str.upper() == 'ROTINEIRA']['Days'].mean(), 0)) if not df_comp_crit.empty and not pd.isna(df_comp_crit[df_comp_crit[col_criticidade].astype(str).str.upper() == 'ROTINEIRA']['Days'].mean()) else 0
                     sla_emg_val = int(round(df_comp_crit[df_comp_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean(), 0)) if not df_comp_crit.empty and not pd.isna(df_comp_crit[df_comp_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean()) else 0
 
-                    # 1. Velocímetro de Rendimento (Configuração Tricolor Nova)
-                    fig_gauge = criar_gauge_rendimento(taxa_rendimento_comp, altura=120)
+                    # 1. Velocímetro de Rendimento (Padrão Original)
+                    cor_gauge_comp = '#388e3c' if taxa_rendimento_comp >= 75 else ('#d97706' if taxa_rendimento_comp >= 50 else '#e53e3e')
+                    fig_gauge = criar_gauge("RENDIMENTO (ATENDIDAS / TOTAL)", taxa_rendimento_comp, 100, cor_gauge_comp, sufixo="%", altura=120, title_size=11)
                     st.plotly_chart(fig_gauge, use_container_width=True, config={'displayModeBar': False})
 
                     # 2. Gráfico de Barras do Backlog
