@@ -233,8 +233,11 @@ if df is not None:
         if col_criticidade:
             df_geral_crit = df_geral_crit[df_geral_crit[col_criticidade].astype(str).str.upper().isin(['ROTINEIRA', 'EMERGENCIAL'])]
 
-        sla_geral_rot = int(round(df_geral_crit[df_geral_crit[col_criticidade].astype(str).str.upper() == 'ROTINEIRA']['Days'].mean(), 0)) if not df_geral_crit.empty and not pd.isna(df_geral_crit[df_geral_crit[col_criticidade].astype(str).str.upper() == 'ROTINEIRA']['Days'].mean()) else 0
-        sla_geral_emg = int(round(df_geral_crit[df_geral_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean(), 0)) if not df_geral_crit.empty and not pd.isna(df_geral_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean()) else 0
+        mean_rot = df_geral_crit[df_geral_crit[col_criticidade].astype(str).str.upper() == 'ROTINEIRA']['Days'].mean() if col_criticidade and not df_geral_crit.empty else float('nan')
+        mean_emg = df_geral_crit[df_geral_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean() if col_criticidade and not df_geral_crit.empty else float('nan')
+
+        sla_geral_rot = int(round(mean_rot, 0)) if not pd.isna(mean_rot) else 0
+        sla_geral_emg = int(round(mean_emg, 0)) if not pd.isna(mean_emg) else 0
 
         # --- GESTÃO DO HISTÓRICO PARA O DIA ANTERIOR ---
         ontem_scs = historico.get("ult_scs", total_sc_unicas_aberto)
