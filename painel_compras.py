@@ -127,7 +127,7 @@ ARQUIVO_MEMORIA = "base_ativa_painel.xlsx"
 ARQUIVO_HISTORICO = "historico_volumetria.json"
 df = None
 
-# Carrega histórico anterior antes de atualizar a base (para pegar a versão anterior real)
+# Carrega histórico anterior
 historico = {}
 if os.path.exists(ARQUIVO_HISTORICO):
     try:
@@ -138,7 +138,6 @@ if os.path.exists(ARQUIVO_HISTORICO):
 
 if uploaded_file is not None:
     try:
-        # Lê o novo arquivo enviado
         if uploaded_file.name.endswith('.csv'):
             df_novo = pd.read_csv(uploaded_file, sep=None, engine='python', encoding='utf-8')
         else:
@@ -146,32 +145,6 @@ if uploaded_file is not None:
             sheet_name = 'Solicitações' if 'Solicitações' in xls.sheet_names else xls.sheet_names[0]
             df_novo = pd.read_excel(uploaded_file, sheet_name=sheet_name)
         
-        # Processa a nova base para calcular métricas e salvar o estado anterior no histórico
-        df_novo.columns = df_novo.columns.astype(str).str.strip()
-        col_cc_temp = 'Centro de Custo' if 'Centro de Custo' in df_novo.columns else None
-        col_sc_temp = 'Solicitação' if 'Solicitação' in df_novo.columns else ('Cod SC. SCM' if 'Cod SC. SCM' in df_novo.columns else None)
-        col_status_temp = 'STATUS' if 'STATUS' in df_novo.columns else None
-        col_crit_temp = 'CRITICIDADE' if 'CRITICIDADE' in df_novo.columns else None
-        col_dt_ini_temp = 'Data Solicitação' if 'Data Solicitação' in df_novo.columns else ('Data emissão Solicitação' if 'Data emissão Solicitação' in df_novo.columns else None)
-        col_dt_ped_temp = 'Data Pedido' if 'Data Pedido' in df_novo.columns else ('Data emissão Pedido' if 'Data emissão Pedido' in df_novo.columns else None)
-
-        if col_cc_temp:
-            df_novo['CC_clean'] = pd.to_numeric(df_novo[col_cc_temp], errors='coerce').fillna(df_novo[col_cc_temp]).astype(str).str.split('.').str[0].str.strip()
-        
-        # Salva o estado atual na memória como "anterior" antes de atualizar a base oficial
-        if os.path.exists(ARQUIVO_MEMORIA):
-            try:
-                df_antigo = pd.read_excel(ARQUIVO_MEMORIA)
-                df_antigo.columns = df_antigo.columns.astype(str).str.strip()
-                if col_cc_temp and col_cc_temp in df_antigo.columns:
-                    df_antigo['CC_clean'] = pd.to_numeric(df_antigo[col_cc_temp], errors='coerce').fillna(df_antigo[col_cc_temp]).astype(str).str.split('.').str[0].str.strip()
-                
-                # Calcula métricas da base anterior para o comparativo
-                # (Mantém o histórico do último relatório carregado)
-            except:
-                pass
-
-        # Salva o arquivo novo na memória
         with open(ARQUIVO_MEMORIA, "wb") as f:
             f.write(uploaded_file.getbuffer())
         
@@ -251,7 +224,7 @@ if df is not None:
         unique_scs_aberto = df_aberto.drop_duplicates(subset=[col_sc]).copy()
         total_sc_unicas_aberto = len(unique_scs_aberto)
         
-        # --- CÁLCULO DO SLA MÉDIO GERAL ---
+        # --- CÁLCULO DO SLA MÉDIO GERAL ATUAL ---
         df_geral_crit = df.copy()
         if col_dt_emissao in df_geral_crit.columns:
             mask_luiz_antigo = (df_geral_crit['Comprador_Resp'] == 'Luiz') & (df_geral_crit[col_dt_emissao] < pd.to_datetime('2026-07-06'))
@@ -261,23 +234,26 @@ if df is not None:
             df_geral_crit = df_geral_crit[df_geral_crit[col_criticidade].astype(str).str.upper().isin(['ROTINEIRA', 'EMERGENCIAL'])]
 
         sla_geral_rot = int(round(df_geral_crit[df_geral_crit[col_criticidade].astype(str).str.upper() == 'ROTINEIRA']['Days'].mean(), 0)) if not df_geral_crit.empty and not pd.isna(df_geral_crit[df_geral_crit[col_criticidade].astype(str).str.upper() == 'ROTINEIRA']['Days'].mean()) else 0
-        sla_geral_emg = int(round(df_geral_crit[df_geral_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean(), 0)) if not df_geral_crit.empty and not pd.isna(df_geral_crit[df_geral_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean()) else 0
+        sla_geral_emg = int(round(df_geral_crit[df_geral_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean(), 0)) if not df_geral_crit.empty and not pd.isna(df_geral_crit[df_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean()) else 0
 
-        # --- GESTÃO DO HISTÓRICO ENTRE ATUALIZAÇÕES DE RELATÓRIO ---
+        # --- GESTÃO DO HISTÓRICO PARA O DIA ANTERIOR ---
+        # Se for nova carga, rotaciona: o atual vira o anterior para a próxima consulta, mas para hoje exibe o armazenado anteriormente (ou 0 se for a primeira vez)
         ontem_scs = historico.get("ult_scs", total_sc_unicas_aberto)
         ontem_itens = historico.get("ult_itens", total_linhas_aberto)
-        ontem_sla_rot = historico.get("ult_sla_rot", sla_geral_rot)
-        ontem_sla_emg = historico.get("ult_sla_emg", sla_geral_emg)
+        
+        # SLA do dia anterior armazenado (se não existir, inicia com 0 conforme solicitado)
+        ontem_sla_rot = historico.get("sla_rot_anterior", 0)
+        ontem_sla_emg = historico.get("sla_emg_anterior", 0)
 
         delta_scs = total_sc_unicas_aberto - ontem_scs
         delta_itens = total_linhas_aberto - ontem_itens
 
-        # Salva o histórico da última atualização oficial carregada se o usuário fez upload
         if uploaded_file is not None:
+            # Salva o atual como o "anterior" para a próxima carga de relatório
             historico["ult_scs"] = total_sc_unicas_aberto
             historico["ult_itens"] = total_linhas_aberto
-            historico["ult_sla_rot"] = sla_geral_rot
-            historico["ult_sla_emg"] = sla_geral_emg
+            historico["sla_rot_anterior"] = sla_geral_rot
+            historico["sla_emg_anterior"] = sla_geral_emg
             with open(ARQUIVO_HISTORICO, "w") as f:
                 json.dump(historico, f)
 
@@ -606,12 +582,12 @@ if df is not None:
             <div style="display: flex; justify-content: center; gap: 40px; font-size: 1.1rem; font-weight: bold;">
                 <div>
                     SLA Rotineira Médio: <span style="color: {'#ff6b6b' if sla_geral_rot > 15 else '#339af0'};">{sla_geral_rot} dias</span> <span style="font-size: 0.8rem; color: #94a3b8;">(Limite: 15 dias)</span>
-                    <div style="font-size: 0.7rem; color: #94a3b8; font-weight: normal; margin-top: 2px;">(vs {ontem_sla_rot} dias anterior)</div>
+                    <div style="font-size: 0.7rem; color: #94a3b8; font-weight: normal; margin-top: 2px;">SLA do dia anterior: {ontem_sla_rot} dias</div>
                 </div>
                 <div>|</div>
                 <div>
                     SLA Emergencial Médio: <span style="color: {'#ff6b6b' if sla_geral_emg > 3 else '#b197fc'};">{sla_geral_emg} dias</span> <span style="font-size: 0.8rem; color: #94a3b8;">(Limite: 3 dias)</span>
-                    <div style="font-size: 0.7rem; color: #94a3b8; font-weight: normal; margin-top: 2px;">(vs {ontem_sla_emg} dias anterior)</div>
+                    <div style="font-size: 0.7rem; color: #94a3b8; font-weight: normal; margin-top: 2px;">SLA do dia anterior: {ontem_sla_emg} dias</div>
                 </div>
             </div>
         </div>
