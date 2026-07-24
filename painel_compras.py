@@ -108,7 +108,6 @@ df = None
 # 1. Se o usuário acabou de fazer um upload
 if uploaded_file is not None:
     try:
-        # Salva o arquivo fisicamente no servidor para os próximos acessos
         with open(ARQUIVO_MEMORIA, "wb") as f:
             f.write(uploaded_file.getbuffer())
         st.success("✅ Base atualizada com sucesso por Silvio Silveira! Esta base agora é a padrão para todos os usuários.")
@@ -146,9 +145,12 @@ if df is not None:
             st.error(f"⚠️ Erro: Colunas essenciais não encontradas. Colunas disponíveis: {list(df.columns)}")
             st.stop()
 
-        # Converte a data para lidar com a regra do Luiz
+        # Converte a data
         if col_dt:
             df[col_dt] = pd.to_datetime(df[col_dt], errors='coerce')
+
+        hoje = pd.to_datetime(data_base)
+        df['Days'] = (hoje - df[col_dt]).dt.days
 
         # Tratamento Compradores
         df['CC_clean'] = df[col_cc].astype(str).str.split('.').str[0].str.strip()
@@ -169,9 +171,6 @@ if df is not None:
 
         df_aberto = df_aberto.dropna(subset=[col_sc])
         df_aberto[col_sc] = df_aberto[col_sc].astype(str).str.split('.').str[0].str.zfill(6)
-
-        hoje = pd.to_datetime(data_base)
-        df_aberto['Days'] = (hoje - df_aberto[col_dt]).dt.days
 
         total_linhas_aberto = len(df_aberto) 
         unique_scs_aberto = df_aberto.drop_duplicates(subset=[col_sc]).copy()
@@ -200,31 +199,31 @@ if df is not None:
         <div class="resumo-bar">DIAGNÓSTICO E VALIDAÇÃO ESTRATÉGICA (VOLUMETRIA, STATUS E CRITICIDADE)</div>
         """, unsafe_allow_html=True)
 
-        def criar_gauge(titulo, valor, max_val, cor_barra):
+        def criar_gauge(titulo, valor, max_val, cor_barra, sufixo=""):
             fig = go.Figure(go.Indicator(
                 mode = "gauge+number", value = valor,
-                number = {'font': {'size': 24, 'color': '#1f3b58', 'family': 'Arial Black'}},
-                title = {'text': titulo, 'font': {'size': 11, 'color': '#111827', 'family': 'Arial Black'}},
+                number = {'suffix': sufixo, 'font': {'size': 22, 'color': '#1f3b58', 'family': 'Arial Black'}},
+                title = {'text': titulo, 'font': {'size': 10, 'color': '#111827', 'family': 'Arial Black'}},
                 gauge = {
                     'axis': {'range': [None, max_val], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 9, 'family': 'Arial Black'}},
                     'bar': {'color': cor_barra}, 'bgcolor': "rgba(0,0,0,0)", 'borderwidth': 0,
                     'steps': [{'range': [0, max_val * 0.6], 'color': '#f1f5f9'}, {'range': [max_val * 0.6, max_val], 'color': '#e2e8f0'}],
                 }
             ))
-            fig.update_layout(height=140, margin=dict(l=10, r=10, t=30, b=5), paper_bgcolor='rgba(0,0,0,0)')
+            fig.update_layout(height=130, margin=dict(l=10, r=10, t=25, b=5), paper_bgcolor='rgba(0,0,0,0)')
             return fig
 
         row1_c1, row1_c2, row1_c3, row1_c4, row1_c5, row1_c6 = st.columns([1.5, 1, 1, 1, 1, 1])
 
         with row1_c1:
             st.markdown(f"""
-            <div style="background-color: white; border: 1px solid #cbd5e1; border-radius: 4px; padding: 10px; text-align: center; height: 160px; display: flex; flex-direction: column; justify-content: center;">
-                <div style="color: #1f3b58; font-size: 1rem; font-family: 'Arial Black'; margin-bottom: 5px;">VOLUMETRIA EM ABERTO</div>
-                <div style="font-size: 2rem; font-weight: bold; color: #2b6cb0; line-height: 1;">{total_sc_unicas_aberto}</div>
-                <div style="font-size: 0.75rem; color: #475569; font-weight: bold; text-transform: uppercase; margin-bottom: 5px;">Solicitações (SCs)</div>
-                <div style="border-top: 1px dashed #cbd5e1; margin: 5px 0;"></div>
-                <div style="font-size: 2rem; font-weight: bold; color: #ed8034; line-height: 1;">{total_linhas_aberto}</div>
-                <div style="font-size: 0.75rem; color: #475569; font-weight: bold; text-transform: uppercase;">Total de Itens</div>
+            <div style="background-color: white; border: 1px solid #cbd5e1; border-radius: 4px; padding: 10px; text-align: center; height: 150px; display: flex; flex-direction: column; justify-content: center;">
+                <div style="color: #1f3b58; font-size: 0.9rem; font-family: 'Arial Black'; margin-bottom: 5px;">VOLUMETRIA EM ABERTO</div>
+                <div style="font-size: 1.8rem; font-weight: bold; color: #2b6cb0; line-height: 1;">{total_sc_unicas_aberto}</div>
+                <div style="font-size: 0.7rem; color: #475569; font-weight: bold; text-transform: uppercase; margin-bottom: 3px;">Solicitações (SCs)</div>
+                <div style="border-top: 1px dashed #cbd5e1; margin: 4px 0;"></div>
+                <div style="font-size: 1.8rem; font-weight: bold; color: #ed8034; line-height: 1;">{total_linhas_aberto}</div>
+                <div style="font-size: 0.7rem; color: #475569; font-weight: bold; text-transform: uppercase;">Total de Itens</div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -344,10 +343,10 @@ if df is not None:
                     st.plotly_chart(fig_crit_stat, use_container_width=True)
 
         # ==========================================
-        # PASSO 4: DESEMPENHO POR COMPRADOR (RENDIMENTO + BACKLOG PENDENTE)
+        # PASSO 4: DESEMPENHO POR COMPRADOR (RENDIMENTO + SLA MÉDIO + BACKLOG)
         # ==========================================
         st.markdown("---")
-        st.markdown('<div class="section-header" style="background-color: #2b4c7e;">DESEMPENHO INDIVIDUAL POR COMPRADOR</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header" style="background-color: #2b4c7e;">DESEMPENHO INDIVIDUAL POR COMPRADOR (RENDIMENTO, SLA MÉDIO E BACKLOG)</div>', unsafe_allow_html=True)
         
         row4_c1, row4_c2, row4_c3 = st.columns(3)
         compradores = ['Ednilson', 'Dayana', 'Luiz']
@@ -365,10 +364,10 @@ if df is not None:
                 
                 # ------ REGRA DE EXCEÇÃO: LUIZ APENAS A PARTIR DE 06/07/2026 ------
                 if comp == 'Luiz' and col_dt in df_comp_total.columns:
-                    st.markdown("<div style='text-align: center; font-size: 0.75rem; font-weight: bold; color: #e53e3e; margin-bottom: 8px;'>*(Análise iniciada em 06/07/2026)</div>", unsafe_allow_html=True)
+                    st.markdown("<div style='text-align: center; font-size: 0.75rem; font-weight: bold; color: #e53e3e; margin-bottom: 4px;'>*(Análise iniciada em 06/07/2026)</div>", unsafe_allow_html=True)
                     df_comp_total = df_comp_total[df_comp_total[col_dt] >= pd.to_datetime('2026-07-06')]
                 else:
-                    st.markdown("<div style='text-align: center; font-size: 0.75rem; color: transparent; margin-bottom: 8px;'>.</div>", unsafe_allow_html=True)
+                    st.markdown("<div style='text-align: center; font-size: 0.75rem; color: transparent; margin-bottom: 4px;'>.</div>", unsafe_allow_html=True)
                 
                 if not df_comp_total.empty and 'Status_Detalhado' in df_comp_total.columns:
                     
@@ -376,23 +375,38 @@ if df is not None:
                     qtd_atendidas = len(df_comp_total[df_comp_total['Status_Detalhado'] == 'Atendidas'])
                     taxa_rendimento_comp = (qtd_atendidas / total_emitidas * 100) if total_emitidas > 0 else 0
                     
-                    # ----- VELOCÍMETRO DE RENDIMENTO INDIVIDUAL -----
-                    cor_gauge_comp = '#388e3c' if taxa_rendimento_comp >= 75 else ('#d97706' if taxa_rendimento_comp >= 50 else '#e53e3e')
+                    # ----- FILTRAR APENAS ROTINEIRA E EMERGENCIAL PARA O SLA MÉDIO -----
+                    if col_criticidade:
+                        df_comp_crit = df_comp_total[df_comp_total[col_criticidade].astype(str).str.upper().isin(['ROTINEIRA', 'EMERGENCIAL'])]
+                    else:
+                        df_comp_crit = pd.DataFrame()
+                        
+                    sla_rot_val = df_comp_crit[df_comp_crit[col_criticidade].astype(str).str.upper() == 'ROTINEIRA']['Days'].mean() if not df_comp_crit.empty else 0
+                    sla_emg_val = df_comp_crit[df_comp_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean() if not df_comp_crit.empty else 0
                     
-                    fig_gauge = go.Figure(go.Indicator(
-                        mode = "gauge+number", value = taxa_rendimento_comp,
-                        number = {'suffix': "%", 'font': {'size': 20, 'color': '#1f3b58', 'family': 'Arial Black'}},
-                        title = {'text': "RENDIMENTO (ATENDIDAS / TOTAL)", 'font': {'size': 10, 'color': '#111827', 'family': 'Arial Black'}},
-                        gauge = {
-                            'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 9, 'family': 'Arial Black'}},
-                            'bar': {'color': cor_gauge_comp}, 'bgcolor': "rgba(0,0,0,0)", 'borderwidth': 0,
-                            'steps': [{'range': [0, 60], 'color': '#f1f5f9'}, {'range': [60, 100], 'color': '#e2e8f0'}],
-                        }
-                    ))
-                    fig_gauge.update_layout(height=130, margin=dict(l=10, r=10, t=20, b=5), paper_bgcolor='rgba(0,0,0,0)')
+                    sla_rot_val = 0 if pd.isna(sla_rot_val) else round(sla_rot_val, 1)
+                    sla_emg_val = 0 if pd.isna(sla_emg_val) else round(sla_emg_val, 1)
+                    sla_geral_val = round(df_comp_crit['Days'].mean(), 1) if not df_comp_crit.empty and not pd.isna(df_comp_crit['Days'].mean()) else 0
+
+                    # ----- 1. VELOCÍMETRO DE RENDIMENTO -----
+                    cor_gauge_comp = '#388e3c' if taxa_rendimento_comp >= 75 else ('#d97706' if taxa_rendimento_comp >= 50 else '#e53e3e')
+                    fig_gauge = criar_gauge("RENDIMENTO (ATENDIDAS / TOTAL)", taxa_rendimento_comp, 100, cor_gauge_comp, sufixo="%")
                     st.plotly_chart(fig_gauge, use_container_width=True)
 
-                    # ----- GRÁFICO DE BARRAS PERCENTUAIS DO BACKLOG PENDENTE -----
+                    # ----- 2. NOVOS VELOCÍMETROS DE SLA MÉDIO (ROTINEIRA E EMERGENCIAL) -----
+                    sub_c1, sub_c2 = st.columns(2)
+                    with sub_c1:
+                        fig_rot = criar_gauge("SLA MÉD. ROTINEIRA", sla_rot_val, max(sla_rot_val * 1.5, 30), "#2b6cb0")
+                        st.plotly_chart(fig_rot, use_container_width=True)
+                        st.markdown(f"<div style='text-align: center; font-size: 0.8rem; font-weight: bold; color: #2b6cb0; margin-top: -15px;'>{sla_rot_val} dias</div>", unsafe_allow_html=True)
+                    with sub_c2:
+                        fig_emg = criar_gauge("SLA MÉD. EMERGENCIAL", sla_emg_val, max(sla_emg_val * 1.5, 10), "#805ad5")
+                        st.plotly_chart(fig_emg, use_container_width=True)
+                        st.markdown(f"<div style='text-align: center; font-size: 0.8rem; font-weight: bold; color: #805ad5; margin-top: -15px;'>{sla_emg_val} dias</div>", unsafe_allow_html=True)
+
+                    st.markdown("<div style='margin: 5px 0;'></div>", unsafe_allow_html=True)
+
+                    # ----- 3. GRÁFICO DE BARRAS PERCENTUAIS DO BACKLOG PENDENTE -----
                     df_comp_aberto = df_comp_total[df_comp_total['Status_Detalhado'] != 'Atendidas'].copy()
                     
                     if not df_comp_aberto.empty:
@@ -404,8 +418,6 @@ if df is not None:
                         comp_stats = comp_stats.sort_values('Status_Detalhado')
                         
                         cores = [color_status_map.get(s, '#718096') for s in comp_stats['Status_Detalhado']]
-                        
-                        # Combinando Quantidade e Percentual na mesma Label
                         comp_stats['Texto_Label'] = comp_stats.apply(lambda row: f"{int(row['Quantidade'])} ({row['Percentual']}%)", axis=1)
                         
                         fig_comp_ind = go.Figure(go.Bar(
@@ -414,23 +426,23 @@ if df is not None:
                             orientation='h',
                             text=comp_stats['Texto_Label'],
                             textposition='outside',
-                            textfont=dict(size=12, color='#1f2937', family='Arial Black'), 
+                            textfont=dict(size=11, color='#1f2937', family='Arial Black'), 
                             marker_color=cores
                         ))
                         
                         fig_comp_ind.update_layout(
                             xaxis_title="% do Backlog Restante", yaxis_title="",
-                            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=150,
+                            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=140,
                             margin=dict(l=5, r=30, t=0, b=10),
                             xaxis=dict(showgrid=True, gridcolor='#e2e8f0', range=[0, max(comp_stats['Percentual'].max() * 1.35, 100)], tickfont=dict(size=9)), 
-                            yaxis=dict(type='category', tickfont=dict(family='Arial Black', size=11))
+                            yaxis=dict(type='category', tickfont=dict(family='Arial Black', size=10))
                         )
                         st.plotly_chart(fig_comp_ind, use_container_width=True)
                     else:
                         st.info(f"Fila limpa! Nenhum item pendente para {comp}.")
                     
                     st.markdown(f"""
-                    <div style='text-align: center; font-size: 0.95rem; color: #2b6cb0; font-weight: bold; background-color: #f1f5f9; padding: 6px; border-radius: 4px; margin-top: 5px;'>
+                    <div style='text-align: center; font-size: 0.9rem; color: #2b6cb0; font-weight: bold; background-color: #f1f5f9; padding: 5px; border-radius: 4px; margin-top: 5px;'>
                         ✅ {qtd_atendidas} de {total_emitidas} Itens Atendidos
                     </div>
                     """, unsafe_allow_html=True)
@@ -442,7 +454,7 @@ if df is not None:
         <hr style='margin: 15px 0px 8px 0px;'>
         <div style="font-size: 1.05rem; color: #4a5568; display: flex; justify-content: space-between; font-weight: 700;">
             <span><b style="color: #2b4c7e;">→ Base Salva:</b> O último arquivo enviado fica salvo como base de consulta para toda a equipe.</span>
-            <span><b style="color: #388e3c;">Metodologia:</b> Gráficos atualizados via integração analítica Protheus Parente Andrade.</span>
+            <span><b style="color: #388e3c;">Metodologia:</b> SLAs calculados com base nas solicitações Rotineiras e Emergenciais.</span>
         </div>
         """, unsafe_allow_html=True)
 
