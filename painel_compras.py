@@ -234,14 +234,12 @@ if df is not None:
             df_geral_crit = df_geral_crit[df_geral_crit[col_criticidade].astype(str).str.upper().isin(['ROTINEIRA', 'EMERGENCIAL'])]
 
         sla_geral_rot = int(round(df_geral_crit[df_geral_crit[col_criticidade].astype(str).str.upper() == 'ROTINEIRA']['Days'].mean(), 0)) if not df_geral_crit.empty and not pd.isna(df_geral_crit[df_geral_crit[col_criticidade].astype(str).str.upper() == 'ROTINEIRA']['Days'].mean()) else 0
-        sla_geral_emg = int(round(df_geral_crit[df_geral_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean(), 0)) if not df_geral_crit.empty and not pd.isna(df_geral_crit[df_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean()) else 0
+        sla_geral_emg = int(round(df_geral_crit[df_geral_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean(), 0)) if not df_geral_crit.empty and not pd.isna(df_geral_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean()) else 0
 
         # --- GESTÃO DO HISTÓRICO PARA O DIA ANTERIOR ---
-        # Se for nova carga, rotaciona: o atual vira o anterior para a próxima consulta, mas para hoje exibe o armazenado anteriormente (ou 0 se for a primeira vez)
         ontem_scs = historico.get("ult_scs", total_sc_unicas_aberto)
         ontem_itens = historico.get("ult_itens", total_linhas_aberto)
         
-        # SLA do dia anterior armazenado (se não existir, inicia com 0 conforme solicitado)
         ontem_sla_rot = historico.get("sla_rot_anterior", 0)
         ontem_sla_emg = historico.get("sla_emg_anterior", 0)
 
@@ -249,7 +247,6 @@ if df is not None:
         delta_itens = total_linhas_aberto - ontem_itens
 
         if uploaded_file is not None:
-            # Salva o atual como o "anterior" para a próxima carga de relatório
             historico["ult_scs"] = total_sc_unicas_aberto
             historico["ult_itens"] = total_linhas_aberto
             historico["sla_rot_anterior"] = sla_geral_rot
@@ -582,12 +579,12 @@ if df is not None:
             <div style="display: flex; justify-content: center; gap: 40px; font-size: 1.1rem; font-weight: bold;">
                 <div>
                     SLA Rotineira Médio: <span style="color: {'#ff6b6b' if sla_geral_rot > 15 else '#339af0'};">{sla_geral_rot} dias</span> <span style="font-size: 0.8rem; color: #94a3b8;">(Limite: 15 dias)</span>
-                    <div style="font-size: 0.7rem; color: #94a3b8; font-weight: normal; margin-top: 2px;">SLA do dia anterior: {ontem_sla_rot} dias</div>
+                    <div style="font-size: 0.75rem; color: #94a3b8; font-weight: normal; margin-top: 2px;">SLA do dia anterior: {ontem_sla_rot} dias</div>
                 </div>
                 <div>|</div>
                 <div>
                     SLA Emergencial Médio: <span style="color: {'#ff6b6b' if sla_geral_emg > 3 else '#b197fc'};">{sla_geral_emg} dias</span> <span style="font-size: 0.8rem; color: #94a3b8;">(Limite: 3 dias)</span>
-                    <div style="font-size: 0.7rem; color: #94a3b8; font-weight: normal; margin-top: 2px;">SLA do dia anterior: {ontem_sla_emg} dias</div>
+                    <div style="font-size: 0.75rem; color: #94a3b8; font-weight: normal; margin-top: 2px;">SLA do dia anterior: {ontem_sla_emg} dias</div>
                 </div>
             </div>
         </div>
