@@ -547,6 +547,35 @@ if df is not None:
                 else:
                     st.info(f"Sem dados mapeados para {comp}.")
 
+        # ==========================================
+        # PASSO 5: CAIXA DE SLA MÉDIO GERAL (CONSOLIDADO)
+        # ==========================================
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        # Cálculo do SLA Médio Geral considerando rotineira e emergencial de toda a base (respeitando a regra do Luiz)
+        df_geral_crit = df.copy()
+        # Aplica a regra do Luiz na base geral se houver
+        if col_dt_emissao in df_geral_crit.columns:
+            mask_luiz_antigo = (df_geral_crit['Comprador_Resp'] == 'Luiz') & (df_geral_crit[col_dt_emissao] < pd.to_datetime('2026-07-06'))
+            df_geral_crit = df_geral_crit[~mask_luiz_antigo]
+
+        if col_criticidade:
+            df_geral_crit = df_geral_crit[df_geral_crit[col_criticidade].astype(str).str.upper().isin(['ROTINEIRA', 'EMERGENCIAL'])]
+
+        sla_geral_rot = int(round(df_geral_crit[df_geral_crit[col_criticidade].astype(str).str.upper() == 'ROTINEIRA']['Days'].mean(), 0)) if not df_geral_crit.empty and not pd.isna(df_geral_crit[df_geral_crit[col_criticidade].astype(str).str.upper() == 'ROTINEIRA']['Days'].mean()) else 0
+        sla_geral_emg = int(round(df_geral_crit[df_geral_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean(), 0)) if not df_geral_crit.empty and not pd.isna(df_geral_crit[df_geral_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean()) else 0
+
+        st.markdown(f"""
+        <div style="background-color: {'#111827' if tema_selecionado != 'Claro' else '#f8fafc'}; border: 1px solid {'#374151' if tema_selecionado != 'Claro' else '#cbd5e1'}; border-radius: 6px; padding: 15px; text-align: center; margin-top: 10px; margin-bottom: 20px;">
+            <div style="font-size: 1rem; font-family: 'Arial Black'; color: {'#60a5fa' if tema_selecionado != 'Claro' else '#1f3b58'}; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;">📊 SLA MÉDIO GERAL CONSOLIDADO (TODOS OS COMPRADORES)</div>
+            <div style="display: flex; justify-content: center; gap: 40px; font-size: 1.1rem; font-weight: bold;">
+                <div>SLA Rotineira Médio: <span style="color: {'#ff6b6b' if sla_geral_rot > 15 else '#339af0'};">{sla_geral_rot} dias</span> <span style="font-size: 0.8rem; color: #94a3b8;">(Limite: 15 dias)</span></div>
+                <div>|</div>
+                <div>SLA Emergencial Médio: <span style="color: {'#ff6b6b' if sla_geral_emg > 3 else '#b197fc'};">{sla_geral_emg} dias</span> <span style="font-size: 0.8rem; color: #94a3b8;">(Limite: 3 dias)</span></div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
         st.markdown("""
         <hr style='margin: 15px 0px 8px 0px;'>
         <div style="font-size: 1.05rem; display: flex; justify-content: space-between; font-weight: 700;">
