@@ -276,9 +276,6 @@ if df is not None:
         sla_geral_rot = int(round(mean_rot, 0)) if not pd.isna(mean_rot) else 0
         sla_geral_emg = int(round(mean_emg, 0)) if not pd.isna(mean_emg) else 0
 
-        ontem_sla_rot = historico.get("sla_rot_anterior", 0)
-        ontem_sla_emg = historico.get("sla_emg_anterior", 0)
-
         criticos_df = unique_scs_aberto[unique_scs_aberto['Days'] >= 20]
         
         # Consolidações para os Velocímetros da Linha 1
@@ -618,7 +615,7 @@ if df is not None:
                     st.info(f"Sem dados mapeados para {comp}.")
 
         # ==========================================
-        # PASSO 5: CAIXA DE SLA MÉDIO GERAL (CONSOLIDADO) - DUAS CAIXINHAS LADO A LADO COM COMPARAÇÃO DO DIA ANTERIOR
+        # PASSO 5: CAIXA DE SLA MÉDIO GERAL (CONSOLIDADO) - DUAS CAIXINHAS LADO A LADO SEM O TEXTO DE DIA ANTERIOR
         # ==========================================
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown('<div class="section-header" style="background-color: #111827; border: 1px solid #374151; margin-bottom: 12px;">📊 SLA MÉDIO GERAL CONSOLIDADO</div>', unsafe_allow_html=True)
@@ -628,24 +625,20 @@ if df is not None:
         with col_box1:
             cor_val_rot = "#ff6b6b" if sla_geral_rot > 15 else "#339af0"
             st.markdown(f"""
-            <div style="background-color: {'#111827' if tema_selecionado != 'Claro' else '#f8fafc'}; border: 1px solid {'#374151' if tema_selecionado != 'Claro' else '#cbd5e1'}; border-radius: 6px; padding: 12px; text-align: center;">
+            <div style="background-color: {'#111827' if tema_selecionado != 'Claro' else '#f8fafc'}; border: 1px solid {'#374151' if tema_selecionado != 'Claro' else '#cbd5e1'}; border-radius: 6px; padding: 15px; text-align: center;">
                 <div style="font-size: 1.0rem; font-family: 'Arial Black'; color: {'#60a5fa' if tema_selecionado != 'Claro' else '#1f3b58'}; margin-bottom: 0px; text-transform: uppercase;">SLA ROTINEIRA MÉDIO</div>
                 <div style="font-size: 0.75rem; font-weight: bold; color: #94a3b8; margin-bottom: 6px;">(Limite: 15 dias)</div>
                 <div style="font-size: 1.8rem; font-weight: bold; color: {cor_val_rot}; line-height: 1.1;">{sla_geral_rot} dias</div>
-                <div style="border-top: 1px dashed {'#374151' if tema_selecionado != 'Claro' else '#cbd5e1'}; margin: 6px 0;"></div>
-                <div style="font-size: 0.8rem; font-weight: bold; color: #94a3b8;">Dia anterior: {ontem_sla_rot} dias</div>
             </div>
             """, unsafe_allow_html=True)
 
         with col_box2:
             cor_val_emg = "#ff6b6b" if sla_geral_emg > 3 else "#b197fc"
             st.markdown(f"""
-            <div style="background-color: {'#111827' if tema_selecionado != 'Claro' else '#f8fafc'}; border: 1px solid {'#374151' if tema_selecionado != 'Claro' else '#cbd5e1'}; border-radius: 6px; padding: 12px; text-align: center;">
+            <div style="background-color: {'#111827' if tema_selecionado != 'Claro' else '#f8fafc'}; border: 1px solid {'#374151' if tema_selecionado != 'Claro' else '#cbd5e1'}; border-radius: 6px; padding: 15px; text-align: center;">
                 <div style="font-size: 1.0rem; font-family: 'Arial Black'; color: {'#60a5fa' if tema_selecionado != 'Claro' else '#1f3b58'}; margin-bottom: 0px; text-transform: uppercase;">SLA EMERGENCIAL MÉDIO</div>
                 <div style="font-size: 0.75rem; font-weight: bold; color: #94a3b8; margin-bottom: 6px;">(Limite: 3 dias)</div>
                 <div style="font-size: 1.8rem; font-weight: bold; color: {cor_val_emg}; line-height: 1.1;">{sla_geral_emg} dias</div>
-                <div style="border-top: 1px dashed {'#374151' if tema_selecionado != 'Claro' else '#cbd5e1'}; margin: 6px 0;"></div>
-                <div style="font-size: 0.8rem; font-weight: bold; color: #94a3b8;">Dia anterior: {ontem_sla_emg} dias</div>
             </div>
             """, unsafe_allow_html=True)
 
