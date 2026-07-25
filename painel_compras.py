@@ -67,7 +67,7 @@ st.markdown(f"""
         align-items: center;
         margin-bottom: 10px;
     }}
-    .header-title {{ font-size: 1.4rem; font-weight: bold; }}
+    .header-title {{ font-size: 2.0rem; font-weight: bold; }}
     .header-sub {{ font-size: 1.1rem; }}
     .resumo-bar {{
         color: white;
@@ -314,7 +314,6 @@ if df is not None:
             fig.update_layout(height=altura, margin=dict(l=10, r=10, t=40, b=5), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
             return fig
 
-        # Layout ajustado para conter a coluna de separação vertical (div)
         row1_c1, row1_c2, row1_c3, row1_c4, row1_div, row1_c5, row1_c6 = st.columns([1.5, 1, 1, 1, 0.2, 1, 1])
 
         with row1_c1:
@@ -347,7 +346,6 @@ if df is not None:
         render_gauge(row1_c3, "ATENÇÃO", qtd_atencao, total_linhas_aberto, "#d97706")
         render_gauge(row1_c4, "FORA DO PRAZO", qtd_fora, total_linhas_aberto, "#e53e3e")
 
-        # Linha Divisória Vertical separando Status de Criticidade
         with row1_div:
             st.markdown(f"""
             <div style="border-left: 2px solid {'#333333' if tema_selecionado != 'Claro' else '#cbd5e1'}; height: 140px; margin: auto; margin-top: 5px;"></div>
