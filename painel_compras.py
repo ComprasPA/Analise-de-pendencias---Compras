@@ -278,7 +278,7 @@ if df is not None:
 
         criticos_df = unique_scs_aberto[unique_scs_aberto['Days'] >= 20]
         
-        # Consolidações para os Velocímetros da Linha 1
+        # Consolidações para os Indicadores da Linha 1
         status_counts = df_aberto['Status_Detalhado'].value_counts()
         qtd_no_prazo = status_counts.get('No Prazo', 0)
         qtd_atencao = status_counts.get('Atenção', 0)
@@ -326,13 +326,13 @@ if df is not None:
             seta_itens = "▲" if diff_itens > 0 else ("▼" if diff_itens < 0 else "•")
 
             st.markdown(f"""
-            <div style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px; text-align: center; height: 150px; display: flex; flex-direction: column; justify-content: center;">
-                <div style="font-size: 0.85rem; font-family: 'Arial Black'; margin-bottom: 2px;">VOLUMETRIA EM ABERTO</div>
-                <div style="font-size: 1.4rem; font-weight: bold; color: #4dabf7; line-height: 1;">{total_sc_unicas_aberto} <span style="font-size: 0.9rem; color: {cor_delta_scs};">{seta_scs} {sinal_scs}{abs(diff_scs)}</span></div>
-                <div style="font-size: 0.62rem; font-weight: bold;">Solicitações (SCs) (vs ant.)</div>
-                <div style="border-top: 1px dashed #cbd5e1; margin: 3px 0;"></div>
-                <div style="font-size: 1.4rem; font-weight: bold; color: #ffa94d; line-height: 1;">{total_linhas_aberto} <span style="font-size: 0.9rem; color: {cor_delta_itens};">{seta_itens} {sinal_itens}{abs(diff_itens)}</span></div>
-                <div style="font-size: 0.62rem; font-weight: bold;">Total de Itens (vs ant.)</div>
+            <div style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 6px; text-align: center; height: 150px; display: flex; flex-direction: column; justify-content: center;">
+                <div style="font-size: 0.95rem; font-family: 'Arial Black'; margin-bottom: 2px;">VOLUMETRIA EM ABERTO</div>
+                <div style="font-size: 1.95rem; font-weight: bold; color: #4dabf7; line-height: 1.1;">{total_sc_unicas_aberto} <span style="font-size: 1.25rem; color: {cor_delta_scs};">{seta_scs} {sinal_scs}{abs(diff_scs)}</span></div>
+                <div style="font-size: 0.85rem; font-weight: bold;">Solicitações (SCs) (vs ant.)</div>
+                <div style="border-top: 1px dashed #cbd5e1; margin: 2px 0;"></div>
+                <div style="font-size: 1.95rem; font-weight: bold; color: #ffa94d; line-height: 1.1;">{total_linhas_aberto} <span style="font-size: 1.25rem; color: {cor_delta_itens};">{seta_itens} {sinal_itens}{abs(diff_itens)}</span></div>
+                <div style="font-size: 0.85rem; font-weight: bold;">Total de Itens (vs ant.)</div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -495,7 +495,7 @@ if df is not None:
             """, unsafe_allow_html=True)
 
         # ==========================================
-        # PASSO 4: DESEMPENHO POR COMPRADOR
+        # PASSO 4: DESEMPENHO POR COMPRADOR (COM BULLET CHARTS HORIZONTAIS PARA OS SLAs)
         # ==========================================
         st.markdown("---")
         st.markdown('<div class="section-header" style="background-color: #2b4c7e;">DESEMPENHO INDIVIDUAL POR COMPRADOR</div>', unsafe_allow_html=True)
@@ -507,6 +507,45 @@ if df is not None:
         color_status_map = {'No Prazo': '#388e3c', 'Atenção': '#d97706', 'Fora do Prazo': '#e53e3e'}
         ordem_status_aberto = ['Fora do Prazo', 'Atenção', 'No Prazo']
         
+        def criar_bullet_chart(titulo_sla, valor, limite_meta, max_escala, cor_barra):
+            fig = go.Figure()
+            # Faixa de fundo indicando o limite de tolerância (verde/bom vs vermelho/estourado)
+            fig.add_trace(go.Bar(
+                x=[max_escala],
+                y=[titulo_sla],
+                orientation='h',
+                marker=dict(color='#2a3b4c' if tema_selecionado != 'Claro' else '#e2e8f0'),
+                hoverinfo='skip'
+            ))
+            # Barra principal com o valor real atingido
+            fig.add_trace(go.Bar(
+                x=[valor],
+                y=[titulo_sla],
+                orientation='h',
+                marker=dict(color=cor_barra),
+                text=f"{valor} dias",
+                textposition='inside',
+                insidetextanchor='middle',
+                textfont=dict(size=12, color='#ffffff', family='Arial Black')
+            ))
+            fig.update_layout(
+                barmode='overlay',
+                height=70,
+                margin=dict(l=10, r=10, t=10, b=10),
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                xaxis=dict(range=[0, max_escala], showgrid=False, zeroline=False, showticklabels=True, tickfont=dict(size=9, color=cor_texto_grafico)),
+                yaxis=dict(showgrid=False, tickfont=dict(size=10, color=cor_texto_grafico, family='Arial Black')),
+                showlegend=False,
+                shapes=[dict(
+                    type='line',
+                    x0=limite_meta, x1=limite_meta,
+                    y0=-0.5, y1=0.5,
+                    line=dict(color='red', width=3, dash='dash')
+                )]
+            )
+            return fig
+
         for comp, col_st in zip(compradores, colunas_st):
             with col_st:
                 st.markdown(f'<div style="text-align: center; font-weight: bold; font-size: 1.15rem; margin-bottom: 2px;">👤 {comp}</div>', unsafe_allow_html=True)
@@ -578,50 +617,24 @@ if df is not None:
                     </div>
                     """, unsafe_allow_html=True)
 
-                    # 4. Velocímetros de SLA
-                    cor_rot = "#ff6b6b" if sla_rot_val > 15 else "#339af0"
-                    fig_rot = go.Figure(go.Indicator(
-                        mode = "gauge+number", value = sla_rot_val,
-                        number = {'font': {'size': 20, 'color': cor_texto_grafico, 'family': 'Arial Black'}},
-                        gauge = {
-                            'axis': {'range': [0, 30], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 9, 'color': cor_texto_grafico, 'family': 'Arial Black'}},
-                            'bar': {'color': cor_rot}, 'bgcolor': "rgba(0,0,0,0)", 'borderwidth': 0,
-                            'steps': [{'range': [0, 15], 'color': '#2a3b4c' if tema_selecionado != 'Claro' else '#e2e8f0'}, 
-                                      {'range': [15, 30], 'color': '#4a2525' if tema_selecionado != 'Claro' else '#fed7d7'}],
-                            'threshold': {'line': {'color': 'red', 'width': 4}, 'thickness': 0.75, 'value': 15}
-                        }
-                    ))
-                    fig_rot.update_layout(height=100, margin=dict(l=5, r=5, t=25, b=5), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+                    # 4. Bullet Charts Horizontais para SLA Rotineiro e Emergencial
+                    st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
+                    
+                    cor_rot_b = "#ff6b6b" if sla_rot_val > 15 else "#339af0"
+                    fig_bullet_rot = criar_bullet_chart("ROTINEIRA", sla_rot_val, 15, 30, cor_rot_b)
+                    st.plotly_chart(fig_bullet_rot, use_container_width=True, config={'displayModeBar': False})
+                    st.markdown(f"<div style='text-align: center; font-size: 0.75rem; font-weight: bold; color: #94a3b8; margin-top: -8px; margin-bottom: 8px;'>Limite: 15 dias</div>", unsafe_allow_html=True)
 
-                    cor_emg = "#ff6b6b" if sla_emg_val > 3 else "#b197fc"
-                    fig_emg = go.Figure(go.Indicator(
-                        mode = "gauge+number", value = sla_emg_val,
-                        number = {'font': {'size': 20, 'color': cor_texto_grafico, 'family': 'Arial Black'}},
-                        gauge = {
-                            'axis': {'range': [0, 20], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 10, 'color': cor_texto_grafico, 'family': 'Arial Black'}},
-                            'bar': {'color': cor_emg}, 'bgcolor': "rgba(0,0,0,0)", 'borderwidth': 0,
-                            'steps': [{'range': [0, 3], 'color': '#2a3b4c' if tema_selecionado != 'Claro' else '#e2e8f0'}, 
-                                      {'range': [3, 20], 'color': '#4a2525' if tema_selecionado != 'Claro' else '#fed7d7'}],
-                            'threshold': {'line': {'color': 'red', 'width': 4}, 'thickness': 0.75, 'value': 3}
-                        }
-                    ))
-                    fig_emg.update_layout(height=100, margin=dict(l=5, r=5, t=25, b=5), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
-
-                    sub_c1, sub_c2 = st.columns(2)
-                    with sub_c1:
-                        st.markdown("<div style='margin-top: 30px;'></div>", unsafe_allow_html=True)
-                        st.plotly_chart(fig_rot, use_container_width=True, config={'displayModeBar': False})
-                        st.markdown(f"<div style='text-align: center; font-size: 0.8rem; font-weight: bold; color: {cor_texto_grafico}; margin-top: -2px;'>SLA ROTINEIRA</div><div style='text-align: center; font-size: 0.75rem; font-weight: bold; color: #94a3b8; margin-top: 2px;'>Limite: 15 dias</div>", unsafe_allow_html=True)
-                    with sub_c2:
-                        st.markdown("<div style='margin-top: 30px;'></div>", unsafe_allow_html=True)
-                        st.plotly_chart(fig_emg, use_container_width=True, config={'displayModeBar': False})
-                        st.markdown(f"<div style='text-align: center; font-size: 0.8rem; font-weight: bold; color: {cor_texto_grafico}; margin-top: -2px;'>SLA EMERGENCIAL</div><div style='text-align: center; font-size: 0.75rem; font-weight: bold; color: #94a3b8; margin-top: 2px;'>Limite: 3 dias</div>", unsafe_allow_html=True)
+                    cor_emg_b = "#ff6b6b" if sla_emg_val > 3 else "#b197fc"
+                    fig_bullet_emg = criar_bullet_chart("EMERGENCIAL", sla_emg_val, 3, 10, cor_emg_b)
+                    st.plotly_chart(fig_bullet_emg, use_container_width=True, config={'displayModeBar': False})
+                    st.markdown(f"<div style='text-align: center; font-size: 0.75rem; font-weight: bold; color: #94a3b8; margin-top: -8px;'>Limite: 3 dias</div>", unsafe_allow_html=True)
                     
                 else:
                     st.info(f"Sem dados mapeados para {comp}.")
 
         # ==========================================
-        # PASSO 5: CAIXA DE SLA MÉDIO GERAL (CONSOLIDADO) - DUAS CAIXINHAS LADO A LADO SEM O TEXTO DE DIA ANTERIOR
+        # PASSO 5: CAIXA DE SLA MÉDIO GERAL (CONSOLIDADO) - DUAS CAIXINHAS LADO A LADO
         # ==========================================
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown('<div class="section-header" style="background-color: #111827; border: 1px solid #374151; margin-bottom: 12px;">📊 SLA MÉDIO GERAL CONSOLIDADO</div>', unsafe_allow_html=True)
