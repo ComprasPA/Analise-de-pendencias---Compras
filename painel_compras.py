@@ -288,7 +288,7 @@ if df is not None:
         qtd_emg = crit_counts.get('EMERGENCIAL', 0)
 
         # ==========================================
-        # PASSO 1: QUADRANTE DE VOLUMETRIA E VELOCÍMETROS GERAIS (VOLTADOS AO PADRÃO CIRCULAR)
+        # PASSO 1: QUADRANTE DE VOLUMETRIA E VELOCÍMETROS GERAIS (COM LINHA DIVISÓRIA VERTICAL)
         # ==========================================
         st.markdown(f"""
         <div class="header-box">
@@ -614,7 +614,7 @@ if df is not None:
                     </div>
                     """, unsafe_allow_html=True)
 
-                    # 4. Hidronível Horizontal para substituição dos velocímetros individuais de SLA
+                    # 4. Hidronível Horizontal para substituição dos velocímetros individuais de SLA dos compradores
                     st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
                     
                     cor_rot_h = "#ff6b6b" if sla_rot_val > 15 else "#339af0"
