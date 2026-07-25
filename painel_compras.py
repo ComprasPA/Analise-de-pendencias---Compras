@@ -278,7 +278,6 @@ if df is not None:
 
         criticos_df = unique_scs_aberto[unique_scs_aberto['Days'] >= 20]
         
-        # Consolidações para os Indicadores da Linha 1
         status_counts = df_aberto['Status_Detalhado'].value_counts()
         qtd_no_prazo = status_counts.get('No Prazo', 0)
         qtd_atencao = status_counts.get('Atenção', 0)
@@ -289,7 +288,7 @@ if df is not None:
         qtd_emg = crit_counts.get('EMERGENCIAL', 0)
 
         # ==========================================
-        # PASSO 1: QUADRANTE DE VOLUMETRIA E VELOCÍMETROS GERAIS (COM LINHA DIVISÓRIA VERTICAL)
+        # PASSO 1: QUADRANTE DE VOLUMETRIA E INDICADORES GERAIS (COM HIDRONÍVEL PARA OS GERAIS)
         # ==========================================
         st.markdown(f"""
         <div class="header-box">
@@ -298,6 +297,45 @@ if df is not None:
         </div>
         <div class="resumo-bar">DIAGNÓSTICO E VALIDAÇÃO ESTRATÉGICA (VOLUMETRIA, STATUS E CRITICIDADE)</div>
         """, unsafe_allow_html=True)
+
+        def criar_hidronivel(titulo, valor, limite_meta, max_escala, cor_barra):
+            fig = go.Figure()
+            # Fundo do hidronível (trilho graduado)
+            fig.add_trace(go.Bar(
+                x=[max_escala],
+                y=[titulo],
+                orientation='h',
+                marker=dict(color='#2a3b4c' if tema_selecionado != 'Claro' else '#e2e8f0'),
+                hoverinfo='skip'
+            ))
+            # Nível preenchido (hidronível)
+            fig.add_trace(go.Bar(
+                x=[valor],
+                y=[titulo],
+                orientation='h',
+                marker=dict(color=cor_barra),
+                text=f"{valor} dias",
+                textposition='inside',
+                insidetextanchor='middle',
+                textfont=dict(size=12, color='#ffffff', family='Arial Black')
+            ))
+            fig.update_layout(
+                barmode='overlay',
+                height=70,
+                margin=dict(l=10, r=10, t=10, b=10),
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                xaxis=dict(range=[0, max_escala], showgrid=False, zeroline=False, showticklabels=True, tickfont=dict(size=9, color=cor_texto_grafico)),
+                yaxis=dict(showgrid=False, tickfont=dict(size=10, color=cor_texto_grafico, family='Arial Black')),
+                showlegend=False,
+                shapes=[dict(
+                    type='line',
+                    x0=limite_meta, x1=limite_meta,
+                    y0=-0.5, y1=0.5,
+                    line=dict(color='red', width=3, dash='dash')
+                )]
+            )
+            return fig
 
         def criar_gauge(titulo, valor, max_val, cor_barra, sufixo="", altura=130, title_size=10):
             fig = go.Figure(go.Indicator(
@@ -495,7 +533,7 @@ if df is not None:
             """, unsafe_allow_html=True)
 
         # ==========================================
-        # PASSO 4: DESEMPENHO POR COMPRADOR (COM BULLET CHARTS HORIZONTAIS PARA OS SLAs)
+        # PASSO 4: DESEMPENHO POR COMPRADOR (COM HIDRONÍVEL HORIZONTAL PARA OS SLAs)
         # ==========================================
         st.markdown("---")
         st.markdown('<div class="section-header" style="background-color: #2b4c7e;">DESEMPENHO INDIVIDUAL POR COMPRADOR</div>', unsafe_allow_html=True)
@@ -507,45 +545,6 @@ if df is not None:
         color_status_map = {'No Prazo': '#388e3c', 'Atenção': '#d97706', 'Fora do Prazo': '#e53e3e'}
         ordem_status_aberto = ['Fora do Prazo', 'Atenção', 'No Prazo']
         
-        def criar_bullet_chart(titulo_sla, valor, limite_meta, max_escala, cor_barra):
-            fig = go.Figure()
-            # Faixa de fundo indicando o limite de tolerância (verde/bom vs vermelho/estourado)
-            fig.add_trace(go.Bar(
-                x=[max_escala],
-                y=[titulo_sla],
-                orientation='h',
-                marker=dict(color='#2a3b4c' if tema_selecionado != 'Claro' else '#e2e8f0'),
-                hoverinfo='skip'
-            ))
-            # Barra principal com o valor real atingido
-            fig.add_trace(go.Bar(
-                x=[valor],
-                y=[titulo_sla],
-                orientation='h',
-                marker=dict(color=cor_barra),
-                text=f"{valor} dias",
-                textposition='inside',
-                insidetextanchor='middle',
-                textfont=dict(size=12, color='#ffffff', family='Arial Black')
-            ))
-            fig.update_layout(
-                barmode='overlay',
-                height=70,
-                margin=dict(l=10, r=10, t=10, b=10),
-                paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)',
-                xaxis=dict(range=[0, max_escala], showgrid=False, zeroline=False, showticklabels=True, tickfont=dict(size=9, color=cor_texto_grafico)),
-                yaxis=dict(showgrid=False, tickfont=dict(size=10, color=cor_texto_grafico, family='Arial Black')),
-                showlegend=False,
-                shapes=[dict(
-                    type='line',
-                    x0=limite_meta, x1=limite_meta,
-                    y0=-0.5, y1=0.5,
-                    line=dict(color='red', width=3, dash='dash')
-                )]
-            )
-            return fig
-
         for comp, col_st in zip(compradores, colunas_st):
             with col_st:
                 st.markdown(f'<div style="text-align: center; font-weight: bold; font-size: 1.15rem; margin-bottom: 2px;">👤 {comp}</div>', unsafe_allow_html=True)
@@ -617,17 +616,17 @@ if df is not None:
                     </div>
                     """, unsafe_allow_html=True)
 
-                    # 4. Bullet Charts Horizontais para SLA Rotineiro e Emergencial
+                    # 4. Hidronível Horizontal para SLA Rotineiro e Emergencial
                     st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
                     
-                    cor_rot_b = "#ff6b6b" if sla_rot_val > 15 else "#339af0"
-                    fig_bullet_rot = criar_bullet_chart("ROTINEIRA", sla_rot_val, 15, 30, cor_rot_b)
-                    st.plotly_chart(fig_bullet_rot, use_container_width=True, config={'displayModeBar': False})
+                    cor_rot_h = "#ff6b6b" if sla_rot_val > 15 else "#339af0"
+                    fig_hidro_rot = criar_hidronivel("ROTINEIRA", sla_rot_val, 15, 30, cor_rot_h)
+                    st.plotly_chart(fig_hidro_rot, use_container_width=True, config={'displayModeBar': False})
                     st.markdown(f"<div style='text-align: center; font-size: 0.75rem; font-weight: bold; color: #94a3b8; margin-top: -8px; margin-bottom: 8px;'>Limite: 15 dias</div>", unsafe_allow_html=True)
 
-                    cor_emg_b = "#ff6b6b" if sla_emg_val > 3 else "#b197fc"
-                    fig_bullet_emg = criar_bullet_chart("EMERGENCIAL", sla_emg_val, 3, 10, cor_emg_b)
-                    st.plotly_chart(fig_bullet_emg, use_container_width=True, config={'displayModeBar': False})
+                    cor_emg_h = "#ff6b6b" if sla_emg_val > 3 else "#b197fc"
+                    fig_hidro_emg = criar_hidronivel("EMERGENCIAL", sla_emg_val, 3, 10, cor_emg_h)
+                    st.plotly_chart(fig_hidro_emg, use_container_width=True, config={'displayModeBar': False})
                     st.markdown(f"<div style='text-align: center; font-size: 0.75rem; font-weight: bold; color: #94a3b8; margin-top: -8px;'>Limite: 3 dias</div>", unsafe_allow_html=True)
                     
                 else:
