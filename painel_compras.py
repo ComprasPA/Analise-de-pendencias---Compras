@@ -25,7 +25,7 @@ with st.expander("⚙️ Abrir / Fechar Configurações (Upload, Data Base e Tem
         )
 
 # ==========================================
-# CSS CUSTOMIZADO DINÂMICO (COMPACTAÇÃO DA TABELA DE ITENS CRÍTICOS)
+# CSS CUSTOMIZADO DINÂMICO
 # ==========================================
 if tema_selecionado == "Black (Preto Absoluto)":
     css_tema = """
@@ -97,7 +97,6 @@ st.markdown(f"""
         margin-top: -5px;
         text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.10);
     }}
-    /* Redução de largura e compactação da tabela de Itens Críticos */
     div[data-testid="stDataFrame"] {{
         max-width: 85% !important;
         margin-left: auto !important;
@@ -255,6 +254,9 @@ if df is not None:
 
         delta_scs = total_sc_unicas_aberto - ontem_scs
         delta_itens = total_linhas_aberto - ontem_itens
+        
+        delta_sla_rot = sla_geral_rot - ontem_sla_rot
+        delta_sla_emg = sla_geral_emg - ontem_sla_emg
 
         if uploaded_file is not None:
             historico["ult_scs"] = total_sc_unicas_aberto
@@ -336,7 +338,7 @@ if df is not None:
         st.markdown("<br>", unsafe_allow_html=True)
 
         # ==========================================
-        # PASSO 2: CENTROS DE CUSTO & ITENS CRÍTICOS (3 COLUNAS - COM TABELA REDUZIDA)
+        # PASSO 2: CENTROS DE CUSTO & ITENS CRÍTICOS (3 COLUNAS)
         # ==========================================
         st.markdown("---")
         row2_c1, row2_c2, row2_c3 = st.columns([1, 1, 0.6])
@@ -579,26 +581,34 @@ if df is not None:
                     st.info(f"Sem dados mapeados para {comp}.")
 
         # ==========================================
-        # PASSO 5: CAIXA DE SLA MÉDIO GERAL (CONSOLIDADO)
+        # PASSO 5: CAIXA DE SLA MÉDIO GERAL (CONSOLIDADO) - DUAS CAIXINHAS LADO A LADO COM COMPARAÇÃO DO DIA ANTERIOR
         # ==========================================
         st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown('<div class="section-header" style="background-color: #111827; border: 1px solid #374151; margin-bottom: 12px;">📊 SLA MÉDIO GERAL CONSOLIDADO</div>', unsafe_allow_html=True)
 
-        st.markdown(f"""
-        <div style="background-color: {'#111827' if tema_selecionado != 'Claro' else '#f8fafc'}; border: 1px solid {'#374151' if tema_selecionado != 'Claro' else '#cbd5e1'}; border-radius: 6px; padding: 15px; text-align: center; margin-top: 10px; margin-bottom: 20px;">
-            <div style="font-size: 1rem; font-family: 'Arial Black'; color: {'#60a5fa' if tema_selecionado != 'Claro' else '#1f3b58'}; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;">📊 SLA MÉDIO GERAL CONSOLIDADO</div>
-            <div style="display: flex; justify-content: center; gap: 40px; font-size: 1.1rem; font-weight: bold;">
-                <div>
-                    SLA Rotineira Médio: <span style="color: {'#ff6b6b' if sla_geral_rot > 15 else '#339af0'};">{sla_geral_rot} dias</span> <span style="font-size: 0.8rem; color: #94a3b8;">(Limite: 15 dias)</span>
-                    <div style="font-size: 0.75rem; color: #94a3b8; font-weight: normal; margin-top: 2px;">SLA do dia anterior: {ontem_sla_rot} dias</div>
-                </div>
-                <div>|</div>
-                <div>
-                    SLA Emergencial Médio: <span style="color: {'#ff6b6b' if sla_geral_emg > 3 else '#b197fc'};">{sla_geral_emg} dias</span> <span style="font-size: 0.8rem; color: #94a3b8;">(Limite: 3 dias)</span>
-                    <div style="font-size: 0.75rem; color: #94a3b8; font-weight: normal; margin-top: 2px;">SLA do dia anterior: {ontem_sla_emg} dias</div>
-                </div>
+        col_box1, col_box2 = st.columns(2)
+
+        with col_box1:
+            cor_val_rot = "#ff6b6b" if sla_geral_rot > 15 else "#339af0"
+            st.markdown(f"""
+            <div style="background-color: {'#111827' if tema_selecionado != 'Claro' else '#f8fafc'}; border: 1px solid {'#374151' if tema_selecionado != 'Claro' else '#cbd5e1'}; border-radius: 6px; padding: 12px; text-align: center;">
+                <div style="font-size: 0.85rem; font-family: 'Arial Black'; color: {'#60a5fa' if tema_selecionado != 'Claro' else '#1f3b58'}; margin-bottom: 4px; text-transform: uppercase;">SLA ROTINEIRA MÉDIO (LIMITE: 15 DIAS)</div>
+                <div style="font-size: 1.8rem; font-weight: bold; color: {cor_val_rot}; line-height: 1.1;">{sla_geral_rot} dias</div>
+                <div style="border-top: 1px dashed {'#374151' if tema_selecionado != 'Claro' else '#cbd5e1'}; margin: 6px 0;"></div>
+                <div style="font-size: 0.8rem; font-weight: bold; color: #94a3b8;">Dia anterior: {ontem_sla_rot} dias</div>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
+
+        with col_box2:
+            cor_val_emg = "#ff6b6b" if sla_geral_emg > 3 else "#b197fc"
+            st.markdown(f"""
+            <div style="background-color: {'#111827' if tema_selecionado != 'Claro' else '#f8fafc'}; border: 1px solid {'#374151' if tema_selecionado != 'Claro' else '#cbd5e1'}; border-radius: 6px; padding: 12px; text-align: center;">
+                <div style="font-size: 0.85rem; font-family: 'Arial Black'; color: {'#60a5fa' if tema_selecionado != 'Claro' else '#1f3b58'}; margin-bottom: 4px; text-transform: uppercase;">SLA EMERGENCIAL MÉDIO (LIMITE: 3 DIAS)</div>
+                <div style="font-size: 1.8rem; font-weight: bold; color: {cor_val_emg}; line-height: 1.1;">{sla_geral_emg} dias</div>
+                <div style="border-top: 1px dashed {'#374151' if tema_selecionado != 'Claro' else '#cbd5e1'}; margin: 6px 0;"></div>
+                <div style="font-size: 0.8rem; font-weight: bold; color: #94a3b8;">Dia anterior: {ontem_sla_emg} dias</div>
+            </div>
+            """, unsafe_allow_html=True)
 
         st.markdown("""
         <hr style='margin: 15px 0px 8px 0px;'>
