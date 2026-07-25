@@ -288,7 +288,7 @@ if df is not None:
         qtd_emg = crit_counts.get('EMERGENCIAL', 0)
 
         # ==========================================
-        # PASSO 1: QUADRANTE DE VOLUMETRIA E INDICADORES GERAIS (COM HIDRONÍVEL PARA OS GERAIS)
+        # PASSO 1: QUADRANTE DE VOLUMETRIA E VELOCÍMETROS GERAIS (VOLTADOS AO PADRÃO CIRCULAR)
         # ==========================================
         st.markdown(f"""
         <div class="header-box">
@@ -297,45 +297,6 @@ if df is not None:
         </div>
         <div class="resumo-bar">DIAGNÓSTICO E VALIDAÇÃO ESTRATÉGICA (VOLUMETRIA, STATUS E CRITICIDADE)</div>
         """, unsafe_allow_html=True)
-
-        def criar_hidronivel(titulo, valor, limite_meta, max_escala, cor_barra):
-            fig = go.Figure()
-            # Fundo do hidronível (trilho graduado)
-            fig.add_trace(go.Bar(
-                x=[max_escala],
-                y=[titulo],
-                orientation='h',
-                marker=dict(color='#2a3b4c' if tema_selecionado != 'Claro' else '#e2e8f0'),
-                hoverinfo='skip'
-            ))
-            # Nível preenchido (hidronível)
-            fig.add_trace(go.Bar(
-                x=[valor],
-                y=[titulo],
-                orientation='h',
-                marker=dict(color=cor_barra),
-                text=f"{valor} dias",
-                textposition='inside',
-                insidetextanchor='middle',
-                textfont=dict(size=12, color='#ffffff', family='Arial Black')
-            ))
-            fig.update_layout(
-                barmode='overlay',
-                height=70,
-                margin=dict(l=10, r=10, t=10, b=10),
-                paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)',
-                xaxis=dict(range=[0, max_escala], showgrid=False, zeroline=False, showticklabels=True, tickfont=dict(size=9, color=cor_texto_grafico)),
-                yaxis=dict(showgrid=False, tickfont=dict(size=10, color=cor_texto_grafico, family='Arial Black')),
-                showlegend=False,
-                shapes=[dict(
-                    type='line',
-                    x0=limite_meta, x1=limite_meta,
-                    y0=-0.5, y1=0.5,
-                    line=dict(color='red', width=3, dash='dash')
-                )]
-            )
-            return fig
 
         def criar_gauge(titulo, valor, max_val, cor_barra, sufixo="", altura=130, title_size=10):
             fig = go.Figure(go.Indicator(
@@ -545,6 +506,43 @@ if df is not None:
         color_status_map = {'No Prazo': '#388e3c', 'Atenção': '#d97706', 'Fora do Prazo': '#e53e3e'}
         ordem_status_aberto = ['Fora do Prazo', 'Atenção', 'No Prazo']
         
+        def criar_hidronivel(titulo, valor, limite_meta, max_escala, cor_barra):
+            fig = go.Figure()
+            fig.add_trace(go.Bar(
+                x=[max_escala],
+                y=[titulo],
+                orientation='h',
+                marker=dict(color='#2a3b4c' if tema_selecionado != 'Claro' else '#e2e8f0'),
+                hoverinfo='skip'
+            ))
+            fig.add_trace(go.Bar(
+                x=[valor],
+                y=[titulo],
+                orientation='h',
+                marker=dict(color=cor_barra),
+                text=f"{valor} dias",
+                textposition='inside',
+                insidetextanchor='middle',
+                textfont=dict(size=12, color='#ffffff', family='Arial Black')
+            ))
+            fig.update_layout(
+                barmode='overlay',
+                height=70,
+                margin=dict(l=10, r=10, t=10, b=10),
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                xaxis=dict(range=[0, max_escala], showgrid=False, zeroline=False, showticklabels=True, tickfont=dict(size=9, color=cor_texto_grafico)),
+                yaxis=dict(showgrid=False, tickfont=dict(size=10, color=cor_texto_grafico, family='Arial Black')),
+                showlegend=False,
+                shapes=[dict(
+                    type='line',
+                    x0=limite_meta, x1=limite_meta,
+                    y0=-0.5, y1=0.5,
+                    line=dict(color='red', width=3, dash='dash')
+                )]
+            )
+            return fig
+
         for comp, col_st in zip(compradores, colunas_st):
             with col_st:
                 st.markdown(f'<div style="text-align: center; font-weight: bold; font-size: 1.15rem; margin-bottom: 2px;">👤 {comp}</div>', unsafe_allow_html=True)
@@ -616,7 +614,7 @@ if df is not None:
                     </div>
                     """, unsafe_allow_html=True)
 
-                    # 4. Hidronível Horizontal para SLA Rotineiro e Emergencial
+                    # 4. Hidronível Horizontal para substituição dos velocímetros individuais de SLA
                     st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
                     
                     cor_rot_h = "#ff6b6b" if sla_rot_val > 15 else "#339af0"
