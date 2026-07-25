@@ -25,7 +25,7 @@ with st.expander("⚙️ Abrir / Fechar Configurações (Upload, Data Base e Tem
         )
 
 # ==========================================
-# CSS CUSTOMIZADO DINÂMICO
+# CSS CUSTOMIZADO DINÂMICO (COMPACTAÇÃO DA TABELA DE ITENS CRÍTICOS)
 # ==========================================
 if tema_selecionado == "Black (Preto Absoluto)":
     css_tema = """
@@ -97,15 +97,16 @@ st.markdown(f"""
         margin-top: -5px;
         text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.10);
     }}
-    /* Centralização perfeita e alinhamento da tabela de Itens Críticos */
-    .stDataFrame {{
-        margin-left: auto;
-        margin-right: auto;
+    /* Redução de largura e compactação da tabela de Itens Críticos */
+    div[data-testid="stDataFrame"] {{
+        max-width: 85% !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
     }}
     .stDataFrame td, .stDataFrame th {{
-        font-size: 0.95rem !important;
+        font-size: 0.9rem !important;
         font-weight: 700 !important;
-        padding: 5px 8px !important;
+        padding: 4px 6px !important;
         text-align: center !important;
     }}
     {css_tema}
@@ -298,7 +299,6 @@ if df is not None:
                               {'range': [max_val * 0.6, max_val], 'color': '#1f2937' if tema_selecionado != 'Claro' else '#e2e8f0'}],
                 }
             ))
-            # Margem superior aumentada (t=40) para o número do topo e a escala ficarem sempre perfeitamente visíveis e sem cortes
             fig.update_layout(height=altura, margin=dict(l=10, r=10, t=40, b=5), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
             return fig
 
@@ -336,10 +336,10 @@ if df is not None:
         st.markdown("<br>", unsafe_allow_html=True)
 
         # ==========================================
-        # PASSO 2: CENTROS DE CUSTO & ITENS CRÍTICOS (3 COLUNAS)
+        # PASSO 2: CENTROS DE CUSTO & ITENS CRÍTICOS (3 COLUNAS - COM TABELA REDUZIDA)
         # ==========================================
         st.markdown("---")
-        row2_c1, row2_c2, row2_c3 = st.columns([1, 1, 1])
+        row2_c1, row2_c2, row2_c3 = st.columns([1, 1, 0.6])
 
         with row2_c1:
             st.markdown('<div class="section-header">TOP 10 CC (VOLUME DE ITENS)</div>', unsafe_allow_html=True)
@@ -549,7 +549,6 @@ if df is not None:
                             'threshold': {'line': {'color': 'red', 'width': 4}, 'thickness': 0.75, 'value': 15}
                         }
                     ))
-                    # Margem superior ajustada para garantir visibilidade perfeita do número 5 no topo
                     fig_rot.update_layout(height=100, margin=dict(l=5, r=5, t=25, b=5), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
 
                     cor_emg = "#ff6b6b" if sla_emg_val > 3 else "#b197fc"
