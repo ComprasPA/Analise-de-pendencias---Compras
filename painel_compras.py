@@ -25,7 +25,7 @@ with st.expander("⚙️ Abrir / Fechar Configurações (Upload, Data Base e Tem
         )
 
 # ==========================================
-# CSS CUSTOMIZADO DINÂMICO
+# CSS CUSTOMIZADO DINÂMICO (CENTRALIZAÇÃO DA TABELA DE ITENS CRÍTICOS)
 # ==========================================
 if tema_selecionado == "Black (Preto Absoluto)":
     css_tema = """
@@ -97,10 +97,16 @@ st.markdown(f"""
         margin-top: -5px;
         text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.10);
     }}
+    /* Centralização e formatação da tabela de Itens Críticos */
+    .stDataFrame {{
+        margin-left: auto;
+        margin-right: auto;
+    }}
     .stDataFrame td, .stDataFrame th {{
         font-size: 0.95rem !important;
         font-weight: 700 !important;
         padding: 5px 8px !important;
+        text-align: center !important;
     }}
     {css_tema}
     </style>
@@ -332,7 +338,9 @@ if df is not None:
         # PASSO 2: CENTROS DE CUSTO & ITENS CRÍTICOS (3 COLUNAS)
         # ==========================================
         st.markdown("---")
-        row2_c1, row2_c2, row2_c3 = st.columns([1, 1, 0.7])
+        
+        # Usando colunas balanceadas para centralizar visualmente a tabela de itens críticos no meio
+        row2_c1, row2_c2, row2_c3, row2_c4, row2_c5 = st.columns([1, 1, 0.2, 0.8, 0.2])
 
         with row2_c1:
             st.markdown('<div class="section-header">TOP 10 CC (VOLUME DE ITENS)</div>', unsafe_allow_html=True)
@@ -372,7 +380,7 @@ if df is not None:
             )
             st.plotly_chart(fig_cc_sc, use_container_width=True, config={'displayModeBar': False})
 
-        with row2_c3:
+        with row2_c4:
             st.markdown('<div class="section-header">ITENS CRÍTICOS</div>', unsafe_allow_html=True)
             top_critical = criticos_df.sort_values(by='Days', ascending=False)[[col_sc, 'CC_clean', 'Days']].head(8)
             top_critical.columns = ['Nº SC', 'C. CUSTO', 'ATRASO']
