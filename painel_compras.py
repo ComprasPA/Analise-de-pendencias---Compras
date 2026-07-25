@@ -660,5 +660,3 @@ if df is not None:
         st.error(f"⚠️ Erro analítico no processamento. Detalhe técnico: {e}")
 else:
     st.info("💡 Clique em **⚙️ Abrir / Fechar Configurações** no topo para atualizar a base de dados.")
-
-
