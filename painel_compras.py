@@ -278,7 +278,6 @@ if df is not None:
 
         criticos_df = unique_scs_aberto[unique_scs_aberto['Days'] >= 20]
         
-        # Consolidações para os Velocímetros da Linha 1
         status_counts = df_aberto['Status_Detalhado'].value_counts()
         qtd_no_prazo = status_counts.get('No Prazo', 0)
         qtd_atencao = status_counts.get('Atenção', 0)
@@ -329,10 +328,10 @@ if df is not None:
             <div style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 6px; text-align: center; height: 150px; display: flex; flex-direction: column; justify-content: center;">
                 <div style="font-size: 0.95rem; font-family: 'Arial Black'; margin-bottom: 2px;">VOLUMETRIA EM ABERTO</div>
                 <div style="font-size: 1.95rem; font-weight: bold; color: #4dabf7; line-height: 1.1;">{total_sc_unicas_aberto} <span style="font-size: 1.25rem; color: {cor_delta_scs};">{seta_scs} {sinal_scs}{abs(diff_scs)}</span></div>
-                <div style="font-size: 0.85rem; font-weight: bold;">Solicitações (SCs) (vs ant.)</div>
+                <div style="font-size: 0.85rem; font-weight: bold;">Solicitações (SCs)</div>
                 <div style="border-top: 1px dashed #cbd5e1; margin: 2px 0;"></div>
                 <div style="font-size: 1.95rem; font-weight: bold; color: #ffa94d; line-height: 1.1;">{total_linhas_aberto} <span style="font-size: 1.25rem; color: {cor_delta_itens};">{seta_itens} {sinal_itens}{abs(diff_itens)}</span></div>
-                <div style="font-size: 0.85rem; font-weight: bold;">Total de Itens (vs ant.)</div>
+                <div style="font-size: 0.85rem; font-weight: bold;">Total de Itens</div>
             </div>
             """, unsafe_allow_html=True)
 
