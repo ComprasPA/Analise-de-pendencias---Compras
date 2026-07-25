@@ -229,9 +229,9 @@ if df is not None:
         df_aberto = df_aberto.dropna(subset=[col_sc])
         df_aberto[col_sc] = df_aberto[col_sc].astype(str).str.split('.').str[0].str.zfill(6)
 
-        total_linhas_aberto = len(df_aberto) 
+        total_linhas_aberto = int(len(df_aberto)) 
         unique_scs_aberto = df_aberto.drop_duplicates(subset=[col_sc]).copy()
-        total_sc_unicas_aberto = len(unique_scs_aberto)
+        total_sc_unicas_aberto = int(len(unique_scs_aberto))
         
         # --- GESTÃO DO HISTÓRICO DE 15 DIAS ---
         data_str = hoje.strftime("%Y-%m-%d")
@@ -254,8 +254,8 @@ if df is not None:
         
         if len(serie_hist) >= 2:
             penultimo = serie_hist[-2]
-            diff_scs = total_sc_unicas_aberto - penultimo["total_scs"]
-            diff_itens = total_linhas_aberto - penultimo["total_itens"]
+            diff_scs = int(total_sc_unicas_aberto - penultimo["total_scs"])
+            diff_itens = int(total_linhas_aberto - penultimo["total_itens"])
 
         if uploaded_file is not None or not os.path.exists(ARQUIVO_HISTORICO):
             with open(ARQUIVO_HISTORICO, "w") as f:
@@ -289,7 +289,7 @@ if df is not None:
         qtd_emg = crit_counts.get('EMERGENCIAL', 0)
 
         # ==========================================
-        # PASSO 1: QUADRANTE DE VOLUMETRIA E VELOCÍMETROS GERAIS
+        # PASSO 1: QUADRANTE DE VOLUMETRIA E VELOCÍMETROS GERAIS (COM LINHA DIVISÓRIA VERTICAL)
         # ==========================================
         st.markdown(f"""
         <div class="header-box">
@@ -314,7 +314,8 @@ if df is not None:
             fig.update_layout(height=altura, margin=dict(l=10, r=10, t=40, b=5), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
             return fig
 
-        row1_c1, row1_c2, row1_c3, row1_c4, row1_c5, row1_c6 = st.columns([1.5, 1, 1, 1, 1, 1])
+        # Layout ajustado para conter a coluna de separação vertical (div)
+        row1_c1, row1_c2, row1_c3, row1_c4, row1_div, row1_c5, row1_c6 = st.columns([1.5, 1, 1, 1, 0.2, 1, 1])
 
         with row1_c1:
             cor_delta_scs = "#ff6b6b" if diff_scs > 0 else "#51cf66"
@@ -328,10 +329,10 @@ if df is not None:
             st.markdown(f"""
             <div style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px; text-align: center; height: 150px; display: flex; flex-direction: column; justify-content: center;">
                 <div style="font-size: 0.85rem; font-family: 'Arial Black'; margin-bottom: 2px;">VOLUMETRIA EM ABERTO</div>
-                <div style="font-size: 1.4rem; font-weight: bold; color: #4dabf7; line-height: 1;">{total_sc_unicas_aberto} <span style="font-size: 0.9rem; color: {cor_delta_scs};">{seta_scs} {sinal_scs}{diff_scs}</span></div>
+                <div style="font-size: 1.4rem; font-weight: bold; color: #4dabf7; line-height: 1;">{total_sc_unicas_aberto} <span style="font-size: 0.9rem; color: {cor_delta_scs};">{seta_scs} {sinal_scs}{abs(diff_scs)}</span></div>
                 <div style="font-size: 0.62rem; font-weight: bold;">Solicitações (SCs) (vs ant.)</div>
                 <div style="border-top: 1px dashed #cbd5e1; margin: 3px 0;"></div>
-                <div style="font-size: 1.4rem; font-weight: bold; color: #ffa94d; line-height: 1;">{total_linhas_aberto} <span style="font-size: 0.9rem; color: {cor_delta_itens};">{seta_itens} {sinal_itens}{diff_itens}</span></div>
+                <div style="font-size: 1.4rem; font-weight: bold; color: #ffa94d; line-height: 1;">{total_linhas_aberto} <span style="font-size: 0.9rem; color: {cor_delta_itens};">{seta_itens} {sinal_itens}{abs(diff_itens)}</span></div>
                 <div style="font-size: 0.62rem; font-weight: bold;">Total de Itens (vs ant.)</div>
             </div>
             """, unsafe_allow_html=True)
@@ -345,6 +346,13 @@ if df is not None:
         render_gauge(row1_c2, "NO PRAZO", qtd_no_prazo, total_linhas_aberto, "#388e3c")
         render_gauge(row1_c3, "ATENÇÃO", qtd_atencao, total_linhas_aberto, "#d97706")
         render_gauge(row1_c4, "FORA DO PRAZO", qtd_fora, total_linhas_aberto, "#e53e3e")
+
+        # Linha Divisória Vertical separando Status de Criticidade
+        with row1_div:
+            st.markdown(f"""
+            <div style="border-left: 2px solid {'#333333' if tema_selecionado != 'Claro' else '#cbd5e1'}; height: 140px; margin: auto; margin-top: 5px;"></div>
+            """, unsafe_allow_html=True)
+
         render_gauge(row1_c5, "ROTINEIRA", qtd_rot, total_linhas_aberto, "#2b6cb0")
         render_gauge(row1_c6, "EMERGENCIAL", qtd_emg, total_linhas_aberto, "#805ad5")
 
