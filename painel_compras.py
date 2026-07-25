@@ -233,6 +233,34 @@ if df is not None:
         unique_scs_aberto = df_aberto.drop_duplicates(subset=[col_sc]).copy()
         total_sc_unicas_aberto = int(len(unique_scs_aberto))
         
+        # --- GESTÃO DO HISTÓRICO DE 15 DIAS ---
+        data_str = hoje.strftime("%Y-%m-%d")
+        serie_hist = historico["serie_historica"]
+        
+        registro_hoje = {"data": data_str, "total_scs": total_sc_unicas_aberto, "total_itens": total_linhas_aberto}
+        
+        if serie_hist and serie_hist[-1]["data"] == data_str:
+            serie_hist[-1] = registro_hoje
+        else:
+            serie_hist.append(registro_hoje)
+            
+        if len(serie_hist) > 15:
+            serie_hist = serie_hist[-15:]
+            
+        historico["serie_historica"] = serie_hist
+        
+        diff_scs = 0
+        diff_itens = 0
+        
+        if len(serie_hist) >= 2:
+            penultimo = serie_hist[-2]
+            diff_scs = int(total_sc_unicas_aberto - penultimo["total_scs"])
+            diff_itens = int(total_linhas_aberto - penultimo["total_itens"])
+
+        if uploaded_file is not None or not os.path.exists(ARQUIVO_HISTORICO):
+            with open(ARQUIVO_HISTORICO, "w") as f:
+                json.dump(historico, f)
+
         # --- CÁLCULO DO SLA MÉDIO GERAL ATUAL ---
         df_geral_crit = df.copy()
         if col_dt_emissao in df_geral_crit.columns:
@@ -371,10 +399,10 @@ if df is not None:
             st.dataframe(top_critical, use_container_width=True, height=320, hide_index=True)
 
         # ==========================================
-        # PASSO 3: TOP 10 COMPRA DIRETA & CRITICIDADE VS STATUS
+        # PASSO 3: TOP 10 COMPRA DIRETA, CRITICIDADE VS STATUS E TENDÊNCIA AO LADO
         # ==========================================
         st.markdown("---")
-        row3_c1, row3_c2 = st.columns(2)
+        row3_c1, row3_c2, row3_c3 = st.columns([1, 1, 0.4])
 
         col_tipo = None
         for c in ['Tipo SC', 'Tipo', 'Grupo', 'Subgrupo']:
@@ -435,6 +463,27 @@ if df is not None:
                         xaxis=dict(showgrid=False, tickfont=dict(size=12, family='Arial Black', color=cor_texto_grafico)), yaxis=dict(showgrid=True, gridcolor='#333333' if tema_selecionado != 'Claro' else '#e2e8f0')
                     )
                     st.plotly_chart(fig_crit_stat, use_container_width=True, config={'displayModeBar': False})
+
+        with row3_c3:
+            st.markdown('<div class="section-header">TENDÊNCIA (ANT. VS ATUAL)</div>', unsafe_allow_html=True)
+            
+            cor_seta_scs = "#ff6b6b" if diff_scs > 0 else ("#51cf66" if diff_scs < 0 else "#94a3b8")
+            simbolo_scs = "▲" if diff_scs > 0 else ("▼" if diff_scs < 0 else "•")
+            
+            cor_seta_itens = "#ff6b6b" if diff_itens > 0 else ("#51cf66" if diff_itens < 0 else "#94a3b8")
+            simbolo_itens = "▲" if diff_itens > 0 else ("▼" if diff_itens < 0 else "•")
+
+            st.markdown(f"""
+            <div style="background-color: {'#111827' if tema_selecionado != 'Claro' else '#f8fafc'}; border: 1px solid {'#374151' if tema_selecionado != 'Claro' else '#cbd5e1'}; border-radius: 4px; padding: 18px; text-align: center; height: 320px; display: flex; flex-direction: column; justify-content: center;">
+                <div style="font-size: 0.85rem; font-family: 'Arial Black'; color: {'#60a5fa' if tema_selecionado != 'Claro' else '#1f3b58'}; margin-bottom: 8px;">VÁRIAÇÃO DE SCs</div>
+                <div style="font-size: 2.2rem; font-weight: bold; color: {cor_seta_scs}; line-height: 1.1;">{simbolo_scs} {abs(diff_scs)}</div>
+                <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 20px;">{'Aumento' if diff_scs > 0 else ('Redução' if diff_scs < 0 else 'Estável')} de solicitações</div>
+                
+                <div style="font-size: 0.85rem; font-family: 'Arial Black'; color: {'#60a5fa' if tema_selecionado != 'Claro' else '#1f3b58'}; margin-bottom: 8px;">VÁRIAÇÃO DE ITENS</div>
+                <div style="font-size: 2.2rem; font-weight: bold; color: {cor_seta_itens}; line-height: 1.1;">{simbolo_itens} {abs(diff_itens)}</div>
+                <div style="font-size: 0.75rem; color: #94a3b8;">{'Aumento' if diff_itens > 0 else ('Redução' if diff_itens < 0 else 'Estável')} de itens</div>
+            </div>
+            """, unsafe_allow_html=True)
 
         # ==========================================
         # PASSO 4: DESEMPENHO POR COMPRADOR
