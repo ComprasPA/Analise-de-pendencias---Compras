@@ -237,7 +237,6 @@ if df is not None:
         data_str = hoje.strftime("%Y-%m-%d")
         serie_hist = historico["serie_historica"]
         
-        # Atualiza ou insere o registro do dia atual
         registro_hoje = {"data": data_str, "total_scs": total_sc_unicas_aberto, "total_itens": total_linhas_aberto}
         
         if serie_hist and serie_hist[-1]["data"] == data_str:
@@ -245,25 +244,18 @@ if df is not None:
         else:
             serie_hist.append(registro_hoje)
             
-        # Mantém apenas os últimos 15 dias
         if len(serie_hist) > 15:
             serie_hist = serie_hist[-15:]
             
         historico["serie_historica"] = serie_hist
         
-        # Identifica variação versus a medição anterior gravada
         diff_scs = 0
         diff_itens = 0
-        tendencia_scs = "stable"
-        tendencia_itens = "stable"
         
         if len(serie_hist) >= 2:
             penultimo = serie_hist[-2]
             diff_scs = total_sc_unicas_aberto - penultimo["total_scs"]
             diff_itens = total_linhas_aberto - penultimo["total_itens"]
-            
-            tendencia_scs = "up" if diff_scs > 0 else ("down" if diff_scs < 0 else "stable")
-            tendencia_itens = "up" if diff_itens > 0 else ("down" if diff_itens < 0 else "stable")
 
         if uploaded_file is not None or not os.path.exists(ARQUIVO_HISTORICO):
             with open(ARQUIVO_HISTORICO, "w") as f:
@@ -340,10 +332,10 @@ if df is not None:
             <div style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px; text-align: center; height: 150px; display: flex; flex-direction: column; justify-content: center;">
                 <div style="font-size: 0.85rem; font-family: 'Arial Black'; margin-bottom: 2px;">VOLUMETRIA EM ABERTO</div>
                 <div style="font-size: 1.4rem; font-weight: bold; color: #4dabf7; line-height: 1;">{total_sc_unicas_aberto} <span style="font-size: 0.9rem; color: {cor_delta_scs};">{seta_scs} {sinal_scs}{diff_scs}</span></div>
-                <div style="font-size: 0.62rem; font-weight: bold;">Solicitações (SCs) (vs medição ant.)</div>
+                <div style="font-size: 0.62rem; font-weight: bold;">Solicitações (SCs) (vs ant.)</div>
                 <div style="border-top: 1px dashed #cbd5e1; margin: 3px 0;"></div>
                 <div style="font-size: 1.4rem; font-weight: bold; color: #ffa94d; line-height: 1;">{total_linhas_aberto} <span style="font-size: 0.9rem; color: {cor_delta_itens};">{seta_itens} {sinal_itens}{diff_itens}</span></div>
-                <div style="font-size: 0.62rem; font-weight: bold;">Total de Itens (vs medição ant.)</div>
+                <div style="font-size: 0.62rem; font-weight: bold;">Total de Itens (vs ant.)</div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -413,10 +405,10 @@ if df is not None:
             st.dataframe(top_critical, use_container_width=True, height=320, hide_index=True)
 
         # ==========================================
-        # PASSO 3: TOP 10 COMPRA DIRETA POR CUSTO & GRÁFICO DE EVOLUÇÃO DO HISTÓRICO (LADO A LADO)
+        # PASSO 3: TOP 10 COMPRA DIRETA & CRITICIDADE VS STATUS (COM CAIXA DE SETA AO LADO)
         # ==========================================
         st.markdown("---")
-        row3_c1, row3_c2 = st.columns(2)
+        row3_c1, row3_c2, row3_c3 = st.columns([1, 1, 0.4])
 
         col_tipo = None
         for c in ['Tipo SC', 'Tipo', 'Grupo', 'Subgrupo']:
@@ -454,29 +446,50 @@ if df is not None:
                 st.info("Nenhum registro de Compra Direta encontrado.")
 
         with row3_c2:
-            st.markdown('<div class="section-header">EVOLUÇÃO DA VOLUMETRIA (ÚLTIMAS MEDIÇÕES)</div>', unsafe_allow_html=True)
-            if serie_hist:
-                df_hist = pd.DataFrame(serie_hist)
-                fig_hist = go.Figure()
-                fig_hist.add_trace(go.Scatter(
-                    x=df_hist["data"], y=df_hist["total_scs"], name="Solicitações (SCs)",
-                    mode='lines+markers', line=dict(color='#4dabf7', width=3)
-                ))
-                fig_hist.add_trace(go.Scatter(
-                    x=df_hist["data"], y=df_hist["total_itens"], name="Total de Itens",
-                    mode='lines+markers', line=dict(color='#ffa94d', width=3)
-                ))
-                fig_hist.update_layout(
-                    xaxis_title="", yaxis_title="Quantidade", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=320,
-                    font=dict(color=cor_texto_grafico),
-                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(family='Arial Black', color=cor_texto_grafico)),
-                    margin=dict(l=5, r=10, t=25, b=10),
-                    xaxis=dict(showgrid=False, tickfont=dict(size=9, color=cor_texto_grafico)),
-                    yaxis=dict(showgrid=True, gridcolor='#333333' if tema_selecionado != 'Claro' else '#e2e8f0')
-                )
-                st.plotly_chart(fig_hist, use_container_width=True, config={'displayModeBar': False})
-            else:
-                st.info("Histórico de medições em construção...")
+            st.markdown('<div class="section-header">CRITICIDADE VS STATUS (QTD. ITENS)</div>', unsafe_allow_html=True)
+            if col_criticidade and col_status:
+                df_crit_stat = df_aberto[df_aberto[col_criticidade].astype(str).str.upper().isin(['ROTINEIRA', 'EMERGENCIAL'])]
+                if not df_crit_stat.empty:
+                    crit_stats = df_crit_stat.groupby([col_criticidade, col_status]).size().reset_index(name='Quantidade')
+                    color_map = {'NO PRAZO': '#388e3c', 'ATENÇÃO': '#d97706', 'FORA DO PRAZO': '#e53e3e'}
+                    fig_crit_stat = go.Figure()
+                    for status_val in ['NO PRAZO', 'ATENÇÃO', 'FORA DO PRAZO']:
+                        df_sub = crit_stats[crit_stats[col_status].str.upper() == status_val]
+                        if not df_sub.empty:
+                            fig_crit_stat.add_trace(go.Bar(
+                                x=df_sub[col_criticidade], y=df_sub['Quantidade'], name=status_val.title(),
+                                marker_color=color_map.get(status_val, '#718096'),
+                                text=df_sub['Quantidade'], textposition='auto', 
+                                textfont=dict(size=12, color=cor_texto_grafico, family='Arial Black')
+                            ))
+                    fig_crit_stat.update_layout(
+                        barmode='group', xaxis_title="", yaxis_title="Qtd. ITENS EM ABERTO", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=320,
+                        font=dict(color=cor_texto_grafico),
+                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(family='Arial Black', color=cor_texto_grafico)),
+                        xaxis=dict(showgrid=False, tickfont=dict(size=12, family='Arial Black', color=cor_texto_grafico)), yaxis=dict(showgrid=True, gridcolor='#333333' if tema_selecionado != 'Claro' else '#e2e8f0')
+                    )
+                    st.plotly_chart(fig_crit_stat, use_container_width=True, config={'displayModeBar': False})
+
+        with row3_c3:
+            st.markdown('<div class="section-header">TENDÊNCIA (ANT. VS ATUAL)</div>', unsafe_allow_html=True)
+            
+            cor_seta_scs = "#ff6b6b" if diff_scs > 0 else ("#51cf66" if diff_scs < 0 else "#94a3b8")
+            simbolo_scs = "▲" if diff_scs > 0 else ("▼" if diff_scs < 0 else "•")
+            
+            cor_seta_itens = "#ff6b6b" if diff_itens > 0 else ("#51cf66" if diff_itens < 0 else "#94a3b8")
+            simbolo_itens = "▲" if diff_itens > 0 else ("▼" if diff_itens < 0 else "•")
+
+            st.markdown(f"""
+            <div style="background-color: {'#111827' if tema_selecionado != 'Claro' else '#f8fafc'}; border: 1px solid {'#374151' if tema_selecionado != 'Claro' else '#cbd5e1'}; border-radius: 4px; padding: 18px; text-align: center; height: 320px; display: flex; flex-direction: column; justify-content: center;">
+                <div style="font-size: 0.85rem; font-family: 'Arial Black'; color: {'#60a5fa' if tema_selecionado != 'Claro' else '#1f3b58'}; margin-bottom: 8px;">VÁRIAÇÃO DE SCs</div>
+                <div style="font-size: 2.2rem; font-weight: bold; color: {cor_seta_scs}; line-height: 1.1;">{simbolo_scs} {abs(diff_scs)}</div>
+                <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 20px;">{'Aumento' if diff_scs > 0 else ('Redução' if diff_scs < 0 else 'Estável')} de solicitações</div>
+                
+                <div style="font-size: 0.85rem; font-family: 'Arial Black'; color: {'#60a5fa' if tema_selecionado != 'Claro' else '#1f3b58'}; margin-bottom: 8px;">VÁRIAÇÃO DE ITENS</div>
+                <div style="font-size: 2.2rem; font-weight: bold; color: {cor_seta_itens}; line-height: 1.1;">{simbolo_itens} {abs(diff_itens)}</div>
+                <div style="font-size: 0.75rem; color: #94a3b8;">{'Aumento' if diff_itens > 0 else ('Redução' if diff_itens < 0 else 'Estável')} de itens</div>
+            </div>
+            """, unsafe_allow_html=True)
 
         # ==========================================
         # PASSO 4: DESEMPENHO POR COMPRADOR
