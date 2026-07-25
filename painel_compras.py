@@ -592,7 +592,8 @@ if df is not None:
             cor_val_rot = "#ff6b6b" if sla_geral_rot > 15 else "#339af0"
             st.markdown(f"""
             <div style="background-color: {'#111827' if tema_selecionado != 'Claro' else '#f8fafc'}; border: 1px solid {'#374151' if tema_selecionado != 'Claro' else '#cbd5e1'}; border-radius: 6px; padding: 12px; text-align: center;">
-                <div style="font-size: 0.85rem; font-family: 'Arial Black'; color: {'#60a5fa' if tema_selecionado != 'Claro' else '#1f3b58'}; margin-bottom: 4px; text-transform: uppercase;">SLA ROTINEIRA MÉDIO (LIMITE: 15 DIAS)</div>
+                <div style="font-size: 1.0rem; font-family: 'Arial Black'; color: {'#60a5fa' if tema_selecionado != 'Claro' else '#1f3b58'}; margin-bottom: 0px; text-transform: uppercase;">SLA ROTINEIRA MÉDIO</div>
+                <div style="font-size: 0.75rem; font-weight: bold; color: #94a3b8; margin-bottom: 6px;">(Limite: 15 dias)</div>
                 <div style="font-size: 1.8rem; font-weight: bold; color: {cor_val_rot}; line-height: 1.1;">{sla_geral_rot} dias</div>
                 <div style="border-top: 1px dashed {'#374151' if tema_selecionado != 'Claro' else '#cbd5e1'}; margin: 6px 0;"></div>
                 <div style="font-size: 0.8rem; font-weight: bold; color: #94a3b8;">Dia anterior: {ontem_sla_rot} dias</div>
@@ -603,7 +604,8 @@ if df is not None:
             cor_val_emg = "#ff6b6b" if sla_geral_emg > 3 else "#b197fc"
             st.markdown(f"""
             <div style="background-color: {'#111827' if tema_selecionado != 'Claro' else '#f8fafc'}; border: 1px solid {'#374151' if tema_selecionado != 'Claro' else '#cbd5e1'}; border-radius: 6px; padding: 12px; text-align: center;">
-                <div style="font-size: 0.85rem; font-family: 'Arial Black'; color: {'#60a5fa' if tema_selecionado != 'Claro' else '#1f3b58'}; margin-bottom: 4px; text-transform: uppercase;">SLA EMERGENCIAL MÉDIO (LIMITE: 3 DIAS)</div>
+                <div style="font-size: 1.0rem; font-family: 'Arial Black'; color: {'#60a5fa' if tema_selecionado != 'Claro' else '#1f3b58'}; margin-bottom: 0px; text-transform: uppercase;">SLA EMERGENCIAL MÉDIO</div>
+                <div style="font-size: 0.75rem; font-weight: bold; color: #94a3b8; margin-bottom: 6px;">(Limite: 3 dias)</div>
                 <div style="font-size: 1.8rem; font-weight: bold; color: {cor_val_emg}; line-height: 1.1;">{sla_geral_emg} dias</div>
                 <div style="border-top: 1px dashed {'#374151' if tema_selecionado != 'Claro' else '#cbd5e1'}; margin: 6px 0;"></div>
                 <div style="font-size: 0.8rem; font-weight: bold; color: #94a3b8;">Dia anterior: {ontem_sla_emg} dias</div>
