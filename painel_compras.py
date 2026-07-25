@@ -278,6 +278,7 @@ if df is not None:
 
         criticos_df = unique_scs_aberto[unique_scs_aberto['Days'] >= 20]
         
+        # Consolidações para os Velocímetros da Linha 1
         status_counts = df_aberto['Status_Detalhado'].value_counts()
         qtd_no_prazo = status_counts.get('No Prazo', 0)
         qtd_atencao = status_counts.get('Atenção', 0)
@@ -494,7 +495,7 @@ if df is not None:
             """, unsafe_allow_html=True)
 
         # ==========================================
-        # PASSO 4: DESEMPENHO POR COMPRADOR (COM HIDRONÍVEL HORIZONTAL PARA OS SLAs)
+        # PASSO 4: DESEMPENHO POR COMPRADOR
         # ==========================================
         st.markdown("---")
         st.markdown('<div class="section-header" style="background-color: #2b4c7e;">DESEMPENHO INDIVIDUAL POR COMPRADOR</div>', unsafe_allow_html=True)
@@ -506,43 +507,6 @@ if df is not None:
         color_status_map = {'No Prazo': '#388e3c', 'Atenção': '#d97706', 'Fora do Prazo': '#e53e3e'}
         ordem_status_aberto = ['Fora do Prazo', 'Atenção', 'No Prazo']
         
-        def criar_hidronivel(titulo, valor, limite_meta, max_escala, cor_barra):
-            fig = go.Figure()
-            fig.add_trace(go.Bar(
-                x=[max_escala],
-                y=[titulo],
-                orientation='h',
-                marker=dict(color='#2a3b4c' if tema_selecionado != 'Claro' else '#e2e8f0'),
-                hoverinfo='skip'
-            ))
-            fig.add_trace(go.Bar(
-                x=[valor],
-                y=[titulo],
-                orientation='h',
-                marker=dict(color=cor_barra),
-                text=f"{valor} dias",
-                textposition='inside',
-                insidetextanchor='middle',
-                textfont=dict(size=12, color='#ffffff', family='Arial Black')
-            ))
-            fig.update_layout(
-                barmode='overlay',
-                height=70,
-                margin=dict(l=10, r=10, t=10, b=10),
-                paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)',
-                xaxis=dict(range=[0, max_escala], showgrid=False, zeroline=False, showticklabels=True, tickfont=dict(size=9, color=cor_texto_grafico)),
-                yaxis=dict(showgrid=False, tickfont=dict(size=10, color=cor_texto_grafico, family='Arial Black')),
-                showlegend=False,
-                shapes=[dict(
-                    type='line',
-                    x0=limite_meta, x1=limite_meta,
-                    y0=-0.5, y1=0.5,
-                    line=dict(color='red', width=3, dash='dash')
-                )]
-            )
-            return fig
-
         for comp, col_st in zip(compradores, colunas_st):
             with col_st:
                 st.markdown(f'<div style="text-align: center; font-weight: bold; font-size: 1.15rem; margin-bottom: 2px;">👤 {comp}</div>', unsafe_allow_html=True)
@@ -614,24 +578,50 @@ if df is not None:
                     </div>
                     """, unsafe_allow_html=True)
 
-                    # 4. Hidronível Horizontal para substituição dos velocímetros individuais de SLA dos compradores
-                    st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
-                    
-                    cor_rot_h = "#ff6b6b" if sla_rot_val > 15 else "#339af0"
-                    fig_hidro_rot = criar_hidronivel("ROTINEIRA", sla_rot_val, 15, 30, cor_rot_h)
-                    st.plotly_chart(fig_hidro_rot, use_container_width=True, config={'displayModeBar': False})
-                    st.markdown(f"<div style='text-align: center; font-size: 0.75rem; font-weight: bold; color: #94a3b8; margin-top: -8px; margin-bottom: 8px;'>Limite: 15 dias</div>", unsafe_allow_html=True)
+                    # 4. Velocímetros de SLA
+                    cor_rot = "#ff6b6b" if sla_rot_val > 15 else "#339af0"
+                    fig_rot = go.Figure(go.Indicator(
+                        mode = "gauge+number", value = sla_rot_val,
+                        number = {'font': {'size': 20, 'color': cor_texto_grafico, 'family': 'Arial Black'}},
+                        gauge = {
+                            'axis': {'range': [0, 30], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 9, 'color': cor_texto_grafico, 'family': 'Arial Black'}},
+                            'bar': {'color': cor_rot}, 'bgcolor': "rgba(0,0,0,0)", 'borderwidth': 0,
+                            'steps': [{'range': [0, 15], 'color': '#2a3b4c' if tema_selecionado != 'Claro' else '#e2e8f0'}, 
+                                      {'range': [15, 30], 'color': '#4a2525' if tema_selecionado != 'Claro' else '#fed7d7'}],
+                            'threshold': {'line': {'color': 'red', 'width': 4}, 'thickness': 0.75, 'value': 15}
+                        }
+                    ))
+                    fig_rot.update_layout(height=100, margin=dict(l=5, r=5, t=25, b=5), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
 
-                    cor_emg_h = "#ff6b6b" if sla_emg_val > 3 else "#b197fc"
-                    fig_hidro_emg = criar_hidronivel("EMERGENCIAL", sla_emg_val, 3, 10, cor_emg_h)
-                    st.plotly_chart(fig_hidro_emg, use_container_width=True, config={'displayModeBar': False})
-                    st.markdown(f"<div style='text-align: center; font-size: 0.75rem; font-weight: bold; color: #94a3b8; margin-top: -8px;'>Limite: 3 dias</div>", unsafe_allow_html=True)
+                    cor_emg = "#ff6b6b" if sla_emg_val > 3 else "#b197fc"
+                    fig_emg = go.Figure(go.Indicator(
+                        mode = "gauge+number", value = sla_emg_val,
+                        number = {'font': {'size': 20, 'color': cor_texto_grafico, 'family': 'Arial Black'}},
+                        gauge = {
+                            'axis': {'range': [0, 20], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 10, 'color': cor_texto_grafico, 'family': 'Arial Black'}},
+                            'bar': {'color': cor_emg}, 'bgcolor': "rgba(0,0,0,0)", 'borderwidth': 0,
+                            'steps': [{'range': [0, 3], 'color': '#2a3b4c' if tema_selecionado != 'Claro' else '#e2e8f0'}, 
+                                      {'range': [3, 20], 'color': '#4a2525' if tema_selecionado != 'Claro' else '#fed7d7'}],
+                            'threshold': {'line': {'color': 'red', 'width': 4}, 'thickness': 0.75, 'value': 3}
+                        }
+                    ))
+                    fig_emg.update_layout(height=100, margin=dict(l=5, r=5, t=25, b=5), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+
+                    sub_c1, sub_c2 = st.columns(2)
+                    with sub_c1:
+                        st.markdown("<div style='margin-top: 30px;'></div>", unsafe_allow_html=True)
+                        st.plotly_chart(fig_rot, use_container_width=True, config={'displayModeBar': False})
+                        st.markdown(f"<div style='text-align: center; font-size: 0.8rem; font-weight: bold; color: {cor_texto_grafico}; margin-top: -2px;'>SLA ROTINEIRA</div><div style='text-align: center; font-size: 0.75rem; font-weight: bold; color: #94a3b8; margin-top: 2px;'>Limite: 15 dias</div>", unsafe_allow_html=True)
+                    with sub_c2:
+                        st.markdown("<div style='margin-top: 30px;'></div>", unsafe_allow_html=True)
+                        st.plotly_chart(fig_emg, use_container_width=True, config={'displayModeBar': False})
+                        st.markdown(f"<div style='text-align: center; font-size: 0.8rem; font-weight: bold; color: {cor_texto_grafico}; margin-top: -2px;'>SLA EMERGENCIAL</div><div style='text-align: center; font-size: 0.75rem; font-weight: bold; color: #94a3b8; margin-top: 2px;'>Limite: 3 dias</div>", unsafe_allow_html=True)
                     
                 else:
                     st.info(f"Sem dados mapeados para {comp}.")
 
         # ==========================================
-        # PASSO 5: CAIXA DE SLA MÉDIO GERAL (CONSOLIDADO) - DUAS CAIXINHAS LADO A LADO
+        # PASSO 5: CAIXA DE SLA MÉDIO GERAL (CONSOLIDADO) - DUAS CAIXINHAS LADO A LADO SEM O TEXTO DE DIA ANTERIOR
         # ==========================================
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown('<div class="section-header" style="background-color: #111827; border: 1px solid #374151; margin-bottom: 12px;">📊 SLA MÉDIO GERAL CONSOLIDADO</div>', unsafe_allow_html=True)
