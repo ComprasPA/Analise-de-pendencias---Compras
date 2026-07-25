@@ -25,25 +25,32 @@ with st.expander("⚙️ Abrir / Fechar Configurações (Upload, Data Base e Tem
         )
 
 # ==========================================
-# CSS CUSTOMIZADO DINÂMICO
+# CSS CUSTOMIZADO DINÂMICO & DESIGN FLUTUANTE (MODERNIZAÇÃO)
 # ==========================================
 if tema_selecionado == "Black (Preto Absoluto)":
     css_tema = """
         .stApp { background-color: #000000 !important; color: #f8fafc !important; }
-        .header-box { background-color: #111111 !important; border: 1px solid #333333; }
-        .resumo-bar, .section-header { background-color: #1a1a1a !important; color: #ffffff !important; border: 1px solid #333333; }
-        div[data-testid="stVerticalBlock"] > div[style*="background-color: white"] { background-color: #121212 !important; border: 1px solid #333333 !important; color: #ffffff !important; }
+        .header-box { background: linear-gradient(135deg, #111111 0%, #1a1a1a 100%) !important; border: 1px solid #333333; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5); }
+        .resumo-bar, .section-header { background: linear-gradient(135deg, #1a1a1a 0%, #262626 100%) !important; color: #ffffff !important; border: 1px solid #333333; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
+        div[data-testid="stVerticalBlock"] > div[style*="background-color: white"], div[data-testid="column"] > div {{
+            background-color: #121212 !important; 
+            border: 1px solid #262626 !important; 
+            border-radius: 12px !important;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+        }}
         p, span, label, div, h1, h2, h3, h4, h5, h6 { color: #f8fafc !important; }
     """
 elif tema_selecionado == "Escuro":
     css_tema = """
         .stApp { background-color: #0e1117 !important; color: #f8fafc !important; }
-        .header-box { background-color: #1f3b58 !important; }
-        .resumo-bar, .section-header { background-color: #2b4c7e !important; }
+        .header-box { background: linear-gradient(135deg, #1f3b58 0%, #162a42 100%) !important; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); }
+        .resumo-bar, .section-header { background: linear-gradient(135deg, #2b4c7e 0%, #1f385c 100%) !important; box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
         p, span, label, div, h1, h2, h3, h4, h5, h6 { color: #f8fafc !important; }
     """
 else:
-    css_tema = ""
+    css_tema = """
+        .stApp { background-color: #f8fafc !important; }
+    """
 
 st.markdown(f"""
     <style>
@@ -60,35 +67,39 @@ st.markdown(f"""
     }}
     .header-box {{
         color: white;
-        padding: 12px 20px;
-        border-radius: 4px;
+        padding: 16px 24px;
+        border-radius: 10px;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 10px;
+        margin-bottom: 12px;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
     }}
-    .header-title {{ font-size: 2.0rem; font-weight: bold; }}
-    .header-sub {{ font-size: 1.1rem; }}
+    .header-title {{ font-size: 2.0rem; font-weight: bold; letter-spacing: -0.5px; }}
+    .header-sub {{ font-size: 1.1rem; opacity: 0.9; }}
     .resumo-bar {{
         color: white;
         text-align: center;
         font-weight: bold;
         font-size: 1rem;
-        padding: 6px;
+        padding: 8px;
         text-transform: uppercase;
-        letter-spacing: 1px;
-        margin-bottom: 15px;
-        border-radius: 2px;
+        letter-spacing: 1.5px;
+        margin-bottom: 18px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     }}
     .section-header {{
         color: white;
         text-align: center;
         font-weight: bold;
         font-size: 0.95rem;
-        padding: 6px;
+        padding: 8px;
         text-transform: uppercase;
-        border-radius: 2px;
-        margin-bottom: 8px;
+        letter-spacing: 1px;
+        border-radius: 8px;
+        margin-bottom: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     }}
     .gauge-footer {{
         text-align: center;
@@ -105,7 +116,7 @@ st.markdown(f"""
     .stDataFrame td, .stDataFrame th {{
         font-size: 0.9rem !important;
         font-weight: 700 !important;
-        padding: 4px 6px !important;
+        padding: 6px 8px !important;
         text-align: center !important;
     }}
     {css_tema}
@@ -233,34 +244,6 @@ if df is not None:
         unique_scs_aberto = df_aberto.drop_duplicates(subset=[col_sc]).copy()
         total_sc_unicas_aberto = int(len(unique_scs_aberto))
         
-        # --- GESTÃO DO HISTÓRICO DE 15 DIAS ---
-        data_str = hoje.strftime("%Y-%m-%d")
-        serie_hist = historico["serie_historica"]
-        
-        registro_hoje = {"data": data_str, "total_scs": total_sc_unicas_aberto, "total_itens": total_linhas_aberto}
-        
-        if serie_hist and serie_hist[-1]["data"] == data_str:
-            serie_hist[-1] = registro_hoje
-        else:
-            serie_hist.append(registro_hoje)
-            
-        if len(serie_hist) > 15:
-            serie_hist = serie_hist[-15:]
-            
-        historico["serie_historica"] = serie_hist
-        
-        diff_scs = 0
-        diff_itens = 0
-        
-        if len(serie_hist) >= 2:
-            penultimo = serie_hist[-2]
-            diff_scs = int(total_sc_unicas_aberto - penultimo["total_scs"])
-            diff_itens = int(total_linhas_aberto - penultimo["total_itens"])
-
-        if uploaded_file is not None or not os.path.exists(ARQUIVO_HISTORICO):
-            with open(ARQUIVO_HISTORICO, "w") as f:
-                json.dump(historico, f)
-
         # --- CÁLCULO DO SLA MÉDIO GERAL ATUAL ---
         df_geral_crit = df.copy()
         if col_dt_emissao in df_geral_crit.columns:
@@ -317,11 +300,11 @@ if df is not None:
 
         with row1_c1:
             st.markdown(f"""
-            <div style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 6px; text-align: center; height: 150px; display: flex; flex-direction: column; justify-content: center;">
+            <div style="border: 1px solid rgba(203, 213, 225, 0.3); border-radius: 10px; padding: 10px; text-align: center; height: 150px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
                 <div style="font-size: 0.95rem; font-family: 'Arial Black'; margin-bottom: 2px;">VOLUMETRIA EM ABERTO</div>
                 <div style="font-size: 1.95rem; font-weight: bold; color: #4dabf7; line-height: 1.1;">{total_sc_unicas_aberto}</div>
                 <div style="font-size: 0.85rem; font-weight: bold;">Solicitações (SCs)</div>
-                <div style="border-top: 1px dashed #cbd5e1; margin: 2px 0;"></div>
+                <div style="border-top: 1px dashed rgba(203, 213, 225, 0.4); margin: 4px 0;"></div>
                 <div style="font-size: 1.95rem; font-weight: bold; color: #ffa94d; line-height: 1.1;">{total_linhas_aberto}</div>
                 <div style="font-size: 0.85rem; font-weight: bold;">Total de Itens</div>
             </div>
@@ -399,10 +382,10 @@ if df is not None:
             st.dataframe(top_critical, use_container_width=True, height=320, hide_index=True)
 
         # ==========================================
-        # PASSO 3: TOP 10 COMPRA DIRETA, CRITICIDADE VS STATUS E TENDÊNCIA AO LADO
+        # PASSO 3: TOP 10 COMPRA DIRETA & CRITICIDADE VS STATUS
         # ==========================================
         st.markdown("---")
-        row3_c1, row3_c2, row3_c3 = st.columns([1, 1, 0.4])
+        row3_c1, row3_c2 = st.columns(2)
 
         col_tipo = None
         for c in ['Tipo SC', 'Tipo', 'Grupo', 'Subgrupo']:
@@ -463,27 +446,6 @@ if df is not None:
                         xaxis=dict(showgrid=False, tickfont=dict(size=12, family='Arial Black', color=cor_texto_grafico)), yaxis=dict(showgrid=True, gridcolor='#333333' if tema_selecionado != 'Claro' else '#e2e8f0')
                     )
                     st.plotly_chart(fig_crit_stat, use_container_width=True, config={'displayModeBar': False})
-
-        with row3_c3:
-            st.markdown('<div class="section-header">TENDÊNCIA (ANT. VS ATUAL)</div>', unsafe_allow_html=True)
-            
-            cor_seta_scs = "#ff6b6b" if diff_scs > 0 else ("#51cf66" if diff_scs < 0 else "#94a3b8")
-            simbolo_scs = "▲" if diff_scs > 0 else ("▼" if diff_scs < 0 else "•")
-            
-            cor_seta_itens = "#ff6b6b" if diff_itens > 0 else ("#51cf66" if diff_itens < 0 else "#94a3b8")
-            simbolo_itens = "▲" if diff_itens > 0 else ("▼" if diff_itens < 0 else "•")
-
-            st.markdown(f"""
-            <div style="background-color: {'#111827' if tema_selecionado != 'Claro' else '#f8fafc'}; border: 1px solid {'#374151' if tema_selecionado != 'Claro' else '#cbd5e1'}; border-radius: 4px; padding: 18px; text-align: center; height: 320px; display: flex; flex-direction: column; justify-content: center;">
-                <div style="font-size: 0.85rem; font-family: 'Arial Black'; color: {'#60a5fa' if tema_selecionado != 'Claro' else '#1f3b58'}; margin-bottom: 8px;">VÁRIAÇÃO DE SCs</div>
-                <div style="font-size: 2.2rem; font-weight: bold; color: {cor_seta_scs}; line-height: 1.1;">{simbolo_scs} {abs(diff_scs)}</div>
-                <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 20px;">{'Aumento' if diff_scs > 0 else ('Redução' if diff_scs < 0 else 'Estável')} de solicitações</div>
-                
-                <div style="font-size: 0.85rem; font-family: 'Arial Black'; color: {'#60a5fa' if tema_selecionado != 'Claro' else '#1f3b58'}; margin-bottom: 8px;">VÁRIAÇÃO DE ITENS</div>
-                <div style="font-size: 2.2rem; font-weight: bold; color: {cor_seta_itens}; line-height: 1.1;">{simbolo_itens} {abs(diff_itens)}</div>
-                <div style="font-size: 0.75rem; color: #94a3b8;">{'Aumento' if diff_itens > 0 else ('Redução' if diff_itens < 0 else 'Estável')} de itens</div>
-            </div>
-            """, unsafe_allow_html=True)
 
         # ==========================================
         # PASSO 4: DESEMPENHO POR COMPRADOR
@@ -564,7 +526,7 @@ if df is not None:
                     
                     # 3. Caixa de Itens Atendidos
                     st.markdown(f"""
-                    <div style='text-align: center; font-size: 0.9rem; font-weight: bold; background-color: {'#1a202c' if tema_selecionado != 'Claro' else '#f1f5f9'}; color: {'#63b3ed' if tema_selecionado != 'Claro' else '#2b6cb0'}; padding: 6px; border-radius: 4px; margin-top: 10px; margin-bottom: 0px; border: 1px solid {'#333333' if tema_selecionado != 'Claro' else 'transparent'};'>
+                    <div style='text-align: center; font-size: 0.9rem; font-weight: bold; background-color: {'#1a202c' if tema_selecionado != 'Claro' else '#f1f5f9'}; color: {'#63b3ed' if tema_selecionado != 'Claro' else '#2b6cb0'}; padding: 6px; border-radius: 6px; margin-top: 10px; margin-bottom: 0px; border: 1px solid {'#333333' if tema_selecionado != 'Claro' else 'transparent'}; box-shadow: 0 2px 10px rgba(0,0,0,0.05);'>
                         ✅ {qtd_atendidas} de {total_emitidas} Itens Atendidos
                     </div>
                     """, unsafe_allow_html=True)
@@ -612,7 +574,7 @@ if df is not None:
                     st.info(f"Sem dados mapeados para {comp}.")
 
         # ==========================================
-        # PASSO 5: CAIXA DE SLA MÉDIO GERAL (CONSOLIDADO) - DUAS CAIXINHAS LADO A LADO SEM O TEXTO DE DIA ANTERIOR
+        # PASSO 5: CAIXA DE SLA MÉDIO GERAL (CONSOLIDADO) - DUAS CAIXINHAS LADO A LADO
         # ==========================================
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown('<div class="section-header" style="background-color: #111827; border: 1px solid #374151; margin-bottom: 12px;">📊 SLA MÉDIO GERAL CONSOLIDADO</div>', unsafe_allow_html=True)
@@ -622,7 +584,7 @@ if df is not None:
         with col_box1:
             cor_val_rot = "#ff6b6b" if sla_geral_rot > 15 else "#339af0"
             st.markdown(f"""
-            <div style="background-color: {'#111827' if tema_selecionado != 'Claro' else '#f8fafc'}; border: 1px solid {'#374151' if tema_selecionado != 'Claro' else '#cbd5e1'}; border-radius: 6px; padding: 15px; text-align: center;">
+            <div style="background-color: {'#111827' if tema_selecionado != 'Claro' else '#f8fafc'}; border: 1px solid {'#374151' if tema_selecionado != 'Claro' else '#cbd5e1'}; border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
                 <div style="font-size: 1.0rem; font-family: 'Arial Black'; color: {'#60a5fa' if tema_selecionado != 'Claro' else '#1f3b58'}; margin-bottom: 0px; text-transform: uppercase;">SLA ROTINEIRA MÉDIO</div>
                 <div style="font-size: 0.75rem; font-weight: bold; color: #94a3b8; margin-bottom: 6px;">(Limite: 15 dias)</div>
                 <div style="font-size: 1.8rem; font-weight: bold; color: {cor_val_rot}; line-height: 1.1;">{sla_geral_rot} dias</div>
@@ -632,7 +594,7 @@ if df is not None:
         with col_box2:
             cor_val_emg = "#ff6b6b" if sla_geral_emg > 3 else "#b197fc"
             st.markdown(f"""
-            <div style="background-color: {'#111827' if tema_selecionado != 'Claro' else '#f8fafc'}; border: 1px solid {'#374151' if tema_selecionado != 'Claro' else '#cbd5e1'}; border-radius: 6px; padding: 15px; text-align: center;">
+            <div style="background-color: {'#111827' if tema_selecionado != 'Claro' else '#f8fafc'}; border: 1px solid {'#374151' if tema_selecionado != 'Claro' else '#cbd5e1'}; border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
                 <div style="font-size: 1.0rem; font-family: 'Arial Black'; color: {'#60a5fa' if tema_selecionado != 'Claro' else '#1f3b58'}; margin-bottom: 0px; text-transform: uppercase;">SLA EMERGENCIAL MÉDIO</div>
                 <div style="font-size: 0.75rem; font-weight: bold; color: #94a3b8; margin-bottom: 6px;">(Limite: 3 dias)</div>
                 <div style="font-size: 1.8rem; font-weight: bold; color: {cor_val_emg}; line-height: 1.1;">{sla_geral_emg} dias</div>
