@@ -381,41 +381,42 @@ if df is not None:
             st.dataframe(top_critical, use_container_width=True, height=320, hide_index=True)
 
         # ==========================================
-        # PASSO 3: TOP 10 COMPRA DIRETA & CRITICIDADE VS STATUS (TOTALMENTE CORRIGIDO)
+        # PASSO 3: TOP 10 COMPRA DIRETA (TOTAL DA PLANILHA: ABERTAS OU FECHADAS) & CRITICIDADE VS STATUS
         # ==========================================
         st.markdown("---")
         row3_c1, row3_c2 = st.columns(2)
 
         with row3_c1:
-            st.markdown('<div class="section-header">TOP 10 COMPRA DIRETA (QTD. REQUISIÇÕES)</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-header">TOP 10 COMPRA DIRETA (TOTAL PLANILHA)</div>', unsafe_allow_html=True)
             
-            # Varre o DataFrame em busca de colunas de classificação de tipo de compra
-            col_tipo_candidatas = [c for c in df.columns if any(termo in c.upper() for termo in ['TIPO', 'GRUPO', 'FORMA', 'COMPRA', 'CLASSIFICAÇÃO'])]
+            # Varre o DataFrame COMPLETO (todas as linhas da planilha: abertas + fechadas)
+            df_geral_completo = df.dropna(subset=[col_sc]).copy()
+            df_geral_completo[col_sc] = df_geral_completo[col_sc].astype(str).str.split('.').str[0].str.zfill(6)
             
-            df_direta = unique_scs_aberto.copy()
+            col_tipo_candidatas = [c for c in df_geral_completo.columns if any(termo in c.upper() for termo in ['TIPO', 'GRUPO', 'FORMA', 'COMPRA', 'CLASSIFICAÇÃO'])]
+            
+            df_direta_total = df_geral_completo.drop_duplicates(subset=[col_sc]).copy()
             filtrado_com_sucesso = False
             
             if col_tipo_candidatas:
                 for c_cand in col_tipo_candidatas:
-                    mask = df_direta[c_cand].astype(str).str.upper().str.contains('DIRETA', na=False)
+                    mask = df_direta_total[c_cand].astype(str).str.upper().str.contains('DIRETA', na=False)
                     if mask.sum() > 0:
-                        df_direta = df_direta[mask]
+                        df_direta_total = df_direta_total[mask]
                         filtrado_com_sucesso = True
                         break
             
             if not filtrado_com_sucesso:
-                # Caso a palavra 'DIRETA' não seja encontrada nas colunas textuais padrão, 
-                # criamos um filtro seguro buscando em todas as colunas object/string do dataframe aberto
-                for col_str in df_aberto.select_dtypes(include=['object', 'string']).columns:
-                    mask_gen = df_aberto[col_str].astype(str).str.upper().str.contains('DIRETA', na=False)
+                for col_str in df_geral_completo.select_dtypes(include=['object', 'string']).columns:
+                    mask_gen = df_geral_completo[col_str].astype(str).str.upper().str.contains('DIRETA', na=False)
                     if mask_gen.sum() > 0:
-                        scs_diretas = df_aberto[mask_gen][col_sc].unique()
-                        df_direta = df_direta[df_direta[col_sc].isin(scs_diretas)]
+                        scs_diretas = df_geral_completo[mask_gen][col_sc].unique()
+                        df_direta_total = df_direta_total[df_direta_total[col_sc].isin(scs_diretas)]
                         filtrado_com_sucesso = True
                         break
 
-            if filtrado_com_sucesso and not df_direta.empty:
-                cc_direta = df_direta.groupby('CC_clean')[col_sc].nunique().reset_index(name='Qtd_SCs').sort_values(by='Qtd_SCs', ascending=False).head(10)
+            if filtrado_com_sucesso and not df_direta_total.empty:
+                cc_direta = df_direta_total.groupby('CC_clean')[col_sc].nunique().reset_index(name='Qtd_SCs').sort_values(by='Qtd_SCs', ascending=False).head(10)
                 cc_direta['CC_clean'] = cc_direta['CC_clean'].astype(str)
 
                 cores_direta = ['#3b82f6'] + ['#0d9488'] * (len(cc_direta) - 1)
@@ -426,13 +427,13 @@ if df is not None:
                     textposition='outside', textfont=dict(size=11, color=cor_texto_grafico, family=familia_fonte_grafico), marker_color=cores_direta[::-1]
                 ))
                 fig_direta.update_layout(
-                    xaxis_title="Qtd. Requisições (Compra Direta)", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=320,
+                    xaxis_title="Qtd. Requisições (Compra Direta - Total)", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=320,
                     font=dict(color=cor_texto_grafico),
                     margin=dict(l=5, r=20, t=10, b=10), xaxis=dict(showgrid=True, gridcolor='#e2e8f0' if is_tema_claro else '#333333'), yaxis=dict(type='category', tickfont=dict(family=familia_fonte_grafico, color=cor_texto_grafico))
                 )
                 st.plotly_chart(fig_direta, use_container_width=True, config={'displayModeBar': False})
             else:
-                st.info("💡 Nenhum registro classificado como 'Direta' foi localizado automaticamente. Verifique se a coluna de tipo de compra possui a nomenclatura 'Direta'.")
+                st.info("💡 Nenhum registro classificado como 'Direta' foi localizado na planilha completa.")
 
         with row3_c2:
             st.markdown('<div class="section-header">CRITICIDADE VS STATUS (QTD. ITENS)</div>', unsafe_allow_html=True)
