@@ -108,14 +108,14 @@ st.markdown(f"""
         margin-top: -5px;
     }}
     div[data-testid="stDataFrame"] {{
-        max-width: 85% !important;
+        max-width: 100% !important;
         margin-left: auto !important;
         margin-right: auto !important;
     }}
     .stDataFrame td, .stDataFrame th {{
-        font-size: 0.88rem !important;
+        font-size: 0.84rem !important;
         font-weight: {'500' if is_tema_claro else '700'} !important;
-        padding: 4px 6px !important;
+        padding: 2px 4px !important;
         text-align: center !important;
     }}
     {css_tema}
@@ -399,7 +399,7 @@ if df is not None:
                     st.plotly_chart(fig_crit_stat, use_container_width=True, config={'displayModeBar': False})
 
         # ==========================================
-        # PASSO 3: SEGUNDA LINHA DE GRÁFICOS (COMPRA DIRETA & ITENS CRÍTICOS LADO A LADO)
+        # PASSO 3: SEGUNDA LINHA DE GRÁFICOS (COMPRA DIRETA & ITENS CRÍTICOS REDUZIDOS LADO A LADO)
         # ==========================================
         st.markdown("---")
         row3_c1, row3_c2 = st.columns(2)
@@ -454,10 +454,10 @@ if df is not None:
 
         with row3_c2:
             st.markdown('<div class="section-header">ITENS CRÍTICOS</div>', unsafe_allow_html=True)
-            top_critical = criticos_df.sort_values(by='Days', ascending=False)[[col_sc, 'CC_clean', 'Days']].head(8)
+            top_critical = criticos_df.sort_values(by='Days', ascending=False)[[col_sc, 'CC_clean', 'Days']].head(7)
             top_critical.columns = ['Nº SC', 'C. CUSTO', 'ATRASO']
             top_critical['ATRASO'] = top_critical['ATRASO'].astype(str) + " DIAS 🔥"
-            st.dataframe(top_critical, use_container_width=True, height=320, hide_index=True)
+            st.dataframe(top_critical, use_container_width=True, height=270, hide_index=True)
 
         # ==========================================
         # PASSO 4: DESEMPENHO POR COMPRADOR
