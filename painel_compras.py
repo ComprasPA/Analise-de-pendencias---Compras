@@ -330,10 +330,10 @@ if df is not None:
         st.markdown("<br>", unsafe_allow_html=True)
 
         # ==========================================
-        # PASSO 2: CENTROS DE CUSTO & ITENS CRÍTICOS (3 COLUNAS)
+        # PASSO 2: PRIMEIRA LINHA DE GRÁFICOS (3 COLUNAS EQUILIBRADAS)
         # ==========================================
         st.markdown("---")
-        row2_c1, row2_c2, row2_c3 = st.columns([1, 1, 0.6])
+        row2_c1, row2_c2, row2_c3 = st.columns(3)
 
         with row2_c1:
             st.markdown('<div class="section-header">TOP 10 CC (VOLUME DE ITENS)</div>', unsafe_allow_html=True)
@@ -374,22 +374,39 @@ if df is not None:
             st.plotly_chart(fig_cc_sc, use_container_width=True, config={'displayModeBar': False})
 
         with row2_c3:
-            st.markdown('<div class="section-header">ITENS CRÍTICOS</div>', unsafe_allow_html=True)
-            top_critical = criticos_df.sort_values(by='Days', ascending=False)[[col_sc, 'CC_clean', 'Days']].head(8)
-            top_critical.columns = ['Nº SC', 'C. CUSTO', 'ATRASO']
-            top_critical['ATRASO'] = top_critical['ATRASO'].astype(str) + " DIAS 🔥"
-            st.dataframe(top_critical, use_container_width=True, height=320, hide_index=True)
+            st.markdown('<div class="section-header">CRITICIDADE VS STATUS (QTD. ITENS)</div>', unsafe_allow_html=True)
+            if col_criticidade and col_status:
+                df_crit_stat = df_aberto[df_aberto[col_criticidade].astype(str).str.upper().isin(['ROTINEIRA', 'EMERGENCIAL'])]
+                if not df_crit_stat.empty:
+                    crit_stats = df_crit_stat.groupby([col_criticidade, col_status]).size().reset_index(name='Quantidade')
+                    color_map = {'NO PRAZO': '#22c55e' if is_tema_claro else '#388e3c', 'ATENÇÃO': '#f59e0b' if is_tema_claro else '#d97706', 'FORA DO PRAZO': '#ef4444' if is_tema_claro else '#e53e3e'}
+                    fig_crit_stat = go.Figure()
+                    for status_val in ['NO PRAZO', 'ATENÇÃO', 'FORA DO PRAZO']:
+                        df_sub = crit_stats[crit_stats[col_status].str.upper() == status_val]
+                        if not df_sub.empty:
+                            fig_crit_stat.add_trace(go.Bar(
+                                x=df_sub[col_criticidade], y=df_sub['Quantidade'], name=status_val.title(),
+                                marker_color=color_map.get(status_val, '#718096'),
+                                text=df_sub['Quantidade'], textposition='auto', 
+                                textfont=dict(size=11, color=cor_texto_grafico, family=familia_fonte_grafico)
+                            ))
+                    fig_crit_stat.update_layout(
+                        barmode='group', xaxis_title="", yaxis_title="Qtd. ITENS", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=320,
+                        font=dict(color=cor_texto_grafico),
+                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(family=familia_fonte_grafico, size=9, color=cor_texto_grafico)),
+                        xaxis=dict(showgrid=False, tickfont=dict(size=11, family=familia_fonte_grafico, color=cor_texto_grafico)), yaxis=dict(showgrid=True, gridcolor='#e2e8f0' if is_tema_claro else '#333333')
+                    )
+                    st.plotly_chart(fig_crit_stat, use_container_width=True, config={'displayModeBar': False})
 
         # ==========================================
-        # PASSO 3: TOP 10 COMPRA DIRETA (TOTAL DA PLANILHA: ABERTAS OU FECHADAS) & CRITICIDADE VS STATUS
+        # PASSO 3: SEGUNDA LINHA DE GRÁFICOS (COMPRA DIRETA & ITENS CRÍTICOS LADO A LADO)
         # ==========================================
         st.markdown("---")
         row3_c1, row3_c2 = st.columns(2)
 
         with row3_c1:
-            st.markdown('<div class="section-header">TOP 10 COMPRA DIRETA (TOTAL PLANILHA)</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-header">TOP 10 COMPRA DIRETA (2026)</div>', unsafe_allow_html=True)
             
-            # Varre o DataFrame COMPLETO (todas as linhas da planilha: abertas + fechadas)
             df_geral_completo = df.dropna(subset=[col_sc]).copy()
             df_geral_completo[col_sc] = df_geral_completo[col_sc].astype(str).str.split('.').str[0].str.zfill(6)
             
@@ -427,7 +444,7 @@ if df is not None:
                     textposition='outside', textfont=dict(size=11, color=cor_texto_grafico, family=familia_fonte_grafico), marker_color=cores_direta[::-1]
                 ))
                 fig_direta.update_layout(
-                    xaxis_title="Qtd. Requisições (Compra Direta - Total)", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=320,
+                    xaxis_title="Qtd. Requisições (Compra Direta - 2026)", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=320,
                     font=dict(color=cor_texto_grafico),
                     margin=dict(l=5, r=20, t=10, b=10), xaxis=dict(showgrid=True, gridcolor='#e2e8f0' if is_tema_claro else '#333333'), yaxis=dict(type='category', tickfont=dict(family=familia_fonte_grafico, color=cor_texto_grafico))
                 )
@@ -436,29 +453,11 @@ if df is not None:
                 st.info("💡 Nenhum registro classificado como 'Direta' foi localizado na planilha completa.")
 
         with row3_c2:
-            st.markdown('<div class="section-header">CRITICIDADE VS STATUS (QTD. ITENS)</div>', unsafe_allow_html=True)
-            if col_criticidade and col_status:
-                df_crit_stat = df_aberto[df_aberto[col_criticidade].astype(str).str.upper().isin(['ROTINEIRA', 'EMERGENCIAL'])]
-                if not df_crit_stat.empty:
-                    crit_stats = df_crit_stat.groupby([col_criticidade, col_status]).size().reset_index(name='Quantidade')
-                    color_map = {'NO PRAZO': '#22c55e' if is_tema_claro else '#388e3c', 'ATENÇÃO': '#f59e0b' if is_tema_claro else '#d97706', 'FORA DO PRAZO': '#ef4444' if is_tema_claro else '#e53e3e'}
-                    fig_crit_stat = go.Figure()
-                    for status_val in ['NO PRAZO', 'ATENÇÃO', 'FORA DO PRAZO']:
-                        df_sub = crit_stats[crit_stats[col_status].str.upper() == status_val]
-                        if not df_sub.empty:
-                            fig_crit_stat.add_trace(go.Bar(
-                                x=df_sub[col_criticidade], y=df_sub['Quantidade'], name=status_val.title(),
-                                marker_color=color_map.get(status_val, '#718096'),
-                                text=df_sub['Quantidade'], textposition='auto', 
-                                textfont=dict(size=12, color=cor_texto_grafico, family=familia_fonte_grafico)
-                            ))
-                    fig_crit_stat.update_layout(
-                        barmode='group', xaxis_title="", yaxis_title="Qtd. ITENS EM ABERTO", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=320,
-                        font=dict(color=cor_texto_grafico),
-                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(family=familia_fonte_grafico, color=cor_texto_grafico)),
-                        xaxis=dict(showgrid=False, tickfont=dict(size=12, family=familia_fonte_grafico, color=cor_texto_grafico)), yaxis=dict(showgrid=True, gridcolor='#e2e8f0' if is_tema_claro else '#333333')
-                    )
-                    st.plotly_chart(fig_crit_stat, use_container_width=True, config={'displayModeBar': False})
+            st.markdown('<div class="section-header">ITENS CRÍTICOS</div>', unsafe_allow_html=True)
+            top_critical = criticos_df.sort_values(by='Days', ascending=False)[[col_sc, 'CC_clean', 'Days']].head(8)
+            top_critical.columns = ['Nº SC', 'C. CUSTO', 'ATRASO']
+            top_critical['ATRASO'] = top_critical['ATRASO'].astype(str) + " DIAS 🔥"
+            st.dataframe(top_critical, use_container_width=True, height=320, hide_index=True)
 
         # ==========================================
         # PASSO 4: DESEMPENHO POR COMPRADOR
