@@ -25,7 +25,7 @@ with st.expander("⚙️ Abrir / Fechar Configurações (Upload, Data Base e Tem
         )
 
 # ==========================================
-# CSS CUSTOMIZADO DINÂMICO & SUAVIZAÇÃO DE TIPOGRAFIA
+# CSS CUSTOMIZADO DINÂMICO & REDUÇÃO DA TABELA
 # ==========================================
 is_tema_claro = tema_selecionado in ["Claro", "Padrão do Sistema"]
 
@@ -108,14 +108,14 @@ st.markdown(f"""
         margin-top: -5px;
     }}
     div[data-testid="stDataFrame"] {{
-        max-width: 100% !important;
+        max-width: 75% !important;
         margin-left: auto !important;
         margin-right: auto !important;
     }}
     .stDataFrame td, .stDataFrame th {{
-        font-size: 0.84rem !important;
+        font-size: 0.82rem !important;
         font-weight: {'500' if is_tema_claro else '700'} !important;
-        padding: 2px 4px !important;
+        padding: 2px 3px !important;
         text-align: center !important;
     }}
     {css_tema}
