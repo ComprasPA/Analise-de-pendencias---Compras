@@ -30,7 +30,7 @@ with st.expander("⚙️ Abrir / Fechar Configurações (Upload, Data Base e Tem
 if tema_selecionado == "Black (Preto Absoluto)":
     css_tema = """
         .stApp { background-color: #000000 !important; color: #f8fafc !important; }
-        .header-box { background-color: #111111 !important; border: 1px solid #333333; }
+        .header-box { background-color: #111111 !important; border: 1px solid #333333; color: #ffffff !important; }
         .resumo-bar, .section-header { background-color: #1a1a1a !important; color: #ffffff !important; border: 1px solid #333333; }
         div[data-testid="stVerticalBlock"] > div[style*="background-color: white"] { background-color: #121212 !important; border: 1px solid #333333 !important; color: #ffffff !important; }
         p, span, label, div, h1, h2, h3, h4, h5, h6 { color: #f8fafc !important; }
@@ -38,19 +38,22 @@ if tema_selecionado == "Black (Preto Absoluto)":
 elif tema_selecionado == "Escuro":
     css_tema = """
         .stApp { background-color: #0e1117 !important; color: #f8fafc !important; }
-        .header-box { background-color: #1f3b58 !important; }
-        .resumo-bar, .section-header { background-color: #2b4c7e !important; }
+        .header-box { background-color: #1f3b58 !important; color: #ffffff !important; }
+        .resumo-bar, .section-header { background-color: #2b4c7e !important; color: #ffffff !important; }
         p, span, label, div, h1, h2, h3, h4, h5, h6 { color: #f8fafc !important; }
     """
 elif tema_selecionado == "Claro":
     css_tema = """
         .stApp { background-color: #ffffff !important; color: #111827 !important; }
-        .header-box { background-color: #2b4c7e !important; color: #ffffff !important; }
-        .resumo-bar, .section-header { background-color: #1f3b58 !important; color: #ffffff !important; }
+        .header-box { background-color: #1f3b58 !important; color: #ffffff !important; }
+        .resumo-bar, .section-header { background-color: #2b4c7e !important; color: #ffffff !important; }
         p, span, label, div, h1, h2, h3, h4, h5, h6 { color: #111827 !important; }
     """
 else:  # Padrão do Sistema (Automático)
-    css_tema = ""
+    css_tema = """
+        .header-box { background-color: #1f3b58 !important; color: #ffffff !important; }
+        .resumo-bar, .section-header { background-color: #2b4c7e !important; color: #ffffff !important; }
+    """
 
 st.markdown(f"""
     <style>
@@ -66,7 +69,6 @@ st.markdown(f"""
         max-width: 100% !important;
     }}
     .header-box {{
-        color: white;
         padding: 12px 20px;
         border-radius: 4px;
         display: flex;
@@ -74,10 +76,9 @@ st.markdown(f"""
         align-items: center;
         margin-bottom: 10px;
     }}
-    .header-title {{ font-size: 2.0rem; font-weight: bold; }}
-    .header-sub {{ font-size: 1.1rem; }}
+    .header-title {{ font-size: 2.0rem; font-weight: bold; color: #ffffff !important; }}
+    .header-sub {{ font-size: 1.1rem; color: #ffffff !important; }}
     .resumo-bar {{
-        color: white;
         text-align: center;
         font-weight: bold;
         font-size: 1rem;
@@ -86,9 +87,9 @@ st.markdown(f"""
         letter-spacing: 1px;
         margin-bottom: 15px;
         border-radius: 2px;
+        color: #ffffff !important;
     }}
     .section-header {{
-        color: white;
         text-align: center;
         font-weight: bold;
         font-size: 0.95rem;
@@ -96,6 +97,7 @@ st.markdown(f"""
         text-transform: uppercase;
         border-radius: 2px;
         margin-bottom: 8px;
+        color: #ffffff !important;
     }}
     .gauge-footer {{
         text-align: center;
@@ -119,7 +121,7 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
-# Cores dinâmicas adaptativas para títulos e eixos de gráficos conforme o tema
+# Cores dinâmicas para títulos de gráficos conforme o tema
 cor_texto_grafico = "#ffffff" if tema_selecionado in ["Escuro", "Black (Preto Absoluto)"] else "#111827"
 
 # ==========================================
@@ -295,14 +297,12 @@ if df is not None:
         row1_c1, row1_c2, row1_c3, row1_c4, row1_div, row1_c5, row1_c6 = st.columns([1.5, 1, 1, 1, 0.2, 1, 1])
 
         with row1_c1:
-            bg_card_vol = "#121212" if tema_selecionado in ["Escuro", "Black (Preto Absoluto)"] else "#ffffff"
-            border_card_vol = "#333333" if tema_selecionado in ["Escuro", "Black (Preto Absoluto)"] else "#cbd5e1"
             st.markdown(f"""
-            <div style="background-color: {bg_card_vol}; border: 1px solid {border_card_vol}; border-radius: 4px; padding: 6px; text-align: center; height: 150px; display: flex; flex-direction: column; justify-content: center;">
+            <div style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 6px; text-align: center; height: 150px; display: flex; flex-direction: column; justify-content: center;">
                 <div style="font-size: 0.95rem; font-family: 'Arial Black'; margin-bottom: 2px;">VOLUMETRIA EM ABERTO</div>
                 <div style="font-size: 1.95rem; font-weight: bold; color: #4dabf7; line-height: 1.1;">{total_sc_unicas_aberto}</div>
                 <div style="font-size: 0.85rem; font-weight: bold;">Solicitações (SCs)</div>
-                <div style="border-top: 1px dashed {border_card_vol}; margin: 2px 0;"></div>
+                <div style="border-top: 1px dashed #cbd5e1; margin: 2px 0;"></div>
                 <div style="font-size: 1.95rem; font-weight: bold; color: #ffa94d; line-height: 1.1;">{total_linhas_aberto}</div>
                 <div style="font-size: 0.85rem; font-weight: bold;">Total de Itens</div>
             </div>
