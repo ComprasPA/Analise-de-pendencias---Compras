@@ -42,7 +42,14 @@ elif tema_selecionado == "Escuro":
         .resumo-bar, .section-header { background-color: #2b4c7e !important; }
         p, span, label, div, h1, h2, h3, h4, h5, h6 { color: #f8fafc !important; }
     """
-else:
+elif tema_selecionado == "Claro":
+    css_tema = """
+        .stApp { background-color: #ffffff !important; color: #111827 !important; }
+        .header-box { background-color: #2b4c7e !important; color: #ffffff !important; }
+        .resumo-bar, .section-header { background-color: #1f3b58 !important; color: #ffffff !important; }
+        p, span, label, div, h1, h2, h3, h4, h5, h6 { color: #111827 !important; }
+    """
+else:  # Padrão do Sistema (Automático)
     css_tema = ""
 
 st.markdown(f"""
@@ -112,7 +119,7 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
-# Cores dinâmicas para títulos de gráficos conforme o tema
+# Cores dinâmicas adaptativas para títulos e eixos de gráficos conforme o tema
 cor_texto_grafico = "#ffffff" if tema_selecionado in ["Escuro", "Black (Preto Absoluto)"] else "#111827"
 
 # ==========================================
@@ -233,34 +240,6 @@ if df is not None:
         unique_scs_aberto = df_aberto.drop_duplicates(subset=[col_sc]).copy()
         total_sc_unicas_aberto = int(len(unique_scs_aberto))
         
-        # --- GESTÃO DO HISTÓRICO DE 15 DIAS ---
-        data_str = hoje.strftime("%Y-%m-%d")
-        serie_hist = historico["serie_historica"]
-        
-        registro_hoje = {"data": data_str, "total_scs": total_sc_unicas_aberto, "total_itens": total_linhas_aberto}
-        
-        if serie_hist and serie_hist[-1]["data"] == data_str:
-            serie_hist[-1] = registro_hoje
-        else:
-            serie_hist.append(registro_hoje)
-            
-        if len(serie_hist) > 15:
-            serie_hist = serie_hist[-15:]
-            
-        historico["serie_historica"] = serie_hist
-        
-        diff_scs = 0
-        diff_itens = 0
-        
-        if len(serie_hist) >= 2:
-            penultimo = serie_hist[-2]
-            diff_scs = int(total_sc_unicas_aberto - penultimo["total_scs"])
-            diff_itens = int(total_linhas_aberto - penultimo["total_itens"])
-
-        if uploaded_file is not None or not os.path.exists(ARQUIVO_HISTORICO):
-            with open(ARQUIVO_HISTORICO, "w") as f:
-                json.dump(historico, f)
-
         # --- CÁLCULO DO SLA MÉDIO GERAL ATUAL ---
         df_geral_crit = df.copy()
         if col_dt_emissao in df_geral_crit.columns:
@@ -316,12 +295,14 @@ if df is not None:
         row1_c1, row1_c2, row1_c3, row1_c4, row1_div, row1_c5, row1_c6 = st.columns([1.5, 1, 1, 1, 0.2, 1, 1])
 
         with row1_c1:
+            bg_card_vol = "#121212" if tema_selecionado in ["Escuro", "Black (Preto Absoluto)"] else "#ffffff"
+            border_card_vol = "#333333" if tema_selecionado in ["Escuro", "Black (Preto Absoluto)"] else "#cbd5e1"
             st.markdown(f"""
-            <div style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 6px; text-align: center; height: 150px; display: flex; flex-direction: column; justify-content: center;">
+            <div style="background-color: {bg_card_vol}; border: 1px solid {border_card_vol}; border-radius: 4px; padding: 6px; text-align: center; height: 150px; display: flex; flex-direction: column; justify-content: center;">
                 <div style="font-size: 0.95rem; font-family: 'Arial Black'; margin-bottom: 2px;">VOLUMETRIA EM ABERTO</div>
                 <div style="font-size: 1.95rem; font-weight: bold; color: #4dabf7; line-height: 1.1;">{total_sc_unicas_aberto}</div>
                 <div style="font-size: 0.85rem; font-weight: bold;">Solicitações (SCs)</div>
-                <div style="border-top: 1px dashed #cbd5e1; margin: 2px 0;"></div>
+                <div style="border-top: 1px dashed {border_card_vol}; margin: 2px 0;"></div>
                 <div style="font-size: 1.95rem; font-weight: bold; color: #ffa94d; line-height: 1.1;">{total_linhas_aberto}</div>
                 <div style="font-size: 0.85rem; font-weight: bold;">Total de Itens</div>
             </div>
@@ -399,10 +380,10 @@ if df is not None:
             st.dataframe(top_critical, use_container_width=True, height=320, hide_index=True)
 
         # ==========================================
-        # PASSO 3: TOP 10 COMPRA DIRETA, CRITICIDADE VS STATUS E TENDÊNCIA AO LADO
+        # PASSO 3: TOP 10 COMPRA DIRETA & CRITICIDADE VS STATUS
         # ==========================================
         st.markdown("---")
-        row3_c1, row3_c2, row3_c3 = st.columns([1, 1, 0.4])
+        row3_c1, row3_c2 = st.columns(2)
 
         col_tipo = None
         for c in ['Tipo SC', 'Tipo', 'Grupo', 'Subgrupo']:
@@ -463,27 +444,6 @@ if df is not None:
                         xaxis=dict(showgrid=False, tickfont=dict(size=12, family='Arial Black', color=cor_texto_grafico)), yaxis=dict(showgrid=True, gridcolor='#333333' if tema_selecionado != 'Claro' else '#e2e8f0')
                     )
                     st.plotly_chart(fig_crit_stat, use_container_width=True, config={'displayModeBar': False})
-
-        with row3_c3:
-            st.markdown('<div class="section-header">TENDÊNCIA (ANT. VS ATUAL)</div>', unsafe_allow_html=True)
-            
-            cor_seta_scs = "#ff6b6b" if diff_scs > 0 else ("#51cf66" if diff_scs < 0 else "#94a3b8")
-            simbolo_scs = "▲" if diff_scs > 0 else ("▼" if diff_scs < 0 else "•")
-            
-            cor_seta_itens = "#ff6b6b" if diff_itens > 0 else ("#51cf66" if diff_itens < 0 else "#94a3b8")
-            simbolo_itens = "▲" if diff_itens > 0 else ("▼" if diff_itens < 0 else "•")
-
-            st.markdown(f"""
-            <div style="background-color: {'#111827' if tema_selecionado != 'Claro' else '#f8fafc'}; border: 1px solid {'#374151' if tema_selecionado != 'Claro' else '#cbd5e1'}; border-radius: 4px; padding: 18px; text-align: center; height: 320px; display: flex; flex-direction: column; justify-content: center;">
-                <div style="font-size: 0.85rem; font-family: 'Arial Black'; color: {'#60a5fa' if tema_selecionado != 'Claro' else '#1f3b58'}; margin-bottom: 8px;">VÁRIAÇÃO DE SCs</div>
-                <div style="font-size: 2.2rem; font-weight: bold; color: {cor_seta_scs}; line-height: 1.1;">{simbolo_scs} {abs(diff_scs)}</div>
-                <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 20px;">{'Aumento' if diff_scs > 0 else ('Redução' if diff_scs < 0 else 'Estável')} de solicitações</div>
-                
-                <div style="font-size: 0.85rem; font-family: 'Arial Black'; color: {'#60a5fa' if tema_selecionado != 'Claro' else '#1f3b58'}; margin-bottom: 8px;">VÁRIAÇÃO DE ITENS</div>
-                <div style="font-size: 2.2rem; font-weight: bold; color: {cor_seta_itens}; line-height: 1.1;">{simbolo_itens} {abs(diff_itens)}</div>
-                <div style="font-size: 0.75rem; color: #94a3b8;">{'Aumento' if diff_itens > 0 else ('Redução' if diff_itens < 0 else 'Estável')} de itens</div>
-            </div>
-            """, unsafe_allow_html=True)
 
         # ==========================================
         # PASSO 4: DESEMPENHO POR COMPRADOR
@@ -563,8 +523,11 @@ if df is not None:
                         st.info(f"Fila limpa! Nenhum item pendente para {comp}.")
                     
                     # 3. Caixa de Itens Atendidos
+                    bg_atendidos = '#1a202c' if tema_selecionado in ["Escuro", "Black (Preto Absoluto)"] else '#f1f5f9'
+                    color_atendidos = '#63b3ed' if tema_selecionado in ["Escuro", "Black (Preto Absoluto)"] else '#2b6cb0'
+                    border_atendidos = '#333333' if tema_selecionado in ["Escuro", "Black (Preto Absoluto)"] else 'transparent'
                     st.markdown(f"""
-                    <div style='text-align: center; font-size: 0.9rem; font-weight: bold; background-color: {'#1a202c' if tema_selecionado != 'Claro' else '#f1f5f9'}; color: {'#63b3ed' if tema_selecionado != 'Claro' else '#2b6cb0'}; padding: 6px; border-radius: 4px; margin-top: 10px; margin-bottom: 0px; border: 1px solid {'#333333' if tema_selecionado != 'Claro' else 'transparent'};'>
+                    <div style='text-align: center; font-size: 0.9rem; font-weight: bold; background-color: {bg_atendidos}; color: {color_atendidos}; padding: 6px; border-radius: 4px; margin-top: 10px; margin-bottom: 0px; border: 1px solid {border_atendidos};'>
                         ✅ {qtd_atendidas} de {total_emitidas} Itens Atendidos
                     </div>
                     """, unsafe_allow_html=True)
@@ -619,11 +582,15 @@ if df is not None:
 
         col_box1, col_box2 = st.columns(2)
 
+        bg_box = '#111827' if tema_selecionado in ["Escuro", "Black (Preto Absoluto)"] else '#f8fafc'
+        border_box = '#374151' if tema_selecionado in ["Escuro", "Black (Preto Absoluto)"] else '#cbd5e1'
+        color_box_title = '#60a5fa' if tema_selecionado in ["Escuro", "Black (Preto Absoluto)"] else '#1f3b58'
+
         with col_box1:
             cor_val_rot = "#ff6b6b" if sla_geral_rot > 15 else "#339af0"
             st.markdown(f"""
-            <div style="background-color: {'#111827' if tema_selecionado != 'Claro' else '#f8fafc'}; border: 1px solid {'#374151' if tema_selecionado != 'Claro' else '#cbd5e1'}; border-radius: 6px; padding: 15px; text-align: center;">
-                <div style="font-size: 1.0rem; font-family: 'Arial Black'; color: {'#60a5fa' if tema_selecionado != 'Claro' else '#1f3b58'}; margin-bottom: 0px; text-transform: uppercase;">SLA ROTINEIRA MÉDIO</div>
+            <div style="background-color: {bg_box}; border: 1px solid {border_box}; border-radius: 6px; padding: 15px; text-align: center;">
+                <div style="font-size: 1.0rem; font-family: 'Arial Black'; color: {color_box_title}; margin-bottom: 0px; text-transform: uppercase;">SLA ROTINEIRA MÉDIO</div>
                 <div style="font-size: 0.75rem; font-weight: bold; color: #94a3b8; margin-bottom: 6px;">(Limite: 15 dias)</div>
                 <div style="font-size: 1.8rem; font-weight: bold; color: {cor_val_rot}; line-height: 1.1;">{sla_geral_rot} dias</div>
             </div>
@@ -632,8 +599,8 @@ if df is not None:
         with col_box2:
             cor_val_emg = "#ff6b6b" if sla_geral_emg > 3 else "#b197fc"
             st.markdown(f"""
-            <div style="background-color: {'#111827' if tema_selecionado != 'Claro' else '#f8fafc'}; border: 1px solid {'#374151' if tema_selecionado != 'Claro' else '#cbd5e1'}; border-radius: 6px; padding: 15px; text-align: center;">
-                <div style="font-size: 1.0rem; font-family: 'Arial Black'; color: {'#60a5fa' if tema_selecionado != 'Claro' else '#1f3b58'}; margin-bottom: 0px; text-transform: uppercase;">SLA EMERGENCIAL MÉDIO</div>
+            <div style="background-color: {bg_box}; border: 1px solid {border_box}; border-radius: 6px; padding: 15px; text-align: center;">
+                <div style="font-size: 1.0rem; font-family: 'Arial Black'; color: {color_box_title}; margin-bottom: 0px; text-transform: uppercase;">SLA EMERGENCIAL MÉDIO</div>
                 <div style="font-size: 0.75rem; font-weight: bold; color: #94a3b8; margin-bottom: 6px;">(Limite: 3 dias)</div>
                 <div style="font-size: 1.8rem; font-weight: bold; color: {cor_val_emg}; line-height: 1.1;">{sla_geral_emg} dias</div>
             </div>
