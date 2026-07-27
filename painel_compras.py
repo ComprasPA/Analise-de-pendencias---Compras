@@ -381,35 +381,43 @@ if df is not None:
             st.dataframe(top_critical, use_container_width=True, height=320, hide_index=True)
 
         # ==========================================
-        # PASSO 3: TOP 10 COMPRA DIRETA & CRITICIDADE VS STATUS (CORRIGIDO)
+        # PASSO 3: TOP 10 COMPRA DIRETA & CRITICIDADE VS STATUS (TOTALMENTE CORRIGIDO)
         # ==========================================
         st.markdown("---")
         row3_c1, row3_c2 = st.columns(2)
 
-        # Identificação robusta da coluna de Tipo de Compra
-        col_tipo = None
-        for c in ['Tipo SC', 'Tipo', 'Tipo de Compra', 'Grupo', 'Subgrupo']:
-            if c in df.columns:
-                col_tipo = c
-                break
-
         with row3_c1:
             st.markdown('<div class="section-header">TOP 10 COMPRA DIRETA (QTD. REQUISIÇÕES)</div>', unsafe_allow_html=True)
             
-            df_direta = df_aberto.drop_duplicates(subset=[col_sc]).copy()
-            if col_tipo:
-                # Filtra especificamente onde o tipo contenha "DIRETA"
-                mask_direta = df_direta[col_tipo].astype(str).str.upper().str.contains('DIRETA', na=False)
-                if mask_direta.sum() > 0:
-                    df_direta = df_direta[mask_direta]
-            else:
-                # Fallback caso a coluna não exista explicitamente no arquivo
-                df_direta = pd.DataFrame(columns=['CC_clean', col_sc])
+            # Varre o DataFrame em busca de colunas de classificação de tipo de compra
+            col_tipo_candidatas = [c for c in df.columns if any(termo in c.upper() for termo in ['TIPO', 'GRUPO', 'FORMA', 'COMPRA', 'CLASSIFICAÇÃO'])]
             
-            cc_direta = df_direta.groupby('CC_clean')[col_sc].nunique().reset_index(name='Qtd_SCs').sort_values(by='Qtd_SCs', ascending=False).head(10)
-            cc_direta['CC_clean'] = cc_direta['CC_clean'].astype(str)
+            df_direta = unique_scs_aberto.copy()
+            filtrado_com_sucesso = False
+            
+            if col_tipo_candidatas:
+                for c_cand in col_tipo_candidatas:
+                    mask = df_direta[c_cand].astype(str).str.upper().str.contains('DIRETA', na=False)
+                    if mask.sum() > 0:
+                        df_direta = df_direta[mask]
+                        filtrado_com_sucesso = True
+                        break
+            
+            if not filtrado_com_sucesso:
+                # Caso a palavra 'DIRETA' não seja encontrada nas colunas textuais padrão, 
+                # criamos um filtro seguro buscando em todas as colunas object/string do dataframe aberto
+                for col_str in df_aberto.select_dtypes(include=['object', 'string']).columns:
+                    mask_gen = df_aberto[col_str].astype(str).str.upper().str.contains('DIRETA', na=False)
+                    if mask_gen.sum() > 0:
+                        scs_diretas = df_aberto[mask_gen][col_sc].unique()
+                        df_direta = df_direta[df_direta[col_sc].isin(scs_diretas)]
+                        filtrado_com_sucesso = True
+                        break
 
-            if not cc_direta.empty:
+            if filtrado_com_sucesso and not df_direta.empty:
+                cc_direta = df_direta.groupby('CC_clean')[col_sc].nunique().reset_index(name='Qtd_SCs').sort_values(by='Qtd_SCs', ascending=False).head(10)
+                cc_direta['CC_clean'] = cc_direta['CC_clean'].astype(str)
+
                 cores_direta = ['#3b82f6'] + ['#0d9488'] * (len(cc_direta) - 1)
                 fig_direta = go.Figure(go.Bar(
                     x=cc_direta.sort_values(by='Qtd_SCs', ascending=True)['Qtd_SCs'],
@@ -424,7 +432,7 @@ if df is not None:
                 )
                 st.plotly_chart(fig_direta, use_container_width=True, config={'displayModeBar': False})
             else:
-                st.info("Nenhum registro de Compra Direta encontrado com os filtros atuais.")
+                st.info("💡 Nenhum registro classificado como 'Direta' foi localizado automaticamente. Verifique se a coluna de tipo de compra possui a nomenclatura 'Direta'.")
 
         with row3_c2:
             st.markdown('<div class="section-header">CRITICIDADE VS STATUS (QTD. ITENS)</div>', unsafe_allow_html=True)
