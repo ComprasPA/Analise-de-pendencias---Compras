@@ -25,8 +25,10 @@ with st.expander("⚙️ Abrir / Fechar Configurações (Upload, Data Base e Tem
         )
 
 # ==========================================
-# CSS CUSTOMIZADO DINÂMICO
+# CSS CUSTOMIZADO DINÂMICO & SUAVIZAÇÃO DE TIPOGRAFIA
 # ==========================================
+is_tema_claro = tema_selecionado in ["Claro", "Padrão do Sistema"]
+
 if tema_selecionado == "Black (Preto Absoluto)":
     css_tema = """
         .stApp { background-color: #000000 !important; color: #f8fafc !important; }
@@ -44,15 +46,15 @@ elif tema_selecionado == "Escuro":
     """
 elif tema_selecionado == "Claro":
     css_tema = """
-        .stApp { background-color: #ffffff !important; color: #111827 !important; }
-        .header-box { background-color: #1f3b58 !important; color: #ffffff !important; }
-        .resumo-bar, .section-header { background-color: #2b4c7e !important; color: #ffffff !important; }
-        p, span, label, div, h1, h2, h3, h4, h5, h6 { color: #111827 !important; }
+        .stApp { background-color: #ffffff !important; color: #334155 !important; }
+        .header-box { background-color: #1e3a8a !important; color: #ffffff !important; }
+        .resumo-bar, .section-header { background-color: #3b82f6 !important; color: #ffffff !important; }
+        p, span, label, div, h1, h2, h3, h4, h5, h6 { color: #334155 !important; }
     """
-else:  # Padrão do Sistema (Automático)
+else:  # Padrão do Sistema
     css_tema = """
-        .header-box { background-color: #1f3b58 !important; color: #ffffff !important; }
-        .resumo-bar, .section-header { background-color: #2b4c7e !important; color: #ffffff !important; }
+        .header-box { background-color: #1e3a8a !important; color: #ffffff !important; }
+        .resumo-bar, .section-header { background-color: #3b82f6 !important; color: #ffffff !important; }
     """
 
 st.markdown(f"""
@@ -76,23 +78,23 @@ st.markdown(f"""
         align-items: center;
         margin-bottom: 10px;
     }}
-    .header-title {{ font-size: 2.0rem; font-weight: bold; color: #ffffff !important; }}
-    .header-sub {{ font-size: 1.1rem; color: #ffffff !important; }}
+    .header-title {{ font-size: 1.8rem; font-weight: {'600' if is_tema_claro else 'bold'}; color: #ffffff !important; }}
+    .header-sub {{ font-size: 1.05rem; font-weight: {'400' if is_tema_claro else 'bold'}; color: #ffffff !important; }}
     .resumo-bar {{
         text-align: center;
-        font-weight: bold;
-        font-size: 1rem;
+        font-weight: {'600' if is_tema_claro else 'bold'};
+        font-size: 0.95rem;
         padding: 6px;
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 0.8px;
         margin-bottom: 15px;
         border-radius: 2px;
         color: #ffffff !important;
     }}
     .section-header {{
         text-align: center;
-        font-weight: bold;
-        font-size: 0.95rem;
+        font-weight: {'600' if is_tema_claro else 'bold'};
+        font-size: 0.9rem;
         padding: 6px;
         text-transform: uppercase;
         border-radius: 2px;
@@ -101,10 +103,9 @@ st.markdown(f"""
     }}
     .gauge-footer {{
         text-align: center;
-        font-size: 1.05rem;
-        font-weight: 800;
+        font-size: 1rem;
+        font-weight: {'600' if is_tema_claro else '800'};
         margin-top: -5px;
-        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.10);
     }}
     div[data-testid="stDataFrame"] {{
         max-width: 85% !important;
@@ -112,8 +113,8 @@ st.markdown(f"""
         margin-right: auto !important;
     }}
     .stDataFrame td, .stDataFrame th {{
-        font-size: 0.9rem !important;
-        font-weight: 700 !important;
+        font-size: 0.88rem !important;
+        font-weight: {'500' if is_tema_claro else '700'} !important;
         padding: 4px 6px !important;
         text-align: center !important;
     }}
@@ -121,8 +122,9 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
-# Cores dinâmicas para títulos de gráficos conforme o tema
-cor_texto_grafico = "#ffffff" if tema_selecionado in ["Escuro", "Black (Preto Absoluto)"] else "#111827"
+# Configuração de fontes dinâmicas e pesos para gráficos conforme o tema
+cor_texto_grafico = "#ffffff" if not is_tema_claro else "#334155"
+familia_fonte_grafico = "Arial" if is_tema_claro else "Arial Black"
 
 # ==========================================
 # MAPEAMENTO DOS COMPRADORES POR CENTRO DE CUSTO
@@ -142,7 +144,6 @@ ARQUIVO_MEMORIA = "base_ativa_painel.xlsx"
 ARQUIVO_HISTORICO = "historico_volumetria.json"
 df = None
 
-# Carrega histórico anterior (mantendo até 15 dias de registros)
 historico = {}
 if os.path.exists(ARQUIVO_HISTORICO):
     try:
@@ -282,13 +283,13 @@ if df is not None:
         def criar_gauge(titulo, valor, max_val, cor_barra, sufixo="", altura=130, title_size=10):
             fig = go.Figure(go.Indicator(
                 mode = "gauge+number", value = valor,
-                number = {'suffix': sufixo, 'font': {'size': 20, 'color': cor_texto_grafico, 'family': 'Arial Black'}},
-                title = {'text': titulo, 'font': {'size': title_size, 'color': cor_texto_grafico, 'family': 'Arial Black'}},
+                number = {'suffix': sufixo, 'font': {'size': 20, 'color': cor_texto_grafico, 'family': familia_fonte_grafico}},
+                title = {'text': titulo, 'font': {'size': title_size, 'color': cor_texto_grafico, 'family': familia_fonte_grafico}},
                 gauge = {
-                    'axis': {'range': [None, max_val], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 9, 'color': cor_texto_grafico, 'family': 'Arial Black'}},
+                    'axis': {'range': [None, max_val], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 9, 'color': cor_texto_grafico, 'family': familia_fonte_grafico}},
                     'bar': {'color': cor_barra}, 'bgcolor': "rgba(0,0,0,0)", 'borderwidth': 0,
-                    'steps': [{'range': [0, max_val * 0.6], 'color': '#2a3b4c' if tema_selecionado != 'Claro' else '#f1f5f9'}, 
-                              {'range': [max_val * 0.6, max_val], 'color': '#1f2937' if tema_selecionado != 'Claro' else '#e2e8f0'}],
+                    'steps': [{'range': [0, max_val * 0.6], 'color': '#2a3b4c' if not is_tema_claro else '#f1f5f9'}, 
+                              {'range': [max_val * 0.6, max_val], 'color': '#1f2937' if not is_tema_claro else '#e2e8f0'}],
                 }
             ))
             fig.update_layout(height=altura, margin=dict(l=10, r=10, t=40, b=5), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
@@ -299,12 +300,12 @@ if df is not None:
         with row1_c1:
             st.markdown(f"""
             <div style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 6px; text-align: center; height: 150px; display: flex; flex-direction: column; justify-content: center;">
-                <div style="font-size: 0.95rem; font-family: 'Arial Black'; margin-bottom: 2px;">VOLUMETRIA EM ABERTO</div>
-                <div style="font-size: 1.95rem; font-weight: bold; color: #4dabf7; line-height: 1.1;">{total_sc_unicas_aberto}</div>
-                <div style="font-size: 0.85rem; font-weight: bold;">Solicitações (SCs)</div>
+                <div style="font-size: 0.95rem; font-weight: {'600' if is_tema_claro else 'bold'}; margin-bottom: 2px;">VOLUMETRIA EM ABERTO</div>
+                <div style="font-size: 1.95rem; font-weight: bold; color: #2563eb; line-height: 1.1;">{total_sc_unicas_aberto}</div>
+                <div style="font-size: 0.85rem; font-weight: {'500' if is_tema_claro else 'bold'};">Solicitações (SCs)</div>
                 <div style="border-top: 1px dashed #cbd5e1; margin: 2px 0;"></div>
-                <div style="font-size: 1.95rem; font-weight: bold; color: #ffa94d; line-height: 1.1;">{total_linhas_aberto}</div>
-                <div style="font-size: 0.85rem; font-weight: bold;">Total de Itens</div>
+                <div style="font-size: 1.95rem; font-weight: bold; color: #d97706; line-height: 1.1;">{total_linhas_aberto}</div>
+                <div style="font-size: 0.85rem; font-weight: {'500' if is_tema_claro else 'bold'};">Total de Itens</div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -314,17 +315,17 @@ if df is not None:
                 perc = (valor / max_val * 100) if max_val > 0 else 0
                 st.markdown(f"<div class='gauge-footer' style='color: {cor};'>{perc:.1f}%</div>", unsafe_allow_html=True)
 
-        render_gauge(row1_c2, "NO PRAZO", qtd_no_prazo, total_linhas_aberto, "#388e3c")
-        render_gauge(row1_c3, "ATENÇÃO", qtd_atencao, total_linhas_aberto, "#d97706")
-        render_gauge(row1_c4, "FORA DO PRAZO", qtd_fora, total_linhas_aberto, "#e53e3e")
+        render_gauge(row1_c2, "NO PRAZO", qtd_no_prazo, total_linhas_aberto, "#22c55e" if is_tema_claro else "#388e3c")
+        render_gauge(row1_c3, "ATENÇÃO", qtd_atencao, total_linhas_aberto, "#f59e0b" if is_tema_claro else "#d97706")
+        render_gauge(row1_c4, "FORA DO PRAZO", qtd_fora, total_linhas_aberto, "#ef4444" if is_tema_claro else "#e53e3e")
 
         with row1_div:
             st.markdown(f"""
-            <div style="border-left: 2px solid {'#333333' if tema_selecionado != 'Claro' else '#cbd5e1'}; height: 140px; margin: auto; margin-top: 5px;"></div>
+            <div style="border-left: 2px solid {'#cbd5e1' if is_tema_claro else '#333333'}; height: 140px; margin: auto; margin-top: 5px;"></div>
             """, unsafe_allow_html=True)
 
-        render_gauge(row1_c5, "ROTINEIRA", qtd_rot, total_linhas_aberto, "#2b6cb0")
-        render_gauge(row1_c6, "EMERGENCIAL", qtd_emg, total_linhas_aberto, "#805ad5")
+        render_gauge(row1_c5, "ROTINEIRA", qtd_rot, total_linhas_aberto, "#3b82f6" if is_tema_claro else "#2b6cb0")
+        render_gauge(row1_c6, "EMERGENCIAL", qtd_emg, total_linhas_aberto, "#8b5cf6" if is_tema_claro else "#805ad5")
 
         st.markdown("<br>", unsafe_allow_html=True)
 
@@ -339,17 +340,17 @@ if df is not None:
             cc_volume = df_aberto.groupby('CC_clean').size().reset_index(name='Quantidade').sort_values(by='Quantidade', ascending=False).head(10)
             cc_volume['CC_clean'] = cc_volume['CC_clean'].astype(str)
             
-            cores_barras = ['#3273a8'] + ['#ed8034'] * (len(cc_volume) - 1)
+            cores_barras = ['#2563eb'] + ['#f97316'] * (len(cc_volume) - 1)
             fig_cc_it = go.Figure(go.Bar(
                 x=cc_volume.sort_values(by='Quantidade', ascending=True)['Quantidade'],
                 y=cc_volume.sort_values(by='Quantidade', ascending=True)['CC_clean'],
                 orientation='h', text=cc_volume.sort_values(by='Quantidade', ascending=True)['Quantidade'],
-                textposition='outside', textfont=dict(size=11, color=cor_texto_grafico, family='Arial Black'), marker_color=cores_barras[::-1]
+                textposition='outside', textfont=dict(size=11, color=cor_texto_grafico, family=familia_fonte_grafico), marker_color=cores_barras[::-1]
             ))
             fig_cc_it.update_layout(
                 xaxis_title="Qtd. Itens", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
                 font=dict(color=cor_texto_grafico),
-                margin=dict(l=5, r=10, t=10, b=10), height=320, xaxis=dict(showgrid=True, gridcolor='#333333' if tema_selecionado != 'Claro' else '#e2e8f0'), yaxis=dict(type='category', tickfont=dict(family='Arial Black', size=10, color=cor_texto_grafico))
+                margin=dict(l=5, r=10, t=10, b=10), height=320, xaxis=dict(showgrid=True, gridcolor='#e2e8f0' if is_tema_claro else '#333333'), yaxis=dict(type='category', tickfont=dict(family=familia_fonte_grafico, size=10, color=cor_texto_grafico))
             )
             st.plotly_chart(fig_cc_it, use_container_width=True, config={'displayModeBar': False})
 
@@ -358,17 +359,17 @@ if df is not None:
             cc_scs = unique_scs_aberto.groupby('CC_clean')[col_sc].nunique().reset_index(name='Qtd_SCs').sort_values(by='Qtd_SCs', ascending=False).head(10)
             cc_scs['CC_clean'] = cc_scs['CC_clean'].astype(str)
             
-            cores_barras_sc = ['#2b6cb0'] + ['#319795'] * (len(cc_scs) - 1)
+            cores_barras_sc = ['#3b82f6'] + ['#0d9488'] * (len(cc_scs) - 1)
             fig_cc_sc = go.Figure(go.Bar(
                 x=cc_scs.sort_values(by='Qtd_SCs', ascending=True)['Qtd_SCs'],
                 y=cc_scs.sort_values(by='Qtd_SCs', ascending=True)['CC_clean'],
                 orientation='h', text=cc_scs.sort_values(by='Qtd_SCs', ascending=True)['Qtd_SCs'],
-                textposition='outside', textfont=dict(size=11, color=cor_texto_grafico, family='Arial Black'), marker_color=cores_barras_sc[::-1]
+                textposition='outside', textfont=dict(size=11, color=cor_texto_grafico, family=familia_fonte_grafico), marker_color=cores_barras_sc[::-1]
             ))
             fig_cc_sc.update_layout(
                 xaxis_title="Qtd. Requisições (SCs)", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
                 font=dict(color=cor_texto_grafico),
-                margin=dict(l=5, r=10, t=10, b=10), height=320, xaxis=dict(showgrid=True, gridcolor='#333333' if tema_selecionado != 'Claro' else '#e2e8f0'), yaxis=dict(type='category', tickfont=dict(family='Arial Black', size=10, color=cor_texto_grafico))
+                margin=dict(l=5, r=10, t=10, b=10), height=320, xaxis=dict(showgrid=True, gridcolor='#e2e8f0' if is_tema_claro else '#333333'), yaxis=dict(type='category', tickfont=dict(family=familia_fonte_grafico, size=10, color=cor_texto_grafico))
             )
             st.plotly_chart(fig_cc_sc, use_container_width=True, config={'displayModeBar': False})
 
@@ -404,17 +405,17 @@ if df is not None:
             cc_direta['CC_clean'] = cc_direta['CC_clean'].astype(str)
 
             if not cc_direta.empty:
-                cores_direta = ['#2b6cb0'] + ['#319795'] * (len(cc_direta) - 1)
+                cores_direta = ['#3b82f6'] + ['#0d9488'] * (len(cc_direta) - 1)
                 fig_direta = go.Figure(go.Bar(
                     x=cc_direta.sort_values(by='Qtd_SCs', ascending=True)['Qtd_SCs'],
                     y=cc_direta.sort_values(by='Qtd_SCs', ascending=True)['CC_clean'],
                     orientation='h', text=cc_direta.sort_values(by='Qtd_SCs', ascending=True)['Qtd_SCs'],
-                    textposition='outside', textfont=dict(size=11, color=cor_texto_grafico, family='Arial Black'), marker_color=cores_direta[::-1]
+                    textposition='outside', textfont=dict(size=11, color=cor_texto_grafico, family=familia_fonte_grafico), marker_color=cores_direta[::-1]
                 ))
                 fig_direta.update_layout(
                     xaxis_title="Qtd. Requisições (Compra Direta)", yaxis_title="", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=320,
                     font=dict(color=cor_texto_grafico),
-                    margin=dict(l=5, r=20, t=10, b=10), xaxis=dict(showgrid=True, gridcolor='#333333' if tema_selecionado != 'Claro' else '#e2e8f0'), yaxis=dict(type='category', tickfont=dict(family='Arial Black', color=cor_texto_grafico))
+                    margin=dict(l=5, r=20, t=10, b=10), xaxis=dict(showgrid=True, gridcolor='#e2e8f0' if is_tema_claro else '#333333'), yaxis=dict(type='category', tickfont=dict(family=familia_fonte_grafico, color=cor_texto_grafico))
                 )
                 st.plotly_chart(fig_direta, use_container_width=True, config={'displayModeBar': False})
             else:
@@ -426,7 +427,7 @@ if df is not None:
                 df_crit_stat = df_aberto[df_aberto[col_criticidade].astype(str).str.upper().isin(['ROTINEIRA', 'EMERGENCIAL'])]
                 if not df_crit_stat.empty:
                     crit_stats = df_crit_stat.groupby([col_criticidade, col_status]).size().reset_index(name='Quantidade')
-                    color_map = {'NO PRAZO': '#388e3c', 'ATENÇÃO': '#d97706', 'FORA DO PRAZO': '#e53e3e'}
+                    color_map = {'NO PRAZO': '#22c55e' if is_tema_claro else '#388e3c', 'ATENÇÃO': '#f59e0b' if is_tema_claro else '#d97706', 'FORA DO PRAZO': '#ef4444' if is_tema_claro else '#e53e3e'}
                     fig_crit_stat = go.Figure()
                     for status_val in ['NO PRAZO', 'ATENÇÃO', 'FORA DO PRAZO']:
                         df_sub = crit_stats[crit_stats[col_status].str.upper() == status_val]
@@ -435,13 +436,13 @@ if df is not None:
                                 x=df_sub[col_criticidade], y=df_sub['Quantidade'], name=status_val.title(),
                                 marker_color=color_map.get(status_val, '#718096'),
                                 text=df_sub['Quantidade'], textposition='auto', 
-                                textfont=dict(size=12, color=cor_texto_grafico, family='Arial Black')
+                                textfont=dict(size=12, color=cor_texto_grafico, family=familia_fonte_grafico)
                             ))
                     fig_crit_stat.update_layout(
                         barmode='group', xaxis_title="", yaxis_title="Qtd. ITENS EM ABERTO", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=320,
                         font=dict(color=cor_texto_grafico),
-                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(family='Arial Black', color=cor_texto_grafico)),
-                        xaxis=dict(showgrid=False, tickfont=dict(size=12, family='Arial Black', color=cor_texto_grafico)), yaxis=dict(showgrid=True, gridcolor='#333333' if tema_selecionado != 'Claro' else '#e2e8f0')
+                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(family=familia_fonte_grafico, color=cor_texto_grafico)),
+                        xaxis=dict(showgrid=False, tickfont=dict(size=12, family=familia_fonte_grafico, color=cor_texto_grafico)), yaxis=dict(showgrid=True, gridcolor='#e2e8f0' if is_tema_claro else '#333333')
                     )
                     st.plotly_chart(fig_crit_stat, use_container_width=True, config={'displayModeBar': False})
 
@@ -455,12 +456,12 @@ if df is not None:
         compradores = ['Ednilson', 'Dayana', 'Luiz']
         colunas_st = [row4_c1, row4_c2, row4_c3]
         
-        color_status_map = {'No Prazo': '#388e3c', 'Atenção': '#d97706', 'Fora do Prazo': '#e53e3e'}
+        color_status_map = {'No Prazo': '#22c55e' if is_tema_claro else '#388e3c', 'Atenção': '#f59e0b' if is_tema_claro else '#d97706', 'Fora do Prazo': '#ef4444' if is_tema_claro else '#e53e3e'}
         ordem_status_aberto = ['Fora do Prazo', 'Atenção', 'No Prazo']
         
         for comp, col_st in zip(compradores, colunas_st):
             with col_st:
-                st.markdown(f'<div style="text-align: center; font-weight: bold; font-size: 1.15rem; margin-bottom: 2px;">👤 {comp}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div style="text-align: center; font-weight: {'600' if is_tema_claro else 'bold'}; font-size: 1.1rem; margin-bottom: 2px;">👤 {comp}</div>', unsafe_allow_html=True)
                 
                 df_comp_total = df[df['Comprador_Resp'] == comp].copy()
                 
@@ -482,7 +483,7 @@ if df is not None:
                     sla_emg_val = int(round(df_comp_crit[df_comp_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean(), 0)) if not df_comp_crit.empty and not pd.isna(df_comp_crit[df_comp_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean()) else 0
 
                     # 1. Velocímetro de Rendimento
-                    cor_gauge_comp = '#388e3c' if taxa_rendimento_comp >= 75 else ('#d97706' if taxa_rendimento_comp >= 50 else '#e53e3e')
+                    cor_gauge_comp = '#22c55e' if taxa_rendimento_comp >= 75 else ('#f59e0b' if taxa_rendimento_comp >= 50 else '#ef4444')
                     fig_gauge = criar_gauge("RENDIMENTO (ATENDIDAS / TOTAL)", taxa_rendimento_comp, 100, cor_gauge_comp, sufixo="%", altura=120, title_size=11)
                     st.plotly_chart(fig_gauge, use_container_width=True, config={'displayModeBar': False})
 
@@ -506,7 +507,7 @@ if df is not None:
                             orientation='h',
                             text=comp_stats['Texto_Label'],
                             textposition='outside',
-                            textfont=dict(size=11, color=cor_texto_grafico, family='Arial Black'), 
+                            textfont=dict(size=11, color=cor_texto_grafico, family=familia_fonte_grafico), 
                             marker_color=cores
                         ))
                         
@@ -515,47 +516,47 @@ if df is not None:
                             plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=140,
                             font=dict(color=cor_texto_grafico),
                             margin=dict(l=5, r=30, t=0, b=10),
-                            xaxis=dict(showgrid=True, gridcolor='#333333' if tema_selecionado != 'Claro' else '#e2e8f0', range=[0, max(comp_stats['Percentual'].max() * 1.35, 100)], tickfont=dict(size=9, color=cor_texto_grafico)), 
-                            yaxis=dict(type='category', tickfont=dict(family='Arial Black', size=10, color=cor_texto_grafico))
+                            xaxis=dict(showgrid=True, gridcolor='#e2e8f0' if is_tema_claro else '#333333', range=[0, max(comp_stats['Percentual'].max() * 1.35, 100)], tickfont=dict(size=9, color=cor_texto_grafico)), 
+                            yaxis=dict(type='category', tickfont=dict(family=familia_fonte_grafico, size=10, color=cor_texto_grafico))
                         )
                         st.plotly_chart(fig_comp_ind, use_container_width=True, config={'displayModeBar': False})
                     else:
                         st.info(f"Fila limpa! Nenhum item pendente para {comp}.")
                     
                     # 3. Caixa de Itens Atendidos
-                    bg_atendidos = '#1a202c' if tema_selecionado in ["Escuro", "Black (Preto Absoluto)"] else '#f1f5f9'
-                    color_atendidos = '#63b3ed' if tema_selecionado in ["Escuro", "Black (Preto Absoluto)"] else '#2b6cb0'
-                    border_atendidos = '#333333' if tema_selecionado in ["Escuro", "Black (Preto Absoluto)"] else 'transparent'
+                    bg_atendidos = '#f1f5f9' if is_tema_claro else '#1a202c'
+                    color_atendidos = '#2563eb' if is_tema_claro else '#63b3ed'
+                    border_atendidos = 'transparent' if is_tema_claro else '#333333'
                     st.markdown(f"""
-                    <div style='text-align: center; font-size: 0.9rem; font-weight: bold; background-color: {bg_atendidos}; color: {color_atendidos}; padding: 6px; border-radius: 4px; margin-top: 10px; margin-bottom: 0px; border: 1px solid {border_atendidos};'>
+                    <div style='text-align: center; font-size: 0.9rem; font-weight: {'600' if is_tema_claro else 'bold'}; background-color: {bg_atendidos}; color: {color_atendidos}; padding: 6px; border-radius: 4px; margin-top: 10px; margin-bottom: 0px; border: 1px solid {border_atendidos};'>
                         ✅ {qtd_atendidas} de {total_emitidas} Itens Atendidos
                     </div>
                     """, unsafe_allow_html=True)
 
                     # 4. Velocímetros de SLA
-                    cor_rot = "#ff6b6b" if sla_rot_val > 15 else "#339af0"
+                    cor_rot = "#ef4444" if sla_rot_val > 15 else ("#3b82f6" if is_tema_claro else "#339af0")
                     fig_rot = go.Figure(go.Indicator(
                         mode = "gauge+number", value = sla_rot_val,
-                        number = {'font': {'size': 20, 'color': cor_texto_grafico, 'family': 'Arial Black'}},
+                        number = {'font': {'size': 20, 'color': cor_texto_grafico, 'family': familia_fonte_grafico}},
                         gauge = {
-                            'axis': {'range': [0, 30], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 9, 'color': cor_texto_grafico, 'family': 'Arial Black'}},
+                            'axis': {'range': [0, 30], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 9, 'color': cor_texto_grafico, 'family': familia_fonte_grafico}},
                             'bar': {'color': cor_rot}, 'bgcolor': "rgba(0,0,0,0)", 'borderwidth': 0,
-                            'steps': [{'range': [0, 15], 'color': '#2a3b4c' if tema_selecionado != 'Claro' else '#e2e8f0'}, 
-                                      {'range': [15, 30], 'color': '#4a2525' if tema_selecionado != 'Claro' else '#fed7d7'}],
+                            'steps': [{'range': [0, 15], 'color': '#f1f5f9' if is_tema_claro else '#2a3b4c'}, 
+                                      {'range': [15, 30], 'color': '#fee2e2' if is_tema_claro else '#4a2525'}],
                             'threshold': {'line': {'color': 'red', 'width': 4}, 'thickness': 0.75, 'value': 15}
                         }
                     ))
                     fig_rot.update_layout(height=100, margin=dict(l=5, r=5, t=25, b=5), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
 
-                    cor_emg = "#ff6b6b" if sla_emg_val > 3 else "#b197fc"
+                    cor_emg = "#ef4444" if sla_emg_val > 3 else ("#8b5cf6" if is_tema_claro else "#b197fc")
                     fig_emg = go.Figure(go.Indicator(
                         mode = "gauge+number", value = sla_emg_val,
-                        number = {'font': {'size': 20, 'color': cor_texto_grafico, 'family': 'Arial Black'}},
+                        number = {'font': {'size': 20, 'color': cor_texto_grafico, 'family': familia_fonte_grafico}},
                         gauge = {
-                            'axis': {'range': [0, 20], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 10, 'color': cor_texto_grafico, 'family': 'Arial Black'}},
+                            'axis': {'range': [0, 20], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 10, 'color': cor_texto_grafico, 'family': familia_fonte_grafico}},
                             'bar': {'color': cor_emg}, 'bgcolor': "rgba(0,0,0,0)", 'borderwidth': 0,
-                            'steps': [{'range': [0, 3], 'color': '#2a3b4c' if tema_selecionado != 'Claro' else '#e2e8f0'}, 
-                                      {'range': [3, 20], 'color': '#4a2525' if tema_selecionado != 'Claro' else '#fed7d7'}],
+                            'steps': [{'range': [0, 3], 'color': '#f1f5f9' if is_tema_claro else '#2a3b4c'}, 
+                                      {'range': [3, 20], 'color': '#fee2e2' if is_tema_claro else '#4a2525'}],
                             'threshold': {'line': {'color': 'red', 'width': 4}, 'thickness': 0.75, 'value': 3}
                         }
                     ))
@@ -565,50 +566,50 @@ if df is not None:
                     with sub_c1:
                         st.markdown("<div style='margin-top: 30px;'></div>", unsafe_allow_html=True)
                         st.plotly_chart(fig_rot, use_container_width=True, config={'displayModeBar': False})
-                        st.markdown(f"<div style='text-align: center; font-size: 0.8rem; font-weight: bold; color: {cor_texto_grafico}; margin-top: -2px;'>SLA ROTINEIRA</div><div style='text-align: center; font-size: 0.75rem; font-weight: bold; color: #94a3b8; margin-top: 2px;'>Limite: 15 dias</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='text-align: center; font-size: 0.8rem; font-weight: {'600' if is_tema_claro else 'bold'}; color: {cor_texto_grafico}; margin-top: -2px;'>SLA ROTINEIRA</div><div style='text-align: center; font-size: 0.75rem; font-weight: {'500' if is_tema_claro else 'bold'}; color: #64748b; margin-top: 2px;'>Limite: 15 dias</div>", unsafe_allow_html=True)
                     with sub_c2:
                         st.markdown("<div style='margin-top: 30px;'></div>", unsafe_allow_html=True)
                         st.plotly_chart(fig_emg, use_container_width=True, config={'displayModeBar': False})
-                        st.markdown(f"<div style='text-align: center; font-size: 0.8rem; font-weight: bold; color: {cor_texto_grafico}; margin-top: -2px;'>SLA EMERGENCIAL</div><div style='text-align: center; font-size: 0.75rem; font-weight: bold; color: #94a3b8; margin-top: 2px;'>Limite: 3 dias</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='text-align: center; font-size: 0.8rem; font-weight: {'600' if is_tema_claro else 'bold'}; color: {cor_texto_grafico}; margin-top: -2px;'>SLA EMERGENCIAL</div><div style='text-align: center; font-size: 0.75rem; font-weight: {'500' if is_tema_claro else 'bold'}; color: #64748b; margin-top: 2px;'>Limite: 3 dias</div>", unsafe_allow_html=True)
                     
                 else:
                     st.info(f"Sem dados mapeados para {comp}.")
 
         # ==========================================
-        # PASSO 5: CAIXA DE SLA MÉDIO GERAL (CONSOLIDADO) - DUAS CAIXINHAS LADO A LADO SEM O TEXTO DE DIA ANTERIOR
+        # PASSO 5: CAIXA DE SLA MÉDIO GERAL (CONSOLIDADO)
         # ==========================================
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown('<div class="section-header" style="background-color: #111827; border: 1px solid #374151; margin-bottom: 12px;">📊 SLA MÉDIO GERAL CONSOLIDADO</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header" style="background-color: #1e3a8a; border: 1px solid #1e3a8a; margin-bottom: 12px;">📊 SLA MÉDIO GERAL CONSOLIDADO</div>', unsafe_allow_html=True)
 
         col_box1, col_box2 = st.columns(2)
 
-        bg_box = '#111827' if tema_selecionado in ["Escuro", "Black (Preto Absoluto)"] else '#f8fafc'
-        border_box = '#374151' if tema_selecionado in ["Escuro", "Black (Preto Absoluto)"] else '#cbd5e1'
-        color_box_title = '#60a5fa' if tema_selecionado in ["Escuro", "Black (Preto Absoluto)"] else '#1f3b58'
+        bg_box = '#f8fafc' if is_tema_claro else '#111827'
+        border_box = '#cbd5e1' if is_tema_claro else '#374151'
+        color_box_title = '#2563eb' if is_tema_claro else '#60a5fa'
 
         with col_box1:
-            cor_val_rot = "#ff6b6b" if sla_geral_rot > 15 else "#339af0"
+            cor_val_rot = "#ef4444" if sla_geral_rot > 15 else ("#2563eb" if is_tema_claro else "#339af0")
             st.markdown(f"""
             <div style="background-color: {bg_box}; border: 1px solid {border_box}; border-radius: 6px; padding: 15px; text-align: center;">
-                <div style="font-size: 1.0rem; font-family: 'Arial Black'; color: {color_box_title}; margin-bottom: 0px; text-transform: uppercase;">SLA ROTINEIRA MÉDIO</div>
-                <div style="font-size: 0.75rem; font-weight: bold; color: #94a3b8; margin-bottom: 6px;">(Limite: 15 dias)</div>
+                <div style="font-size: 1.0rem; font-weight: {'600' if is_tema_claro else 'bold'}; color: {color_box_title}; margin-bottom: 0px; text-transform: uppercase;">SLA ROTINEIRA MÉDIO</div>
+                <div style="font-size: 0.75rem; font-weight: {'500' if is_tema_claro else 'bold'}; color: #64748b; margin-bottom: 6px;">(Limite: 15 dias)</div>
                 <div style="font-size: 1.8rem; font-weight: bold; color: {cor_val_rot}; line-height: 1.1;">{sla_geral_rot} dias</div>
             </div>
             """, unsafe_allow_html=True)
 
         with col_box2:
-            cor_val_emg = "#ff6b6b" if sla_geral_emg > 3 else "#b197fc"
+            cor_val_emg = "#ef4444" if sla_geral_emg > 3 else ("#8b5cf6" if is_tema_claro else "#b197fc")
             st.markdown(f"""
             <div style="background-color: {bg_box}; border: 1px solid {border_box}; border-radius: 6px; padding: 15px; text-align: center;">
-                <div style="font-size: 1.0rem; font-family: 'Arial Black'; color: {color_box_title}; margin-bottom: 0px; text-transform: uppercase;">SLA EMERGENCIAL MÉDIO</div>
-                <div style="font-size: 0.75rem; font-weight: bold; color: #94a3b8; margin-bottom: 6px;">(Limite: 3 dias)</div>
+                <div style="font-size: 1.0rem; font-weight: {'600' if is_tema_claro else 'bold'}; color: {color_box_title}; margin-bottom: 0px; text-transform: uppercase;">SLA EMERGENCIAL MÉDIO</div>
+                <div style="font-size: 0.75rem; font-weight: {'500' if is_tema_claro else 'bold'}; color: #64748b; margin-bottom: 6px;">(Limite: 3 dias)</div>
                 <div style="font-size: 1.8rem; font-weight: bold; color: {cor_val_emg}; line-height: 1.1;">{sla_geral_emg} dias</div>
             </div>
             """, unsafe_allow_html=True)
 
         st.markdown("""
         <hr style='margin: 15px 0px 8px 0px;'>
-        <div style="font-size: 1.05rem; display: flex; justify-content: space-between; font-weight: 700;">
+        <div style="font-size: 1.05rem; display: flex; justify-content: space-between; font-weight: 600;">
             <span><b>→ Base Salva:</b> O último arquivo enviado fica salvo como base de consulta para toda a equipe.</span>
             <span><b>Metodologia:</b> Limites vigentes: Rotineira (&lt;= 15 dias) | Emergencial (&lt;= 3 dias).</span>
         </div>
