@@ -381,13 +381,14 @@ if df is not None:
             st.dataframe(top_critical, use_container_width=True, height=320, hide_index=True)
 
         # ==========================================
-        # PASSO 3: TOP 10 COMPRA DIRETA & CRITICIDADE VS STATUS
+        # PASSO 3: TOP 10 COMPRA DIRETA & CRITICIDADE VS STATUS (CORRIGIDO)
         # ==========================================
         st.markdown("---")
         row3_c1, row3_c2 = st.columns(2)
 
+        # Identificação robusta da coluna de Tipo de Compra
         col_tipo = None
-        for c in ['Tipo SC', 'Tipo', 'Grupo', 'Subgrupo']:
+        for c in ['Tipo SC', 'Tipo', 'Tipo de Compra', 'Grupo', 'Subgrupo']:
             if c in df.columns:
                 col_tipo = c
                 break
@@ -395,13 +396,17 @@ if df is not None:
         with row3_c1:
             st.markdown('<div class="section-header">TOP 10 COMPRA DIRETA (QTD. REQUISIÇÕES)</div>', unsafe_allow_html=True)
             
-            df_direta = df_aberto.copy()
+            df_direta = df_aberto.drop_duplicates(subset=[col_sc]).copy()
             if col_tipo:
+                # Filtra especificamente onde o tipo contenha "DIRETA"
                 mask_direta = df_direta[col_tipo].astype(str).str.upper().str.contains('DIRETA', na=False)
                 if mask_direta.sum() > 0:
                     df_direta = df_direta[mask_direta]
+            else:
+                # Fallback caso a coluna não exista explicitamente no arquivo
+                df_direta = pd.DataFrame(columns=['CC_clean', col_sc])
             
-            cc_direta = df_direta.drop_duplicates(subset=[col_sc]).groupby('CC_clean')[col_sc].nunique().reset_index(name='Qtd_SCs').sort_values(by='Qtd_SCs', ascending=False).head(10)
+            cc_direta = df_direta.groupby('CC_clean')[col_sc].nunique().reset_index(name='Qtd_SCs').sort_values(by='Qtd_SCs', ascending=False).head(10)
             cc_direta['CC_clean'] = cc_direta['CC_clean'].astype(str)
 
             if not cc_direta.empty:
@@ -419,7 +424,7 @@ if df is not None:
                 )
                 st.plotly_chart(fig_direta, use_container_width=True, config={'displayModeBar': False})
             else:
-                st.info("Nenhum registro de Compra Direta encontrado.")
+                st.info("Nenhum registro de Compra Direta encontrado com os filtros atuais.")
 
         with row3_c2:
             st.markdown('<div class="section-header">CRITICIDADE VS STATUS (QTD. ITENS)</div>', unsafe_allow_html=True)
