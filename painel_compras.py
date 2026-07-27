@@ -108,7 +108,7 @@ st.markdown(f"""
         margin-top: -5px;
     }}
     div[data-testid="stDataFrame"] {{
-        max-width: 75% !important;
+        max-width: 70% !important;
         margin-left: auto !important;
         margin-right: auto !important;
     }}
@@ -399,10 +399,10 @@ if df is not None:
                     st.plotly_chart(fig_crit_stat, use_container_width=True, config={'displayModeBar': False})
 
         # ==========================================
-        # PASSO 3: SEGUNDA LINHA DE GRÁFICOS (COMPRA DIRETA & ITENS CRÍTICOS REDUZIDOS LADO A LADO)
+        # PASSO 3: SEGUNDA LINHA DE GRÁFICOS (COMPRA DIRETA AMPLIADA & ITENS CRÍTICOS REDUZIDOS)
         # ==========================================
         st.markdown("---")
-        row3_c1, row3_c2 = st.columns(2)
+        row3_c1, row3_c2 = st.columns([1.25, 0.75])
 
         with row3_c1:
             st.markdown('<div class="section-header">TOP 10 COMPRA DIRETA (2026)</div>', unsafe_allow_html=True)
