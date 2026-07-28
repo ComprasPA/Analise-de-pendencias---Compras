@@ -127,7 +127,7 @@ cor_texto_grafico = "#ffffff" if not is_tema_claro else "#334155"
 familia_fonte_grafico = "Arial" if is_tema_claro else "Arial Black"
 
 # ==========================================
-# MAPEAMENTO DOS COMPRADORES POR CENTRO DE CUSTO (CC 1244 ATRIBUÍDO AO SILVIO)
+# MAPEAMENTO DOS COMPRADORES POR CENTRO DE CUSTO
 # ==========================================
 MAPA_COMPRADORES = {
     '1225': 'Ednilson', '1235': 'Ednilson', '1241': 'Ednilson', '1236': 'Ednilson',
@@ -192,6 +192,13 @@ if df is not None:
         
         col_dt_emissao = 'Data Solicitação' if 'Data Solicitação' in df.columns else ('Data emissão Solicitação' if 'Data emissão Solicitação' in df.columns else None)
         col_dt_pedido = 'Data Pedido' if 'Data Pedido' in df.columns else ('Data emissão Pedido' if 'Data emissão Pedido' in df.columns else None)
+        
+        # Identificação da coluna de Pedido para contagem
+        col_pedido_num = None
+        for c in ['Pedido', 'Nº Pedido', 'Num. Pedido', 'Nro Pedido', 'Cod Pedido']:
+            if c in df.columns:
+                col_pedido_num = c
+                break
 
         if not col_sc or not col_cc or not col_dt_emissao:
             st.error(f"⚠️ Erro: Coluna de solicitação, centro de custo ou 'Data Solicitação' não encontrada. Colunas disponíveis: {list(df.columns)}")
@@ -488,6 +495,14 @@ if df is not None:
                     qtd_atendidas = len(df_comp_total[df_comp_total['Status_Detalhado'] == 'Atendidas'])
                     taxa_rendimento_comp = (qtd_atendidas / total_emitidas * 100) if total_emitidas > 0 else 0
                     
+                    # Cálculo exclusivo de pedidos gerados preenchidos com números
+                    qtd_pedidos_gerados = 0
+                    if col_pedido_num and col_pedido_num in df_comp_total.columns:
+                        s_ped = df_comp_total[col_pedido_num].dropna().astype(str).str.strip()
+                        # Considera apenas strings que contenham dígitos numéricos e não sejam vazias/nulas
+                        mask_num = s_ped.str.contains(r'\d', regex=True) & (s_ped != '') & (s_ped.str.upper() != 'NAN')
+                        qtd_pedidos_gerados = int(mask_num.sum())
+
                     if col_criticidade:
                         df_comp_crit = df_comp_total[df_comp_total[col_criticidade].astype(str).str.upper().isin(['ROTINEIRA', 'EMERGENCIAL'])]
                     else:
@@ -537,13 +552,14 @@ if df is not None:
                     else:
                         st.info(f"Fila limpa para {comp}.")
                     
-                    # 3. Caixa de Itens Atendidos
+                    # 3. Caixa de Itens Atendidos & Pedidos Gerados numéricos
                     bg_atendidos = '#f1f5f9' if is_tema_claro else '#1a202c'
                     color_atendidos = '#2563eb' if is_tema_claro else '#63b3ed'
                     border_atendidos = 'transparent' if is_tema_claro else '#333333'
                     st.markdown(f"""
                     <div style='text-align: center; font-size: 0.82rem; font-weight: {'600' if is_tema_claro else 'bold'}; background-color: {bg_atendidos}; color: {color_atendidos}; padding: 5px; border-radius: 4px; margin-top: 8px; margin-bottom: 0px; border: 1px solid {border_atendidos};'>
-                        ✅ {qtd_atendidas} de {total_emitidas} Atendidos
+                        ✅ {qtd_atendidas} de {total_emitidas} Atendidos<br>
+                        📦 {qtd_pedidos_gerados} Pedidos Gerados
                     </div>
                     """, unsafe_allow_html=True)
 
