@@ -193,7 +193,6 @@ if df is not None:
         col_dt_emissao = 'Data Solicitação' if 'Data Solicitação' in df.columns else ('Data emissão Solicitação' if 'Data emissão Solicitação' in df.columns else None)
         col_dt_pedido = 'Data Pedido' if 'Data Pedido' in df.columns else ('Data emissão Pedido' if 'Data emissão Pedido' in df.columns else None)
         
-        # Identificação da coluna de Pedido para contagem numérica
         col_pedido_num = None
         for c in ['Pedido', 'Nº Pedido', 'Num. Pedido', 'Nro Pedido', 'Cod Pedido']:
             if c in df.columns:
@@ -251,13 +250,6 @@ if df is not None:
         unique_scs_aberto = df_aberto.drop_duplicates(subset=[col_sc]).copy()
         total_sc_unicas_aberto = int(len(unique_scs_aberto))
         
-        # Contagem total de pedidos gerados numéricos na planilha
-        total_pedidos_gerados_geral = 0
-        if col_pedido_num and col_pedido_num in df.columns:
-            s_ped_geral = df[col_pedido_num].dropna().astype(str).str.strip()
-            mask_num_geral = s_ped_geral.str.contains(r'\d', regex=True) & (s_ped_geral != '') & (s_ped_geral.str.upper() != 'NAN')
-            total_pedidos_gerados_geral = int(mask_num_geral.sum())
-
         # --- CÁLCULO DO SLA MÉDIO GERAL ATUAL ---
         df_geral_crit = df.copy()
         if col_dt_emissao in df_geral_crit.columns:
@@ -285,14 +277,14 @@ if df is not None:
         qtd_emg = crit_counts.get('EMERGENCIAL', 0)
 
         # ==========================================
-        # PASSO 1: QUADRANTE DE VOLUMETRIA E PEDIDOS GERADOS (COM LINHA DIVISÓRIA VERTICAL)
+        # PASSO 1: QUADRANTE DE VOLUMETRIA E VELOCÍMETROS GERAIS (COM LINHA DIVISÓRIA VERTICAL)
         # ==========================================
         st.markdown(f"""
         <div class="header-box">
             <span class="header-title">PANORAMA DE REQUISIÇÕES PENDENTES DE COMPRA (EM ABERTO)</span>
             <span class="header-sub">DADOS CONSOLIDADOS | {hoje.strftime("%d/%m/%Y")}</span>
         </div>
-        <div class="resumo-bar">DIAGNÓSTICO E VALIDAÇÃO ESTRATÉGICA (VOLUMETRIA, PEDIDOS E CRITICIDADE)</div>
+        <div class="resumo-bar">DIAGNÓSTICO E VALIDAÇÃO ESTRATÉGICA (VOLUMETRIA, STATUS E CRITICIDADE)</div>
         """, unsafe_allow_html=True)
 
         def criar_gauge(titulo, valor, max_val, cor_barra, sufixo="", altura=130, title_size=10):
@@ -315,12 +307,12 @@ if df is not None:
         with row1_c1:
             st.markdown(f"""
             <div style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 6px; text-align: center; height: 150px; display: flex; flex-direction: column; justify-content: center;">
-                <div style="font-size: 0.90rem; font-weight: {'600' if is_tema_claro else 'bold'}; margin-bottom: 2px;">VOLUMETRIA & PEDIDOS</div>
-                <div style="font-size: 1.45rem; font-weight: bold; color: #2563eb; line-height: 1.1;">{total_sc_unicas_aberto} SCs | {total_linhas_aberto} Itens</div>
-                <div style="font-size: 0.75rem; font-weight: {'500' if is_tema_claro else 'bold'};">Em Aberto</div>
+                <div style="font-size: 0.95rem; font-weight: {'600' if is_tema_claro else 'bold'}; margin-bottom: 2px;">VOLUMETRIA EM ABERTO</div>
+                <div style="font-size: 1.95rem; font-weight: bold; color: #2563eb; line-height: 1.1;">{total_sc_unicas_aberto}</div>
+                <div style="font-size: 0.85rem; font-weight: {'500' if is_tema_claro else 'bold'};">Solicitações (SCs)</div>
                 <div style="border-top: 1px dashed #cbd5e1; margin: 2px 0;"></div>
-                <div style="font-size: 1.45rem; font-weight: bold; color: #16a34a; line-height: 1.1;">{total_pedidos_gerados_geral}</div>
-                <div style="font-size: 0.75rem; font-weight: {'500' if is_tema_claro else 'bold'};">📦 Pedidos Gerados</div>
+                <div style="font-size: 1.95rem; font-weight: bold; color: #d97706; line-height: 1.1;">{total_linhas_aberto}</div>
+                <div style="font-size: 0.85rem; font-weight: {'500' if is_tema_claro else 'bold'};">Total de Itens</div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -502,7 +494,7 @@ if df is not None:
                     qtd_atendidas = len(df_comp_total[df_comp_total['Status_Detalhado'] == 'Atendidas'])
                     taxa_rendimento_comp = (qtd_atendidas / total_emitidas * 100) if total_emitidas > 0 else 0
                     
-                    # Cálculo exclusivo de pedidos gerados numéricos para o comprador
+                    # Cálculo de pedidos gerados numéricos para abaixo de Atendidos
                     qtd_pedidos_gerados = 0
                     if col_pedido_num and col_pedido_num in df_comp_total.columns:
                         s_ped = df_comp_total[col_pedido_num].dropna().astype(str).str.strip()
@@ -558,7 +550,7 @@ if df is not None:
                     else:
                         st.info(f"Fila limpa para {comp}.")
                     
-                    # 3. Caixa de Itens Atendidos & Pedidos Gerados numéricos exatamente abaixo
+                    # 3. Caixa de Itens Atendidos & Pedidos Gerados numéricos abaixo
                     bg_atendidos = '#f1f5f9' if is_tema_claro else '#1a202c'
                     color_atendidos = '#2563eb' if is_tema_claro else '#63b3ed'
                     border_atendidos = 'transparent' if is_tema_claro else '#333333'
