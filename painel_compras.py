@@ -127,11 +127,12 @@ cor_texto_grafico = "#ffffff" if not is_tema_claro else "#334155"
 familia_fonte_grafico = "Arial" if is_tema_claro else "Arial Black"
 
 # ==========================================
-# MAPEAMENTO DOS COMPRADORES POR CENTRO DE CUSTO
+# MAPEAMENTO DOS COMPRADORES POR CENTRO DE CUSTO (CC 1244 ATRIBUÍDO AO SILVIO)
 # ==========================================
 MAPA_COMPRADORES = {
-    '1225': 'Ednilson', '1235': 'Ednilson', '1244': 'Ednilson', '1241': 'Ednilson', '1236': 'Ednilson',
+    '1225': 'Ednilson', '1235': 'Ednilson', '1241': 'Ednilson', '1236': 'Ednilson',
     '1238': 'Dayana', '1243': 'Dayana', '1217': 'Dayana', '1237': 'Dayana',
+    '1244': 'Silvio',
     '1223': 'Luiz', '1240': 'Luiz', '9001': 'Luiz', '2003': 'Luiz', '2002': 'Luiz', '2001': 'Luiz',
     '3003': 'Luiz', '2010': 'Luiz', '3007': 'Luiz', '3010': 'Luiz', '3000': 'Luiz', '3002': 'Luiz',
     '3006': 'Luiz', '1239': 'Luiz', '3013': 'Luiz', '3024': 'Luiz'
@@ -460,21 +461,21 @@ if df is not None:
             st.dataframe(top_critical, use_container_width=True, height=270, hide_index=True)
 
         # ==========================================
-        # PASSO 4: DESEMPENHO POR COMPRADOR
+        # PASSO 4: DESEMPENHO POR COMPRADOR (EDNILSON, DAYANA, SILVIO, LUIZ)
         # ==========================================
         st.markdown("---")
         st.markdown('<div class="section-header" style="background-color: #2b4c7e;">DESEMPENHO INDIVIDUAL POR COMPRADOR</div>', unsafe_allow_html=True)
         
-        row4_c1, row4_c2, row4_c3 = st.columns(3)
-        compradores = ['Ednilson', 'Dayana', 'Luiz']
-        colunas_st = [row4_c1, row4_c2, row4_c3]
+        row4_c1, row4_c2, row4_c3, row4_c4 = st.columns(4)
+        compradores = ['Ednilson', 'Dayana', 'Silvio', 'Luiz']
+        colunas_st = [row4_c1, row4_c2, row4_c3, row4_c4]
         
         color_status_map = {'No Prazo': '#22c55e' if is_tema_claro else '#388e3c', 'Atenção': '#f59e0b' if is_tema_claro else '#d97706', 'Fora do Prazo': '#ef4444' if is_tema_claro else '#e53e3e'}
         ordem_status_aberto = ['Fora do Prazo', 'Atenção', 'No Prazo']
         
         for comp, col_st in zip(compradores, colunas_st):
             with col_st:
-                st.markdown(f'<div style="text-align: center; font-weight: {'600' if is_tema_claro else 'bold'}; font-size: 1.1rem; margin-bottom: 2px;">👤 {comp}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div style="text-align: center; font-weight: {'600' if is_tema_claro else 'bold'}; font-size: 1.05rem; margin-bottom: 2px;">👤 {comp}</div>', unsafe_allow_html=True)
                 
                 df_comp_total = df[df['Comprador_Resp'] == comp].copy()
                 
@@ -497,7 +498,7 @@ if df is not None:
 
                     # 1. Velocímetro de Rendimento
                     cor_gauge_comp = '#22c55e' if taxa_rendimento_comp >= 75 else ('#f59e0b' if taxa_rendimento_comp >= 50 else '#ef4444')
-                    fig_gauge = criar_gauge("RENDIMENTO (ATENDIDAS / TOTAL)", taxa_rendimento_comp, 100, cor_gauge_comp, sufixo="%", altura=120, title_size=11)
+                    fig_gauge = criar_gauge("RENDIMENTO (ATENDIDAS / TOTAL)", taxa_rendimento_comp, 100, cor_gauge_comp, sufixo="%", altura=110, title_size=10)
                     st.plotly_chart(fig_gauge, use_container_width=True, config={'displayModeBar': False})
 
                     # 2. Gráfico de Barras do Backlog
@@ -520,29 +521,29 @@ if df is not None:
                             orientation='h',
                             text=comp_stats['Texto_Label'],
                             textposition='outside',
-                            textfont=dict(size=11, color=cor_texto_grafico, family=familia_fonte_grafico), 
+                            textfont=dict(size=10, color=cor_texto_grafico, family=familia_fonte_grafico), 
                             marker_color=cores
                         ))
                         
                         fig_comp_ind.update_layout(
-                            xaxis_title="% do Backlog Restante", yaxis_title="",
-                            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=140,
+                            xaxis_title="% Backlog", yaxis_title="",
+                            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", height=130,
                             font=dict(color=cor_texto_grafico),
-                            margin=dict(l=5, r=30, t=0, b=10),
-                            xaxis=dict(showgrid=True, gridcolor='#e2e8f0' if is_tema_claro else '#333333', range=[0, max(comp_stats['Percentual'].max() * 1.35, 100)], tickfont=dict(size=9, color=cor_texto_grafico)), 
-                            yaxis=dict(type='category', tickfont=dict(family=familia_fonte_grafico, size=10, color=cor_texto_grafico))
+                            margin=dict(l=5, r=25, t=0, b=10),
+                            xaxis=dict(showgrid=True, gridcolor='#e2e8f0' if is_tema_claro else '#333333', range=[0, max(comp_stats['Percentual'].max() * 1.35, 100)], tickfont=dict(size=8, color=cor_texto_grafico)), 
+                            yaxis=dict(type='category', tickfont=dict(family=familia_fonte_grafico, size=9, color=cor_texto_grafico))
                         )
                         st.plotly_chart(fig_comp_ind, use_container_width=True, config={'displayModeBar': False})
                     else:
-                        st.info(f"Fila limpa! Nenhum item pendente para {comp}.")
+                        st.info(f"Fila limpa para {comp}.")
                     
                     # 3. Caixa de Itens Atendidos
                     bg_atendidos = '#f1f5f9' if is_tema_claro else '#1a202c'
                     color_atendidos = '#2563eb' if is_tema_claro else '#63b3ed'
                     border_atendidos = 'transparent' if is_tema_claro else '#333333'
                     st.markdown(f"""
-                    <div style='text-align: center; font-size: 0.9rem; font-weight: {'600' if is_tema_claro else 'bold'}; background-color: {bg_atendidos}; color: {color_atendidos}; padding: 6px; border-radius: 4px; margin-top: 10px; margin-bottom: 0px; border: 1px solid {border_atendidos};'>
-                        ✅ {qtd_atendidas} de {total_emitidas} Itens Atendidos
+                    <div style='text-align: center; font-size: 0.82rem; font-weight: {'600' if is_tema_claro else 'bold'}; background-color: {bg_atendidos}; color: {color_atendidos}; padding: 5px; border-radius: 4px; margin-top: 8px; margin-bottom: 0px; border: 1px solid {border_atendidos};'>
+                        ✅ {qtd_atendidas} de {total_emitidas} Atendidos
                     </div>
                     """, unsafe_allow_html=True)
 
@@ -550,43 +551,43 @@ if df is not None:
                     cor_rot = "#ef4444" if sla_rot_val > 15 else ("#3b82f6" if is_tema_claro else "#339af0")
                     fig_rot = go.Figure(go.Indicator(
                         mode = "gauge+number", value = sla_rot_val,
-                        number = {'font': {'size': 20, 'color': cor_texto_grafico, 'family': familia_fonte_grafico}},
+                        number = {'font': {'size': 18, 'color': cor_texto_grafico, 'family': familia_fonte_grafico}},
                         gauge = {
-                            'axis': {'range': [0, 30], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 9, 'color': cor_texto_grafico, 'family': familia_fonte_grafico}},
+                            'axis': {'range': [0, 30], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 8, 'color': cor_texto_grafico, 'family': familia_fonte_grafico}},
                             'bar': {'color': cor_rot}, 'bgcolor': "rgba(0,0,0,0)", 'borderwidth': 0,
                             'steps': [{'range': [0, 15], 'color': '#f1f5f9' if is_tema_claro else '#2a3b4c'}, 
                                       {'range': [15, 30], 'color': '#fee2e2' if is_tema_claro else '#4a2525'}],
-                            'threshold': {'line': {'color': 'red', 'width': 4}, 'thickness': 0.75, 'value': 15}
+                            'threshold': {'line': {'color': 'red', 'width': 3}, 'thickness': 0.75, 'value': 15}
                         }
                     ))
-                    fig_rot.update_layout(height=100, margin=dict(l=5, r=5, t=25, b=5), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+                    fig_rot.update_layout(height=90, margin=dict(l=5, r=5, t=20, b=5), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
 
                     cor_emg = "#ef4444" if sla_emg_val > 3 else ("#8b5cf6" if is_tema_claro else "#b197fc")
                     fig_emg = go.Figure(go.Indicator(
                         mode = "gauge+number", value = sla_emg_val,
-                        number = {'font': {'size': 20, 'color': cor_texto_grafico, 'family': familia_fonte_grafico}},
+                        number = {'font': {'size': 18, 'color': cor_texto_grafico, 'family': familia_fonte_grafico}},
                         gauge = {
-                            'axis': {'range': [0, 20], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 10, 'color': cor_texto_grafico, 'family': familia_fonte_grafico}},
+                            'axis': {'range': [0, 20], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 8, 'color': cor_texto_grafico, 'family': familia_fonte_grafico}},
                             'bar': {'color': cor_emg}, 'bgcolor': "rgba(0,0,0,0)", 'borderwidth': 0,
                             'steps': [{'range': [0, 3], 'color': '#f1f5f9' if is_tema_claro else '#2a3b4c'}, 
                                       {'range': [3, 20], 'color': '#fee2e2' if is_tema_claro else '#4a2525'}],
-                            'threshold': {'line': {'color': 'red', 'width': 4}, 'thickness': 0.75, 'value': 3}
+                            'threshold': {'line': {'color': 'red', 'width': 3}, 'thickness': 0.75, 'value': 3}
                         }
                     ))
-                    fig_emg.update_layout(height=100, margin=dict(l=5, r=5, t=25, b=5), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+                    fig_emg.update_layout(height=90, margin=dict(l=5, r=5, t=20, b=5), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
 
                     sub_c1, sub_c2 = st.columns(2)
                     with sub_c1:
-                        st.markdown("<div style='margin-top: 30px;'></div>", unsafe_allow_html=True)
+                        st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
                         st.plotly_chart(fig_rot, use_container_width=True, config={'displayModeBar': False})
-                        st.markdown(f"<div style='text-align: center; font-size: 0.8rem; font-weight: {'600' if is_tema_claro else 'bold'}; color: {cor_texto_grafico}; margin-top: -2px;'>SLA ROTINEIRA</div><div style='text-align: center; font-size: 0.75rem; font-weight: {'500' if is_tema_claro else 'bold'}; color: #64748b; margin-top: 2px;'>Limite: 15 dias</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='text-align: center; font-size: 0.75rem; font-weight: {'600' if is_tema_claro else 'bold'}; color: {cor_texto_grafico}; margin-top: -2px;'>SLA ROT.</div><div style='text-align: center; font-size: 0.68rem; color: #64748b;'>Máx: 15d</div>", unsafe_allow_html=True)
                     with sub_c2:
-                        st.markdown("<div style='margin-top: 30px;'></div>", unsafe_allow_html=True)
+                        st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
                         st.plotly_chart(fig_emg, use_container_width=True, config={'displayModeBar': False})
-                        st.markdown(f"<div style='text-align: center; font-size: 0.8rem; font-weight: {'600' if is_tema_claro else 'bold'}; color: {cor_texto_grafico}; margin-top: -2px;'>SLA EMERGENCIAL</div><div style='text-align: center; font-size: 0.75rem; font-weight: {'500' if is_tema_claro else 'bold'}; color: #64748b; margin-top: 2px;'>Limite: 3 dias</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='text-align: center; font-size: 0.75rem; font-weight: {'600' if is_tema_claro else 'bold'}; color: {cor_texto_grafico}; margin-top: -2px;'>SLA EMG.</div><div style='text-align: center; font-size: 0.68rem; color: #64748b;'>Máx: 3d</div>", unsafe_allow_html=True)
                     
                 else:
-                    st.info(f"Sem dados mapeados para {comp}.")
+                    st.info(f"Sem dados para {comp}.")
 
         # ==========================================
         # PASSO 5: CAIXA DE SLA MÉDIO GERAL (CONSOLIDADO)
