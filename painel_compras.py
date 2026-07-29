@@ -132,10 +132,10 @@ familia_fonte_grafico = "Arial" if is_tema_claro else "Arial Black"
 MAPA_COMPRADORES = {
     '1225': 'Ednilson', '1235': 'Ednilson', '1241': 'Ednilson', '1236': 'Ednilson',
     '1238': 'Dayana', '1243': 'Dayana', '1217': 'Dayana', '1237': 'Dayana',
+    '1244': 'Silvio',
     '1223': 'Luiz', '1240': 'Luiz', '9001': 'Luiz', '2003': 'Luiz', '2002': 'Luiz', '2001': 'Luiz',
     '3003': 'Luiz', '2010': 'Luiz', '3007': 'Luiz', '3010': 'Luiz', '3000': 'Luiz', '3002': 'Luiz',
-    '3006': 'Luiz', '1239': 'Luiz', '3013': 'Luiz', '3024': 'Luiz',
-    '1244': 'Silvio'
+    '3006': 'Luiz', '1239': 'Luiz', '3013': 'Luiz', '3024': 'Luiz'
 }
 
 # ==========================================
@@ -192,6 +192,12 @@ if df is not None:
         
         col_dt_emissao = 'Data Solicitação' if 'Data Solicitação' in df.columns else ('Data emissão Solicitação' if 'Data emissão Solicitação' in df.columns else None)
         col_dt_pedido = 'Data Pedido' if 'Data Pedido' in df.columns else ('Data emissão Pedido' if 'Data emissão Pedido' in df.columns else None)
+        
+        col_pedido_num = None
+        for c in ['Pedido', 'Nº Pedido', 'Num. Pedido', 'Nro Pedido', 'Cod Pedido']:
+            if c in df.columns:
+                col_pedido_num = c
+                break
 
         if not col_sc or not col_cc or not col_dt_emissao:
             st.error(f"⚠️ Erro: Coluna de solicitação, centro de custo ou 'Data Solicitação' não encontrada. Colunas disponíveis: {list(df.columns)}")
@@ -461,13 +467,13 @@ if df is not None:
             st.dataframe(top_critical, use_container_width=True, height=270, hide_index=True)
 
         # ==========================================
-        # PASSO 4: DESEMPENHO POR COMPRADOR (EDNILSON, DAYANA, LUIZ, SÍLVIO)
+        # PASSO 4: DESEMPENHO POR COMPRADOR (EDNILSON, DAYANA, SILVIO, LUIZ)
         # ==========================================
         st.markdown("---")
         st.markdown('<div class="section-header" style="background-color: #2b4c7e;">DESEMPENHO INDIVIDUAL POR COMPRADOR</div>', unsafe_allow_html=True)
         
         row4_c1, row4_c2, row4_c3, row4_c4 = st.columns(4)
-        compradores = ['Ednilson', 'Dayana', 'Luiz', 'Sílvio']
+        compradores = ['Ednilson', 'Dayana', 'Silvio', 'Luiz']
         colunas_st = [row4_c1, row4_c2, row4_c3, row4_c4]
         
         color_status_map = {'No Prazo': '#22c55e' if is_tema_claro else '#388e3c', 'Atenção': '#f59e0b' if is_tema_claro else '#d97706', 'Fora do Prazo': '#ef4444' if is_tema_claro else '#e53e3e'}
@@ -488,6 +494,13 @@ if df is not None:
                     qtd_atendidas = len(df_comp_total[df_comp_total['Status_Detalhado'] == 'Atendidas'])
                     taxa_rendimento_comp = (qtd_atendidas / total_emitidas * 100) if total_emitidas > 0 else 0
                     
+                    # Cálculo de pedidos gerados numéricos para abaixo de Atendidos
+                    qtd_pedidos_gerados = 0
+                    if col_pedido_num and col_pedido_num in df_comp_total.columns:
+                        s_ped = df_comp_total[col_pedido_num].dropna().astype(str).str.strip()
+                        mask_num = s_ped.str.contains(r'\d', regex=True) & (s_ped != '') & (s_ped.str.upper() != 'NAN')
+                        qtd_pedidos_gerados = int(mask_num.sum())
+
                     if col_criticidade:
                         df_comp_crit = df_comp_total[df_comp_total[col_criticidade].astype(str).str.upper().isin(['ROTINEIRA', 'EMERGENCIAL'])]
                     else:
@@ -537,13 +550,14 @@ if df is not None:
                     else:
                         st.info(f"Fila limpa para {comp}.")
                     
-                    # 3. Caixa de Itens Atendidos original
+                    # 3. Caixa de Itens Atendidos & Pedidos Gerados numéricos abaixo
                     bg_atendidos = '#f1f5f9' if is_tema_claro else '#1a202c'
                     color_atendidos = '#2563eb' if is_tema_claro else '#63b3ed'
                     border_atendidos = 'transparent' if is_tema_claro else '#333333'
                     st.markdown(f"""
-                    <div style='text-align: center; font-size: 0.9rem; font-weight: {'600' if is_tema_claro else 'bold'}; background-color: {bg_atendidos}; color: {color_atendidos}; padding: 6px; border-radius: 4px; margin-top: 10px; margin-bottom: 0px; border: 1px solid {border_atendidos};'>
-                        ✅ {qtd_atendidas} de {total_emitidas} Itens Atendidos
+                    <div style='text-align: center; font-size: 0.82rem; font-weight: {'600' if is_tema_claro else 'bold'}; background-color: {bg_atendidos}; color: {color_atendidos}; padding: 6px; border-radius: 4px; margin-top: 8px; margin-bottom: 0px; border: 1px solid {border_atendidos};'>
+                        ✅ {qtd_atendidas} de {total_emitidas} Atendidos<br>
+                        📦 {qtd_pedidos_gerados} Pedidos Gerados
                     </div>
                     """, unsafe_allow_html=True)
 
