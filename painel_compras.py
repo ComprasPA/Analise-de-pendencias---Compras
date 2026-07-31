@@ -166,6 +166,12 @@ if df is not None:
         
         col_dt_emissao = 'Data Solicitação' if 'Data Solicitação' in df.columns else ('Data emissão Solicitação' if 'Data emissão Solicitação' in df.columns else None)
         col_dt_pedido = 'Data Pedido' if 'Data Pedido' in df.columns else ('Data emissão Pedido' if 'Data emissão Pedido' in df.columns else None)
+        
+        col_pedido_num = None
+        for c in ['Pedido', 'Nº Pedido', 'Num. Pedido', 'Nro Pedido', 'Cod Pedido']:
+            if c in df.columns:
+                col_pedido_num = c
+                break
 
         if not col_sc or not col_cc or not col_dt_emissao:
             st.error(f"⚠️ Erro: Coluna de solicitação, centro de custo ou 'Data Solicitação' não encontrada. Colunas disponíveis: {list(df.columns)}")
@@ -245,7 +251,7 @@ if df is not None:
         qtd_emg = crit_counts.get('EMERGENCIAL', 0)
 
         # ==========================================
-        # PASSO 1: QUADRANTE DE VOLUMETRIA E VELOCÍMETROS (ORDEM: ROTINEIRA, EMERGENCIAL, NO PRAZO, ATENÇÃO, FORA DO PRAZO)
+        # PASSO 1: QUADRANTE DE VOLUMETRIA E VELOCÍMETROS
         # ==========================================
         st.markdown(f"""
         <div class="header-box">
@@ -258,7 +264,11 @@ if df is not None:
         def criar_gauge(titulo, valor, max_val, cor_barra, sufixo="", altura=130, title_size=10):
             fig = go.Figure(go.Indicator(
                 mode = "gauge+number", value = valor,
-                number = {'suffix': sufixo, 'font': {'size': 20, 'color': cor_texto_grafico, 'family': familia_fonte_grafico}},
+                number = {
+                    'suffix': sufixo, 
+                    'font': {'size': 20, 'color': cor_texto_grafico, 'family': familia_fonte_grafico},
+                    'xposition': 'center'
+                },
                 title = {'text': titulo, 'font': {'size': title_size, 'color': cor_texto_grafico, 'family': familia_fonte_grafico}},
                 gauge = {
                     'axis': {'range': [None, max_val], 'tickwidth': 1, 'tickcolor': "#475569", 'tickfont': {'size': 9, 'color': cor_texto_grafico, 'family': familia_fonte_grafico}},
@@ -267,7 +277,12 @@ if df is not None:
                               {'range': [max_val * 0.6, max_val], 'color': '#1f2937' if not is_tema_claro else '#e2e8f0'}],
                 }
             ))
-            fig.update_layout(height=altura, margin=dict(l=10, r=10, t=40, b=5), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+            fig.update_layout(
+                height=altura, 
+                margin=dict(l=20, r=20, t=40, b=5), 
+                paper_bgcolor='rgba(0,0,0,0)', 
+                plot_bgcolor='rgba(0,0,0,0)'
+            )
             return fig
 
         row1_c1, row1_c2, row1_c3, row1_div, row1_c4, row1_c5, row1_c6 = st.columns([1.5, 1, 1, 0.2, 1, 1, 1])
@@ -290,7 +305,6 @@ if df is not None:
                 perc = (valor / max_val * 100) if max_val > 0 else 0
                 st.markdown(f"<div class='gauge-footer' style='color: {cor};'>{perc:.1f}%</div>", unsafe_allow_html=True)
 
-        # Ordem solicitada: Rotineira, Emergencial | No Prazo, Atenção, Fora do Prazo
         render_gauge(row1_c2, "ROTINEIRA", qtd_rot, total_linhas_aberto, "#3b82f6" if is_tema_claro else "#2b6cb0")
         render_gauge(row1_c3, "EMERGENCIAL", qtd_emg, total_linhas_aberto, "#8b5cf6" if is_tema_claro else "#805ad5")
 
@@ -381,7 +395,7 @@ if df is not None:
         row3_c1, row3_c2 = st.columns([1.50, 0.50])
 
         with row3_c1:
-            st.markdown('<div class="section-header">TOP 10 COMPRA DIRETA (2026)</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-header">TOP 10 SOLICITAÇÕES DE COMPRA DIRETA (2026)</div>', unsafe_allow_html=True)
             
             df_geral_completo = df.dropna(subset=[col_sc]).copy()
             df_geral_completo[col_sc] = df_geral_completo[col_sc].astype(str).str.split('.').str[0].str.zfill(6)
@@ -463,6 +477,13 @@ if df is not None:
                     qtd_atendidas = len(df_comp_total[df_comp_total['Status_Detalhado'] == 'Atendidas'])
                     taxa_rendimento_comp = (qtd_atendidas / total_emitidas * 100) if total_emitidas > 0 else 0
                     
+                    # Cálculo exclusivo de pedidos gerados numéricos para o comprador
+                    qtd_pedidos_gerados = 0
+                    if col_pedido_num and col_pedido_num in df_comp_total.columns:
+                        s_ped = df_comp_total[col_pedido_num].dropna().astype(str).str.strip()
+                        mask_num = s_ped.str.contains(r'\d', regex=True) & (s_ped != '') & (s_ped.str.upper() != 'NAN')
+                        qtd_pedidos_gerados = int(mask_num.sum())
+
                     if col_criticidade:
                         df_comp_crit = df_comp_total[df_comp_total[col_criticidade].astype(str).str.upper().isin(['ROTINEIRA', 'EMERGENCIAL'])]
                     else:
@@ -471,7 +492,7 @@ if df is not None:
                     sla_rot_val = int(round(df_comp_crit[df_comp_crit[col_criticidade].astype(str).str.upper() == 'ROTINEIRA']['Days'].mean(), 0)) if not df_comp_crit.empty and not pd.isna(df_comp_crit[df_comp_crit[col_criticidade].astype(str).str.upper() == 'ROTINEIRA']['Days'].mean()) else 0
                     sla_emg_val = int(round(df_comp_crit[df_comp_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean(), 0)) if not df_comp_crit.empty and not pd.isna(df_comp_crit[df_comp_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean()) else 0
 
-                    # 1. Velocímetro de Rendimento
+                    # 1. Velocímetro de Rendimento (Centralizado com margens ajustadas)
                     cor_gauge_comp = '#22c55e' if taxa_rendimento_comp >= 75 else ('#f59e0b' if taxa_rendimento_comp >= 50 else '#ef4444')
                     fig_gauge = criar_gauge("RENDIMENTO (ATENDIDAS / TOTAL)", taxa_rendimento_comp, 100, cor_gauge_comp, sufixo="%", altura=110, title_size=10)
                     st.plotly_chart(fig_gauge, use_container_width=True, config={'displayModeBar': False})
@@ -512,13 +533,14 @@ if df is not None:
                     else:
                         st.info(f"Fila limpa para {comp}.")
                     
-                    # 3. Caixa de Itens Atendidos original
+                    # 3. Caixa de Itens Atendidos & Pedidos Emitidos
                     bg_atendidos = '#f1f5f9' if is_tema_claro else '#1a202c'
                     color_atendidos = '#2563eb' if is_tema_claro else '#63b3ed'
                     border_atendidos = 'transparent' if is_tema_claro else '#333333'
                     st.markdown(f"""
-                    <div style='text-align: center; font-size: 0.9rem; font-weight: {'600' if is_tema_claro else 'bold'}; background-color: {bg_atendidos}; color: {color_atendidos}; padding: 6px; border-radius: 4px; margin-top: 10px; margin-bottom: 0px; border: 1px solid {border_atendidos};'>
-                        ✅ {qtd_atendidas} de {total_emitidas} Itens Atendidos
+                    <div style='text-align: center; font-size: 0.82rem; font-weight: {'600' if is_tema_claro else 'bold'}; background-color: {bg_atendidos}; color: {color_atendidos}; padding: 6px; border-radius: 4px; margin-top: 8px; margin-bottom: 0px; border: 1px solid {border_atendidos};'>
+                        ✅ {qtd_atendidas} de {total_emitidas} Itens Atendidos<br>
+                        📦 {qtd_pedidos_gerados} Pedidos Emitidos
                     </div>
                     """, unsafe_allow_html=True)
 
