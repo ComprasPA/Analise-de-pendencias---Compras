@@ -266,8 +266,7 @@ if df is not None:
                 mode = "gauge+number", value = valor,
                 number = {
                     'suffix': sufixo, 
-                    'font': {'size': 20, 'color': cor_texto_grafico, 'family': familia_fonte_grafico},
-                    'xposition': 'center'
+                    'font': {'size': 20, 'color': cor_texto_grafico, 'family': familia_fonte_grafico}
                 },
                 title = {'text': titulo, 'font': {'size': title_size, 'color': cor_texto_grafico, 'family': familia_fonte_grafico}},
                 gauge = {
@@ -492,7 +491,7 @@ if df is not None:
                     sla_rot_val = int(round(df_comp_crit[df_comp_crit[col_criticidade].astype(str).str.upper() == 'ROTINEIRA']['Days'].mean(), 0)) if not df_comp_crit.empty and not pd.isna(df_comp_crit[df_comp_crit[col_criticidade].astype(str).str.upper() == 'ROTINEIRA']['Days'].mean()) else 0
                     sla_emg_val = int(round(df_comp_crit[df_comp_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean(), 0)) if not df_comp_crit.empty and not pd.isna(df_comp_crit[df_comp_crit[col_criticidade].astype(str).str.upper() == 'EMERGENCIAL']['Days'].mean()) else 0
 
-                    # 1. Velocímetro de Rendimento (Centralizado com margens ajustadas)
+                    # 1. Velocímetro de Rendimento (Centralizado perfeitamente)
                     cor_gauge_comp = '#22c55e' if taxa_rendimento_comp >= 75 else ('#f59e0b' if taxa_rendimento_comp >= 50 else '#ef4444')
                     fig_gauge = criar_gauge("RENDIMENTO (ATENDIDAS / TOTAL)", taxa_rendimento_comp, 100, cor_gauge_comp, sufixo="%", altura=110, title_size=10)
                     st.plotly_chart(fig_gauge, use_container_width=True, config={'displayModeBar': False})
