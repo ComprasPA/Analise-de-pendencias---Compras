@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import datetime
 import plotly.graph_objects as go
+import os
 
 # 1. CONFIGURAÇÃO DA PÁGINA (Wide com barra de rolagem habilitada)
 st.set_page_config(layout="wide", page_title="Panorama Executivo de Suprimentos")
@@ -136,24 +137,36 @@ MAPA_COMPRADORES = {
 }
 
 # ==========================================
-# GERENCIAMENTO DE ESTADO EM MEMÓRIA
+# PERSISTÊNCIA GLOBAL EM ARQUIVO NO SERVIDOR
 # ==========================================
-if "df_dados" not in st.session_state:
-    st.session_state.df_dados = None
+ARQUIVO_GLOBAL = "base_ativa_painel.xlsx"
+df = None
 
+# Se um usuário fez upload de um novo arquivo, salvamos globalmente
 if uploaded_file is not None:
     try:
         if uploaded_file.name.endswith('.csv'):
-            st.session_state.df_dados = pd.read_csv(uploaded_file, sep=None, engine='python', encoding='utf-8')
+            df_temp = pd.read_csv(uploaded_file, sep=None, engine='python', encoding='utf-8')
         else:
             xls = pd.ExcelFile(uploaded_file)
             sheet_name = 'Solicitações' if 'Solicitações' in xls.sheet_names else xls.sheet_names[0]
-            st.session_state.df_dados = pd.read_excel(uploaded_file, sheet_name=sheet_name)
-        st.success("✅ Base carregada com sucesso na memória da sessão!")
+            df_temp = pd.read_excel(uploaded_file, sheet_name=sheet_name)
+        
+        # Salva o arquivo no servidor para acesso de todos os terminais
+        df_temp.to_excel(ARQUIVO_GLOBAL, index=False)
+        df = df_temp
+        st.success("✅ Nova base salva com sucesso no servidor e disponível para todos os terminais!")
     except Exception as e:
-        st.error(f"Erro ao ler o arquivo enviado: {e}")
+        st.error(f"Erro ao processar o arquivo enviado: {e}")
 
-df = st.session_state.df_dados
+# Se nenhum arquivo foi enviado agora, mas já existe base salva no servidor, carregamos ela
+elif os.path.exists(ARQUIVO_GLOBAL):
+    try:
+        xls = pd.ExcelFile(ARQUIVO_GLOBAL)
+        sheet_name = 'Solicitações' if 'Solicitações' in xls.sheet_names else xls.sheet_names[0]
+        df = pd.read_excel(ARQUIVO_GLOBAL, sheet_name=sheet_name)
+    except Exception as e:
+        st.warning(f"⚠️ Erro ao ler a base global salva. Detalhe: {e}")
 
 if df is not None:
     try:
@@ -620,7 +633,7 @@ if df is not None:
         st.markdown("""
         <hr style='margin: 15px 0px 8px 0px;'>
         <div style="font-size: 1.05rem; display: flex; justify-content: space-between; font-weight: 600;">
-            <span><b>→ Base na Sessão:</b> Os dados carregados ficam gravados na memória e não se perdem ao navegar.</span>
+            <span><b>→ Base Global (Servidor):</b> O arquivo salvo permanece disponível e sincronizado para qualquer usuário ou terminal.</span>
             <span><b>Metodologia:</b> Limites vigentes: Rotineira (&lt;= 15 dias) | Emergencial (&lt;= 3 dias).</span>
         </div>
         """, unsafe_allow_html=True)
@@ -628,4 +641,4 @@ if df is not None:
     except Exception as e:
         st.error(f"⚠️ Erro analítico no processamento. Detalhe técnico: {e}")
 else:
-    st.info("💡 Clique em **⚙️ Abrir / Fechar Configurações** no topo para fazer o upload da planilha e carregar o painel.")
+    st.info("💡 Clique em **⚙️ Abrir / Fechar Configurações** no topo para fazer o upload da planilha e carregar o painel para todos os usuários.")
