@@ -2,8 +2,6 @@ import streamlit as st
 import pandas as pd
 import datetime
 import plotly.graph_objects as go
-import os
-import json
 
 # 1. CONFIGURAÇÃO DA PÁGINA (Wide com barra de rolagem habilitada)
 st.set_page_config(layout="wide", page_title="Panorama Executivo de Suprimentos")
@@ -122,7 +120,6 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
-# Configuração de fontes dinâmicas e pesos para gráficos conforme o tema
 cor_texto_grafico = "#ffffff" if not is_tema_claro else "#334155"
 familia_fonte_grafico = "Arial" if is_tema_claro else "Arial Black"
 
@@ -132,54 +129,31 @@ familia_fonte_grafico = "Arial" if is_tema_claro else "Arial Black"
 MAPA_COMPRADORES = {
     '1225': 'Ednilson', '1235': 'Ednilson', '1241': 'Ednilson', '1236': 'Ednilson',
     '1238': 'Dayana', '1243': 'Dayana', '1217': 'Dayana', '1237': 'Dayana',
-    '1244': 'Silvio',
     '1223': 'Luiz', '1240': 'Luiz', '9001': 'Luiz', '2003': 'Luiz', '2002': 'Luiz', '2001': 'Luiz',
     '3003': 'Luiz', '2010': 'Luiz', '3007': 'Luiz', '3010': 'Luiz', '3000': 'Luiz', '3002': 'Luiz',
-    '3006': 'Luiz', '1239': 'Luiz', '3013': 'Luiz', '3024': 'Luiz'
+    '3006': 'Luiz', '1239': 'Luiz', '3013': 'Luiz', '3024': 'Luiz',
+    '1244': 'Sílvio'
 }
 
 # ==========================================
-# PROCESSAMENTO ANALÍTICO DE DADOS (MEMÓRIA GLOBAL)
+# GERENCIAMENTO DE ESTADO EM MEMÓRIA
 # ==========================================
-ARQUIVO_MEMORIA = "base_ativa_painel.xlsx"
-ARQUIVO_HISTORICO = "historico_volumetria.json"
-df = None
-
-historico = {}
-if os.path.exists(ARQUIVO_HISTORICO):
-    try:
-        with open(ARQUIVO_HISTORICO, "r") as f:
-            historico = json.load(f)
-    except:
-        historico = {}
-
-if "serie_historica" not in historico:
-    historico["serie_historica"] = []
+if "df_dados" not in st.session_state:
+    st.session_state.df_dados = None
 
 if uploaded_file is not None:
     try:
         if uploaded_file.name.endswith('.csv'):
-            df_novo = pd.read_csv(uploaded_file, sep=None, engine='python', encoding='utf-8')
+            st.session_state.df_dados = pd.read_csv(uploaded_file, sep=None, engine='python', encoding='utf-8')
         else:
             xls = pd.ExcelFile(uploaded_file)
             sheet_name = 'Solicitações' if 'Solicitações' in xls.sheet_names else xls.sheet_names[0]
-            df_novo = pd.read_excel(uploaded_file, sheet_name=sheet_name)
-        
-        with open(ARQUIVO_MEMORIA, "wb") as f:
-            f.write(uploaded_file.getbuffer())
-        
-        st.success("✅ Base atualizada com sucesso por Silvio Silveira! Esta base agora é a padrão para todos os usuários.")
-        df = df_novo
+            st.session_state.df_dados = pd.read_excel(uploaded_file, sheet_name=sheet_name)
+        st.success("✅ Base carregada com sucesso na memória da sessão!")
     except Exception as e:
         st.error(f"Erro ao ler o arquivo enviado: {e}")
 
-elif os.path.exists(ARQUIVO_MEMORIA):
-    try:
-        xls = pd.ExcelFile(ARQUIVO_MEMORIA)
-        sheet_name = 'Solicitações' if 'Solicitações' in xls.sheet_names else xls.sheet_names[0]
-        df = pd.read_excel(ARQUIVO_MEMORIA, sheet_name=sheet_name)
-    except Exception as e:
-        st.error(f"Erro ao ler a base salva no servidor: {e}")
+df = st.session_state.df_dados
 
 if df is not None:
     try:
@@ -192,12 +166,6 @@ if df is not None:
         
         col_dt_emissao = 'Data Solicitação' if 'Data Solicitação' in df.columns else ('Data emissão Solicitação' if 'Data emissão Solicitação' in df.columns else None)
         col_dt_pedido = 'Data Pedido' if 'Data Pedido' in df.columns else ('Data emissão Pedido' if 'Data emissão Pedido' in df.columns else None)
-        
-        col_pedido_num = None
-        for c in ['Pedido', 'Nº Pedido', 'Num. Pedido', 'Nro Pedido', 'Cod Pedido']:
-            if c in df.columns:
-                col_pedido_num = c
-                break
 
         if not col_sc or not col_cc or not col_dt_emissao:
             st.error(f"⚠️ Erro: Coluna de solicitação, centro de custo ou 'Data Solicitação' não encontrada. Colunas disponíveis: {list(df.columns)}")
@@ -277,14 +245,14 @@ if df is not None:
         qtd_emg = crit_counts.get('EMERGENCIAL', 0)
 
         # ==========================================
-        # PASSO 1: QUADRANTE DE VOLUMETRIA E VELOCÍMETROS GERAIS (COM LINHA DIVISÓRIA VERTICAL)
+        # PASSO 1: QUADRANTE DE VOLUMETRIA E VELOCÍMETROS (ORDEM: ROTINEIRA, EMERGENCIAL, NO PRAZO, ATENÇÃO, FORA DO PRAZO)
         # ==========================================
         st.markdown(f"""
         <div class="header-box">
             <span class="header-title">PANORAMA DE REQUISIÇÕES PENDENTES DE COMPRA (EM ABERTO)</span>
             <span class="header-sub">DADOS CONSOLIDADOS | {hoje.strftime("%d/%m/%Y")}</span>
         </div>
-        <div class="resumo-bar">DIAGNÓSTICO E VALIDAÇÃO ESTRATÉGICA (VOLUMETRIA, STATUS E CRITICIDADE)</div>
+        <div class="resumo-bar">DIAGNÓSTICO E VALIDAÇÃO ESTRATÉGICA (VOLUMETRIA, CRITICIDADE E STATUS)</div>
         """, unsafe_allow_html=True)
 
         def criar_gauge(titulo, valor, max_val, cor_barra, sufixo="", altura=130, title_size=10):
@@ -302,7 +270,7 @@ if df is not None:
             fig.update_layout(height=altura, margin=dict(l=10, r=10, t=40, b=5), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
             return fig
 
-        row1_c1, row1_c2, row1_c3, row1_c4, row1_div, row1_c5, row1_c6 = st.columns([1.5, 1, 1, 1, 0.2, 1, 1])
+        row1_c1, row1_c2, row1_c3, row1_div, row1_c4, row1_c5, row1_c6 = st.columns([1.5, 1, 1, 0.2, 1, 1, 1])
 
         with row1_c1:
             st.markdown(f"""
@@ -322,22 +290,23 @@ if df is not None:
                 perc = (valor / max_val * 100) if max_val > 0 else 0
                 st.markdown(f"<div class='gauge-footer' style='color: {cor};'>{perc:.1f}%</div>", unsafe_allow_html=True)
 
-        render_gauge(row1_c2, "NO PRAZO", qtd_no_prazo, total_linhas_aberto, "#22c55e" if is_tema_claro else "#388e3c")
-        render_gauge(row1_c3, "ATENÇÃO", qtd_atencao, total_linhas_aberto, "#f59e0b" if is_tema_claro else "#d97706")
-        render_gauge(row1_c4, "FORA DO PRAZO", qtd_fora, total_linhas_aberto, "#ef4444" if is_tema_claro else "#e53e3e")
+        # Ordem solicitada: Rotineira, Emergencial | No Prazo, Atenção, Fora do Prazo
+        render_gauge(row1_c2, "ROTINEIRA", qtd_rot, total_linhas_aberto, "#3b82f6" if is_tema_claro else "#2b6cb0")
+        render_gauge(row1_c3, "EMERGENCIAL", qtd_emg, total_linhas_aberto, "#8b5cf6" if is_tema_claro else "#805ad5")
 
         with row1_div:
             st.markdown(f"""
             <div style="border-left: 2px solid {'#cbd5e1' if is_tema_claro else '#333333'}; height: 140px; margin: auto; margin-top: 5px;"></div>
             """, unsafe_allow_html=True)
 
-        render_gauge(row1_c5, "ROTINEIRA", qtd_rot, total_linhas_aberto, "#3b82f6" if is_tema_claro else "#2b6cb0")
-        render_gauge(row1_c6, "EMERGENCIAL", qtd_emg, total_linhas_aberto, "#8b5cf6" if is_tema_claro else "#805ad5")
+        render_gauge(row1_c4, "NO PRAZO", qtd_no_prazo, total_linhas_aberto, "#22c55e" if is_tema_claro else "#388e3c")
+        render_gauge(row1_c5, "ATENÇÃO", qtd_atencao, total_linhas_aberto, "#f59e0b" if is_tema_claro else "#d97706")
+        render_gauge(row1_c6, "FORA DO PRAZO", qtd_fora, total_linhas_aberto, "#ef4444" if is_tema_claro else "#e53e3e")
 
         st.markdown("<br>", unsafe_allow_html=True)
 
         # ==========================================
-        # PASSO 2: PRIMEIRA LINHA DE GRÁFICOS (3 COLUNAS EQUILIBRADAS)
+        # PASSO 2: PRIMEIRA LINHA DE GRÁFICOS
         # ==========================================
         st.markdown("---")
         row2_c1, row2_c2, row2_c3 = st.columns(3)
@@ -467,13 +436,13 @@ if df is not None:
             st.dataframe(top_critical, use_container_width=True, height=270, hide_index=True)
 
         # ==========================================
-        # PASSO 4: DESEMPENHO POR COMPRADOR (EDNILSON, DAYANA, SILVIO, LUIZ)
+        # PASSO 4: DESEMPENHO POR COMPRADOR (EDNILSON, DAYANA, LUIZ, SÍLVIO)
         # ==========================================
         st.markdown("---")
         st.markdown('<div class="section-header" style="background-color: #2b4c7e;">DESEMPENHO INDIVIDUAL POR COMPRADOR</div>', unsafe_allow_html=True)
         
         row4_c1, row4_c2, row4_c3, row4_c4 = st.columns(4)
-        compradores = ['Ednilson', 'Dayana', 'Silvio', 'Luiz']
+        compradores = ['Ednilson', 'Dayana', 'Luiz', 'Sílvio']
         colunas_st = [row4_c1, row4_c2, row4_c3, row4_c4]
         
         color_status_map = {'No Prazo': '#22c55e' if is_tema_claro else '#388e3c', 'Atenção': '#f59e0b' if is_tema_claro else '#d97706', 'Fora do Prazo': '#ef4444' if is_tema_claro else '#e53e3e'}
@@ -494,13 +463,6 @@ if df is not None:
                     qtd_atendidas = len(df_comp_total[df_comp_total['Status_Detalhado'] == 'Atendidas'])
                     taxa_rendimento_comp = (qtd_atendidas / total_emitidas * 100) if total_emitidas > 0 else 0
                     
-                    # Cálculo de pedidos gerados numéricos para abaixo de Atendidos
-                    qtd_pedidos_gerados = 0
-                    if col_pedido_num and col_pedido_num in df_comp_total.columns:
-                        s_ped = df_comp_total[col_pedido_num].dropna().astype(str).str.strip()
-                        mask_num = s_ped.str.contains(r'\d', regex=True) & (s_ped != '') & (s_ped.str.upper() != 'NAN')
-                        qtd_pedidos_gerados = int(mask_num.sum())
-
                     if col_criticidade:
                         df_comp_crit = df_comp_total[df_comp_total[col_criticidade].astype(str).str.upper().isin(['ROTINEIRA', 'EMERGENCIAL'])]
                     else:
@@ -550,14 +512,13 @@ if df is not None:
                     else:
                         st.info(f"Fila limpa para {comp}.")
                     
-                    # 3. Caixa de Itens Atendidos & Pedidos Gerados numéricos abaixo
+                    # 3. Caixa de Itens Atendidos original
                     bg_atendidos = '#f1f5f9' if is_tema_claro else '#1a202c'
                     color_atendidos = '#2563eb' if is_tema_claro else '#63b3ed'
                     border_atendidos = 'transparent' if is_tema_claro else '#333333'
                     st.markdown(f"""
-                    <div style='text-align: center; font-size: 0.82rem; font-weight: {'600' if is_tema_claro else 'bold'}; background-color: {bg_atendidos}; color: {color_atendidos}; padding: 6px; border-radius: 4px; margin-top: 8px; margin-bottom: 0px; border: 1px solid {border_atendidos};'>
-                        ✅ {qtd_atendidas} de {total_emitidas} Atendidos<br>
-                        📦 {qtd_pedidos_gerados} Pedidos Gerados
+                    <div style='text-align: center; font-size: 0.9rem; font-weight: {'600' if is_tema_claro else 'bold'}; background-color: {bg_atendidos}; color: {color_atendidos}; padding: 6px; border-radius: 4px; margin-top: 10px; margin-bottom: 0px; border: 1px solid {border_atendidos};'>
+                        ✅ {qtd_atendidas} de {total_emitidas} Itens Atendidos
                     </div>
                     """, unsafe_allow_html=True)
 
@@ -638,7 +599,7 @@ if df is not None:
         st.markdown("""
         <hr style='margin: 15px 0px 8px 0px;'>
         <div style="font-size: 1.05rem; display: flex; justify-content: space-between; font-weight: 600;">
-            <span><b>→ Base Salva:</b> O último arquivo enviado fica salvo como base de consulta para toda a equipe.</span>
+            <span><b>→ Base na Sessão:</b> Os dados carregados ficam gravados na memória e não se perdem ao navegar.</span>
             <span><b>Metodologia:</b> Limites vigentes: Rotineira (&lt;= 15 dias) | Emergencial (&lt;= 3 dias).</span>
         </div>
         """, unsafe_allow_html=True)
@@ -646,4 +607,4 @@ if df is not None:
     except Exception as e:
         st.error(f"⚠️ Erro analítico no processamento. Detalhe técnico: {e}")
 else:
-    st.info("💡 Clique em **⚙️ Abrir / Fechar Configurações** no topo para atualizar a base de dados.")
+    st.info("💡 Clique em **⚙️ Abrir / Fechar Configurações** no topo para fazer o upload da planilha e carregar o painel.")
