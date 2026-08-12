@@ -55,11 +55,17 @@ elif tema_selecionado == "Claro":
         .resumo-bar, .section-header { background-color: #3b82f6 !important; color: #ffffff !important; }
         p, span, label, div, h1, h2, h3, h4, h5, h6 { color: #334155 !important; }
     """
-else:  # Padrão do Sistema
+else:
   css_tema = """
         .header-box { background-color: #1e3a8a !important; color: #ffffff !important; }
         .resumo-bar, .section-header { background-color: #3b82f6 !important; color: #ffffff !important; }
     """
+
+weight_title = '600' if is_tema_claro else 'bold'
+weight_sub = '400' if is_tema_claro else 'bold'
+weight_resumo = '600' if is_tema_claro else 'bold'
+weight_gauge = '600' if is_tema_claro else '800'
+weight_th = '500' if is_tema_claro else '700'
 
 st.markdown(
     f"""
@@ -83,11 +89,11 @@ st.markdown(
         align-items: center;
         margin-bottom: 10px;
     }}
-    .header-title {{ font-size: 1.8rem; font-weight: {'600' if is_tema_claro else 'bold'}; color: #ffffff !important; }}
-    .header-sub {{ font-size: 1.05rem; font-weight: {'400' if is_tema_claro else 'bold'}; color: #ffffff !important; }}
+    .header-title {{ font-size: 1.8rem; font-weight: {weight_title}; color: #ffffff !important; }}
+    .header-sub {{ font-size: 1.05rem; font-weight: {weight_sub}; color: #ffffff !important; }}
     .resumo-bar {{
         text-align: center;
-        font-weight: {'600' if is_tema_claro else 'bold'};
+        font-weight: {weight_resumo};
         font-size: 0.95rem;
         padding: 6px;
         text-transform: uppercase;
@@ -98,7 +104,7 @@ st.markdown(
     }}
     .section-header {{
         text-align: center;
-        font-weight: {'600' if is_tema_claro else 'bold'};
+        font-weight: {weight_resumo};
         font-size: 0.9rem;
         padding: 6px;
         text-transform: uppercase;
@@ -109,7 +115,7 @@ st.markdown(
     .gauge-footer {{
         text-align: center;
         font-size: 1rem;
-        font-weight: {'600' if is_tema_claro else '800'};
+        font-weight: {weight_gauge};
         margin-top: -5px;
     }}
     div[data-testid="stDataFrame"] {{
@@ -119,7 +125,7 @@ st.markdown(
     }}
     .stDataFrame td, .stDataFrame th {{
         font-size: 0.82rem !important;
-        font-weight: {'500' if is_tema_claro else '700'} !important;
+        font-weight: {weight_th} !important;
         padding: 2px 3px !important;
         text-align: center !important;
     }}
@@ -433,12 +439,12 @@ if df is not None:
       st.markdown(
           f"""
             <div style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 6px; text-align: center; height: 150px; display: flex; flex-direction: column; justify-content: center;">
-                <div style="font-size: 0.95rem; font-weight: {'600' if is_tema_claro else 'bold'}; margin-bottom: 2px;">VOLUMETRIA EM ABERTO</div>
+                <div style="font-size: 0.95rem; font-weight: {weight_resumo}; margin-bottom: 2px;">VOLUMETRIA EM ABERTO</div>
                 <div style="font-size: 1.95rem; font-weight: bold; color: #2563eb; line-height: 1.1;">{total_sc_unicas_aberto}</div>
-                <div style="font-size: 0.85rem; font-weight: {'500' if is_tema_claro else 'bold'};">Solicitações (SCs)</div>
+                <div style="font-size: 0.85rem; font-weight: {weight_th};">Solicitações (SCs)</div>
                 <div style="border-top: 1px dashed #cbd5e1; margin: 2px 0;"></div>
                 <div style="font-size: 1.95rem; font-weight: bold; color: #d97706; line-height: 1.1;">{total_linhas_aberto}</div>
-                <div style="font-size: 0.85rem; font-weight: {'500' if is_tema_claro else 'bold'};">Total de Itens</div>
+                <div style="font-size: 0.85rem; font-weight: {weight_th};">Total de Itens</div>
             </div>
             """,
           unsafe_allow_html=True,
@@ -891,7 +897,7 @@ if df is not None:
     for comp, col_st in zip(compradores, colunas_st):
       with col_st:
         st.markdown(
-            f'<div style="text-align: center; font-weight: {"600" if is_tema_claro else "bold"}; font-size: 1.05rem; margin-bottom: 2px;">👤 {comp}</div>',
+            f'<div style="text-align: center; font-weight: {weight_resumo}; font-size: 1.05rem; margin-bottom: 2px;">👤 {comp}</div>',
             unsafe_allow_html=True,
         )
 
@@ -1088,7 +1094,7 @@ if df is not None:
           border_atendidos = "transparent" if is_tema_claro else "#333333"
           st.markdown(
               f"""
-                    <div style='text-align: center; font-size: 0.82rem; font-weight: {"600" if is_tema_claro else "bold"}; background-color: {bg_atendidos}; color: {color_atendidos}; padding: 6px; border-radius: 4px; margin-top: 8px; margin-bottom: 0px; border: 1px solid {border_atendidos};'>
+                    <div style='text-align: center; font-size: 0.82rem; font-weight: {weight_resumo}; background-color: {bg_atendidos}; color: {color_atendidos}; padding: 6px; border-radius: 4px; margin-top: 8px; margin-bottom: 0px; border: 1px solid {border_atendidos};'>
                         ✅ {qtd_atendidas} de {total_emitidas} Itens Atendidos<br>
                         📦 {qtd_pedidos_gerados} Pedidos Emitidos
                     </div>
@@ -1219,11 +1225,7 @@ if df is not None:
                 key=f"gauge_sla_rot_{comp}",
             )
             st.markdown(
-                f"<div style='text-align: center; font-size: 0.75rem; font-weight:"
-                f" {\"600\" if is_tema_claro else \"bold\"}; color:"
-                f" {cor_texto_grafico}; margin-top: -2px;'>SLA ROT.</div><div"
-                " style='text-align: center; font-size: 0.68rem; color:"
-                " #64748b;'>Máx: 15d</div>",
+                f"<div style='text-align: center; font-size: 0.75rem; font-weight: {weight_resumo}; color: {cor_texto_grafico}; margin-top: -2px;'>SLA ROT.</div><div style='text-align: center; font-size: 0.68rem; color: #64748b;'>Máx: 15d</div>",
                 unsafe_allow_html=True,
             )
           with sub_c2:
@@ -1237,11 +1239,7 @@ if df is not None:
                 key=f"gauge_sla_emg_{comp}",
             )
             st.markdown(
-                f"<div style='text-align: center; font-size: 0.75rem; font-weight:"
-                f" {\"600\" if is_tema_claro else \"bold\"}; color:"
-                f" {cor_texto_grafico}; margin-top: -2px;'>SLA EMG.</div><div"
-                " style='text-align: center; font-size: 0.68rem; color:"
-                " #64748b;'>Máx: 3d</div>",
+                f"<div style='text-align: center; font-size: 0.75rem; font-weight: {weight_resumo}; color: {cor_texto_grafico}; margin-top: -2px;'>SLA EMG.</div><div style='text-align: center; font-size: 0.68rem; color: #64748b;'>Máx: 3d</div>",
                 unsafe_allow_html=True,
             )
 
@@ -1274,8 +1272,8 @@ if df is not None:
       st.markdown(
           f"""
             <div style="background-color: {bg_box}; border: 1px solid {border_box}; border-radius: 6px; padding: 15px; text-align: center;">
-                <div style="font-size: 1.0rem; font-weight: {'600' if is_tema_claro else 'bold'}; color: {color_box_title}; margin-bottom: 0px; text-transform: uppercase;">SLA ROTINEIRA MÉDIO</div>
-                <div style="font-size: 0.75rem; font-weight: {'500' if is_tema_claro else 'bold'}; color: #64748b; margin-bottom: 6px;">(Limite: 15 dias)</div>
+                <div style="font-size: 1.0rem; font-weight: {weight_resumo}; color: {color_box_title}; margin-bottom: 0px; text-transform: uppercase;">SLA ROTINEIRA MÉDIO</div>
+                <div style="font-size: 0.75rem; font-weight: {weight_th}; color: #64748b; margin-bottom: 6px;">(Limite: 15 dias)</div>
                 <div style="font-size: 1.8rem; font-weight: bold; color: {cor_val_rot}; line-height: 1.1;">{sla_geral_rot} dias</div>
             </div>
             """,
@@ -1291,8 +1289,8 @@ if df is not None:
       st.markdown(
           f"""
             <div style="background-color: {bg_box}; border: 1px solid {border_box}; border-radius: 6px; padding: 15px; text-align: center;">
-                <div style="font-size: 1.0rem; font-weight: {'600' if is_tema_claro else 'bold'}; color: {color_box_title}; margin-bottom: 0px; text-transform: uppercase;">SLA EMERGENCIAL MÉDIO</div>
-                <div style="font-size: 0.75rem; font-weight: {'500' if is_tema_claro else 'bold'}; color: #64748b; margin-bottom: 6px;">(Limite: 3 dias)</div>
+                <div style="font-size: 1.0rem; font-weight: {weight_resumo}; color: {color_box_title}; margin-bottom: 0px; text-transform: uppercase;">SLA EMERGENCIAL MÉDIO</div>
+                <div style="font-size: 0.75rem; font-weight: {weight_th}; color: #64748b; margin-bottom: 6px;">(Limite: 3 dias)</div>
                 <div style="font-size: 1.8rem; font-weight: bold; color: {cor_val_emg}; line-height: 1.1;">{sla_geral_emg} dias</div>
             </div>
             """,
