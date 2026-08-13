@@ -8,18 +8,20 @@ import streamlit as st
 # 1. CONFIGURAÇÃO DA PÁGINA (Wide com barra de rolagem habilitada)
 st.set_page_config(layout="wide", page_title="Panorama Executivo de Suprimentos")
 
+# Link público do Google Sheets fornecido
+GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1e7pQ512ge5XMnXxsRODEO7V48KgWo6FpKeITFqBSg1o/export?format=xlsx&gid=0"
+
 # ==========================================
 # PAINEL DE CONFIGURAÇÕES (RETRÁTIL)
 # ==========================================
 with st.expander(
-    "⚙️ Abrir / Fechar Configurações (Upload, Data Base e Tema)", expanded=False
+    "⚙️ Abrir / Fechar Configurações (Sincronização, Data Base e Tema)",
+    expanded=False,
 ):
   col_cfg1, col_cfg2, col_cfg3 = st.columns([2, 1, 1])
   with col_cfg1:
-    uploaded_file = st.file_uploader(
-        "Upload do arquivo de pendências (.xlsx / .csv)",
-        type=["xlsx", "xls", "csv"],
-    )
+    st.info("🔗 Fonte: Google Sheets (Guia: Solicitações)")
+    forcar_atualizacao = st.button("🔄 Sincronizar com Google Sheets Agora")
   with col_cfg2:
     data_base = st.date_input("Data base SLA:", datetime.date.today())
   with col_cfg3:
@@ -30,7 +32,7 @@ with st.expander(
     )
 
 # ==========================================
-# CSS CUSTOMIZADO DINÂMICO & REDUÇÃO DA TABELA
+# CSS CUSTOMIZADO DINÂMICO
 # ==========================================
 is_tema_claro = tema_selecionado in ["Claro", "Padrão do Sistema"]
 
@@ -171,9 +173,8 @@ MAPA_COMPRADORES = {
 }
 
 # ==========================================
-# PERSISTÊNCIA GLOBAL & HISTÓRICO DE ONTEM
+# LEITURA AUTOMATIZADA DO GOOGLE SHEETS & HISTÓRICO
 # ==========================================
-ARQUIVO_GLOBAL = "base_ativa_painel.xlsx"
 ARQUIVO_HISTORICO = "historico_snapshots.json"
 df = None
 
@@ -185,37 +186,25 @@ if os.path.exists(ARQUIVO_HISTORICO):
   except Exception:
     historico = {}
 
-if uploaded_file is not None:
-  try:
-    if uploaded_file.name.endswith(".csv"):
-      df_temp = pd.read_csv(
-          uploaded_file, sep=None, engine="python", encoding="utf-8"
-      )
-    else:
-      xls = pd.ExcelFile(uploaded_file)
-      sheet_name = (
-          "Solicitações" if "Solicitações" in xls.sheet_names else xls.sheet_names[0]
-      )
-      df_temp = pd.read_excel(uploaded_file, sheet_name=sheet_name)
+# Função para carregar os dados diretamente do link do Google Sheets com cache do Streamlit
+@st.cache_data(ttl=300)  # Atualiza a cada 5 minutos automaticamente
+def carregar_dados_gsheets(url):
+  xls = pd.ExcelFile(url)
+  sheet_name = (
+      "Solicitações" if "Solicitações" in xls.sheet_names else xls.sheet_names[0]
+  )
+  return pd.read_excel(url, sheet_name=sheet_name)
 
-    df_temp.to_excel(ARQUIVO_GLOBAL, index=False)
-    df = df_temp
-    st.success(
-        "✅ Nova base salva com sucesso no servidor e disponível para todos os"
-        " terminais!"
-    )
-  except Exception as e:
-    st.error(f"Erro ao processar o arquivo enviado: {e}")
 
-elif os.path.exists(ARQUIVO_GLOBAL):
-  try:
-    xls = pd.ExcelFile(ARQUIVO_GLOBAL)
-    sheet_name = (
-        "Solicitações" if "Solicitações" in xls.sheet_names else xls.sheet_names[0]
-    )
-    df = pd.read_excel(ARQUIVO_GLOBAL, sheet_name=sheet_name)
-  except Exception as e:
-    st.warning(f"⚠️ Erro ao ler a base global salva. Detalhe: {e}")
+try:
+  if forcar_atualizacao:
+    st.cache_data.clear()
+  df = carregar_dados_gsheets(GOOGLE_SHEET_URL)
+except Exception as e:
+  st.error(
+      f"⚠️ Erro ao conectar com o Google Sheets. Verifique se o link está"
+      f" público ('Qualquer pessoa com o link pode ser leitor'). Detalhe: {e}"
+  )
 
 if df is not None:
   try:
@@ -387,7 +376,7 @@ if df is not None:
         f"""
         <div class="header-box">
             <span class="header-title">PANORAMA DE REQUISIÇÕES PENDENTES DE COMPRA (EM ABERTO)</span>
-            <span class="header-sub">DADOS CONSOLIDADOS | {hoje.strftime("%d/%m/%Y")}</span>
+            <span class="header-sub">GOOGLE SHEETS | {hoje.strftime("%d/%m/%Y")}</span>
         </div>
         <div class="resumo-bar">DIAGNÓSTICO E VALIDAÇÃO ESTRATÉGICA (VOLUMETRIA, CRITICIDADE E STATUS)</div>
         """,
@@ -1365,7 +1354,7 @@ if df is not None:
         """
         <hr style='margin: 15px 0px 8px 0px;'>
         <div style="font-size: 1.05rem; display: flex; justify-content: space-between; font-weight: 600;">
-            <span><b>→ Base Global (Servidor):</b> O arquivo salvo permanece disponível e sincronizado para qualquer usuário ou terminal.</span>
+            <span><b>→ Sincronização Google Sheets:</b> Os dados são carregados diretamente do link público da planilha na guia 'Solicitações'.</span>
             <span><b>Metodologia:</b> Limites vigentes: Rotineira (&lt;= 15 dias) | Emergencial (&lt;= 3 dias).</span>
         </div>
         """,
@@ -1374,8 +1363,3 @@ if df is not None:
 
   except Exception as e:
     st.error(f"⚠️ Erro analítico no processamento. Detalhe técnico: {e}")
-else:
-  st.info(
-      "💡 Clique em **⚙️ Abrir / Fechar Configurações** no topo para fazer o"
-      " upload da planilha e carregar o painel para todos os usuários."
-  )
