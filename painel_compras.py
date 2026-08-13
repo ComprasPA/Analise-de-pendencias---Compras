@@ -1,4 +1,5 @@
 import datetime
+import json
 import os
 import pandas as pd
 import plotly.graph_objects as go
@@ -61,11 +62,11 @@ else:
         .resumo-bar, .section-header { background-color: #3b82f6 !important; color: #ffffff !important; }
     """
 
-weight_title = '600' if is_tema_claro else 'bold'
-weight_sub = '400' if is_tema_claro else 'bold'
-weight_resumo = '600' if is_tema_claro else 'bold'
-weight_gauge = '600' if is_tema_claro else '800'
-weight_th = '500' if is_tema_claro else '700'
+weight_title = "600" if is_tema_claro else "bold"
+weight_sub = "400" if is_tema_claro else "bold"
+weight_resumo = "600" if is_tema_claro else "bold"
+weight_gauge = "600" if is_tema_claro else "800"
+weight_th = "500" if is_tema_claro else "700"
 
 st.markdown(
     f"""
@@ -170,10 +171,20 @@ MAPA_COMPRADORES = {
 }
 
 # ==========================================
-# PERSISTÊNCIA GLOBAL EM ARQUIVO NO SERVIDOR
+# PERSISTÊNCIA GLOBAL & HISTÓRICO DE ONTEM
 # ==========================================
 ARQUIVO_GLOBAL = "base_ativa_painel.xlsx"
+ARQUIVO_HISTORICO = "historico_snapshots.json"
 df = None
+
+# Carrega histórico de snapshots para comparativo
+historico = {}
+if os.path.exists(ARQUIVO_HISTORICO):
+  try:
+    with open(ARQUIVO_HISTORICO, "r", encoding="utf-8") as f:
+      historico = json.load(f)
+  except Exception:
+    historico = {}
 
 if uploaded_file is not None:
   try:
@@ -205,7 +216,7 @@ elif os.path.exists(ARQUIVO_GLOBAL):
     )
     df = pd.read_excel(ARQUIVO_GLOBAL, sheet_name=sheet_name)
   except Exception as e:
-    st.warning(f"⚠️ Erro ao ler a base global salva. Detalhe: {e}")
+    st.warning(f"⚠️ Erro al ler a base global salva. Detalhe: {e}")
 
 if df is not None:
   try:
@@ -249,8 +260,10 @@ if df is not None:
       st.stop()
 
     hoje = pd.to_datetime(data_base)
-    df[col_dt_emissao] = pd.to_datetime(df[col_dt_emissao], errors="coerce")
+    hoje_str = hoje.strftime("%Y-%m-%d")
+    ontem_str = (hoje - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
 
+    df[col_dt_emissao] = pd.to_datetime(df[col_dt_emissao], errors="coerce")
     if col_dt_pedido:
       df[col_dt_pedido] = pd.to_datetime(df[col_dt_pedido], errors="coerce")
 
@@ -311,53 +324,30 @@ if df is not None:
     unique_scs_aberto = df_aberto.drop_duplicates(subset=[col_sc]).copy()
     total_sc_unicas_aberto = int(len(unique_scs_aberto))
 
-    df_geral_crit = df.copy()
-    if col_dt_emissao in df_geral_crit.columns:
-      mask_luiz_antigo = (df_geral_crit["Comprador_Resp"] == "Luiz") & (
-          df_geral_crit[col_dt_emissao] < pd.to_datetime("2026-07-06")
-      )
-      df_geral_crit = df_geral_crit[~mask_luiz_antigo]
+    # Calcula métricas atuais por comprador para salvar snapshot
+    snapshot_atual = {
+        "total_scs_aberto": total_sc_unicas_aberto,
+        "total_linhas_aberto": total_linhas_aberto,
+        "compradores": {},
+    }
 
-    if col_criticidade:
-      df_geral_crit = df_geral_crit[
-          df_geral_crit[col_criticidade]
-          .astype(str)
-          .str.upper()
-          .isin(["ROTINEIRA", "EMERGENCIAL"])
-      ]
+    compradores = ["Ednilson", "Dayana", "Luiz", "Sílvio"]
+    for comp in compradores:
+      df_c = df[df["Comprador_Resp"] == comp]
+      if comp == "Luiz" and col_dt_emissao in df_c.columns:
+        df_c = df_c[df_c[col_dt_emissao] >= pd.to_datetime("2026-07-06")]
+      snapshot_atual["compradores"][comp] = int(len(df_c))
 
-    mean_rot = (
-        df_geral_crit[
-            df_geral_crit[col_criticidade].astype(str).str.upper() == "ROTINEIRA"
-        ]["Days"].mean()
-        if col_criticidade and not df_geral_crit.empty
-        else float("nan")
-    )
-    mean_emg = (
-        df_geral_crit[
-            df_geral_crit[col_criticidade].astype(str).str.upper() == "EMERGENCIAL"
-        ]["Days"].mean()
-        if col_criticidade and not df_geral_crit.empty
-        else float("nan")
-    )
+    # Salva/atualiza o snapshot de hoje no histórico
+    historico[hoje_str] = snapshot_atual
+    try:
+      with open(ARQUIVO_HISTORICO, "w", encoding="utf-8") as f:
+        json.dump(historico, f, ensure_ascii=False, indent=4)
+    except Exception:
+      pass
 
-    sla_geral_rot = int(round(mean_rot, 0)) if not pd.isna(mean_rot) else 0
-    sla_geral_emg = int(round(mean_emg, 0)) if not pd.isna(mean_emg) else 0
-
-    criticos_df = unique_scs_aberto[unique_scs_aberto["Days"] >= 20]
-
-    status_counts = df_aberto["Status_Detalhado"].value_counts()
-    qtd_no_prazo = status_counts.get("No Prazo", 0)
-    qtd_atencao = status_counts.get("Atenção", 0)
-    qtd_fora = status_counts.get("Fora do Prazo", 0)
-
-    crit_counts = (
-        df_aberto[col_criticidade].astype(str).str.upper().value_counts()
-        if col_criticidade
-        else {}
-    )
-    qtd_rot = crit_counts.get("ROTINEIRA", 0)
-    qtd_emg = crit_counts.get("EMERGENCIAL", 0)
+    # Resgata dados de ontem para comparativo
+    dados_ontem = historico.get(ontem_str, None)
 
     # ==========================================
     # PASSO 1: QUADRANTE DE VOLUMETRIA E VELOCÍMETROS
@@ -436,6 +426,20 @@ if df is not None:
     )
 
     with row1_c1:
+      # Texto comparativo com ontem para a Volumetria em Aberto
+      if dados_ontem:
+        delta_scs = total_sc_unicas_aberto - dados_ontem.get(
+            "total_scs_aberto", total_sc_unicas_aberto
+        )
+        delta_itens = total_linhas_aberto - dados_ontem.get(
+            "total_linhas_aberto", total_linhas_aberto
+        )
+        sinal_scs = "+" if delta_scs > 0 else ""
+        sinal_itens = "+" if delta_itens > 0 else ""
+        texto_comparativo = f"Ontem: {dados_ontem.get('total_scs_aberto', '--')} SCs ({sinal_scs}{delta_scs}) | {dados_ontem.get('total_linhas_aberto', '--')} Itens ({sinal_itens}{delta_itens})"
+      else:
+        texto_comparativo = "Comparativo vs Ontem: Sem base anterior"
+
       st.markdown(
           f"""
             <div style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 6px; text-align: center; height: 150px; display: flex; flex-direction: column; justify-content: center;">
@@ -444,7 +448,7 @@ if df is not None:
                 <div style="font-size: 0.85rem; font-weight: {weight_th};">Solicitações (SCs)</div>
                 <div style="border-top: 1px dashed #cbd5e1; margin: 2px 0;"></div>
                 <div style="font-size: 1.95rem; font-weight: bold; color: #d97706; line-height: 1.1;">{total_linhas_aberto}</div>
-                <div style="font-size: 0.85rem; font-weight: {weight_th};">Total de Itens</div>
+                <div style="font-size: 0.80rem; font-weight: {weight_th}; color: #64748b; margin-top: 2px;">{texto_comparativo}</div>
             </div>
             """,
           unsafe_allow_html=True,
@@ -463,6 +467,18 @@ if df is not None:
             f"<div class='gauge-footer' style='color: {cor};'>{perc:.1f}%</div>",
             unsafe_allow_html=True,
         )
+
+    crit_counts = (
+        df_aberto[col_criticidade].astype(str).str.upper().value_counts()
+        if col_criticidade
+        else {}
+    )
+    qtd_rot = crit_counts.get("ROTINEIRA", 0)
+    qtd_emg = crit_counts.get("EMERGENCIAL", 0)
+    status_counts = df_aberto["Status_Detalhado"].value_counts()
+    qtd_no_prazo = status_counts.get("No Prazo", 0)
+    qtd_atencao = status_counts.get("Atenção", 0)
+    qtd_fora = status_counts.get("Fora do Prazo", 0)
 
     render_gauge(
         row1_c2,
@@ -864,6 +880,7 @@ if df is not None:
           '<div class="section-header">ITENS CRÍTICOS</div>',
           unsafe_allow_html=True,
       )
+      criticos_df = unique_scs_aberto[unique_scs_aberto["Days"] >= 20]
       top_critical = criticos_df.sort_values(by="Days", ascending=False)[
           [col_sc, "CC_clean", "Days"]
       ].head(7)
@@ -907,6 +924,23 @@ if df is not None:
           df_comp_total = df_comp_total[
               df_comp_total[col_dt_emissao] >= pd.to_datetime("2026-07-06")
           ]
+
+        total_emitidas_atual = len(df_comp_total)
+
+        # Resgata quantidade de ontem para este comprador
+        qtd_ontem_comp = (
+            dados_ontem.get("compradores", {}).get(comp, None)
+            if dados_ontem
+            else None
+        )
+        if qtd_ontem_comp is not None:
+          delta_comp = total_emitidas_atual - qtd_ontem_comp
+          sinal_comp = "+" if delta_comp > 0 else ""
+          texto_comp_ontem = (
+              f"Ontem: {qtd_ontem_comp} ({sinal_comp}{delta_comp})"
+          )
+        else:
+          texto_comp_ontem = "Ontem: --"
 
         if not df_comp_total.empty and "Status_Detalhado" in df_comp_total.columns:
           total_emitidas = len(df_comp_total)
@@ -1096,7 +1130,8 @@ if df is not None:
               f"""
                     <div style='text-align: center; font-size: 0.82rem; font-weight: {weight_resumo}; background-color: {bg_atendidos}; color: {color_atendidos}; padding: 6px; border-radius: 4px; margin-top: 8px; margin-bottom: 0px; border: 1px solid {border_atendidos};'>
                         ✅ {qtd_atendidas} de {total_emitidas} Itens Atendidos<br>
-                        📦 {qtd_pedidos_gerados} Pedidos Emitidos
+                        📦 {qtd_pedidos_gerados} Pedidos Emitidos<br>
+                        <span style="font-size: 0.72rem; font-weight: 500; color: #64748b;">Tot. Solicitado: {total_emitidas} ({texto_comp_ontem})</span>
                     </div>
                     """,
               unsafe_allow_html=True,
@@ -1306,7 +1341,7 @@ if df is not None:
         </div>
         """,
         unsafe_allow_html=True,
-    )
+      )
 
   except Exception as e:
     st.error(f"⚠️ Erro analítico no processamento. Detalhe técnico: {e}")
