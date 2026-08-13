@@ -177,7 +177,6 @@ ARQUIVO_GLOBAL = "base_ativa_painel.xlsx"
 ARQUIVO_HISTORICO = "historico_snapshots.json"
 df = None
 
-# Carrega histórico de snapshots para comparativo
 historico = {}
 if os.path.exists(ARQUIVO_HISTORICO):
   try:
@@ -216,7 +215,7 @@ elif os.path.exists(ARQUIVO_GLOBAL):
     )
     df = pd.read_excel(ARQUIVO_GLOBAL, sheet_name=sheet_name)
   except Exception as e:
-    st.warning(f"⚠️ Erro al ler a base global salva. Detalhe: {e}")
+    st.warning(f"⚠️ Erro ao ler a base global salva. Detalhe: {e}")
 
 if df is not None:
   try:
@@ -324,7 +323,41 @@ if df is not None:
     unique_scs_aberto = df_aberto.drop_duplicates(subset=[col_sc]).copy()
     total_sc_unicas_aberto = int(len(unique_scs_aberto))
 
-    # Calcula métricas atuais por comprador para salvar snapshot
+    # --- CÁLCULO DO SLA MÉDIO GERAL ---
+    df_geral_crit = df.copy()
+    if col_dt_emissao in df_geral_crit.columns:
+      mask_luiz_antigo = (df_geral_crit["Comprador_Resp"] == "Luiz") & (
+          df_geral_crit[col_dt_emissao] < pd.to_datetime("2026-07-06")
+      )
+      df_geral_crit = df_geral_crit[~mask_luiz_antigo]
+
+    if col_criticidade:
+      df_geral_crit = df_geral_crit[
+          df_geral_crit[col_criticidade]
+          .astype(str)
+          .str.upper()
+          .isin(["ROTINEIRA", "EMERGENCIAL"])
+      ]
+
+    mean_rot = (
+        df_geral_crit[
+            df_geral_crit[col_criticidade].astype(str).str.upper() == "ROTINEIRA"
+        ]["Days"].mean()
+        if col_criticidade and not df_geral_crit.empty
+        else float("nan")
+    )
+    mean_emg = (
+        df_geral_crit[
+            df_geral_crit[col_criticidade].astype(str).str.upper() == "EMERGENCIAL"
+        ]["Days"].mean()
+        if col_criticidade and not df_geral_crit.empty
+        else float("nan")
+    )
+
+    sla_geral_rot = int(round(mean_rot, 0)) if not pd.isna(mean_rot) else 0
+    sla_geral_emg = int(round(mean_emg, 0)) if not pd.isna(mean_emg) else 0
+
+    # Snapshot atual para histórico
     snapshot_atual = {
         "total_scs_aberto": total_sc_unicas_aberto,
         "total_linhas_aberto": total_linhas_aberto,
@@ -338,7 +371,6 @@ if df is not None:
         df_c = df_c[df_c[col_dt_emissao] >= pd.to_datetime("2026-07-06")]
       snapshot_atual["compradores"][comp] = int(len(df_c))
 
-    # Salva/atualiza o snapshot de hoje no histórico
     historico[hoje_str] = snapshot_atual
     try:
       with open(ARQUIVO_HISTORICO, "w", encoding="utf-8") as f:
@@ -346,7 +378,6 @@ if df is not None:
     except Exception:
       pass
 
-    # Resgata dados de ontem para comparativo
     dados_ontem = historico.get(ontem_str, None)
 
     # ==========================================
@@ -426,7 +457,6 @@ if df is not None:
     )
 
     with row1_c1:
-      # Texto comparativo com ontem para a Volumetria em Aberto
       if dados_ontem:
         delta_scs = total_sc_unicas_aberto - dados_ontem.get(
             "total_scs_aberto", total_sc_unicas_aberto
@@ -927,7 +957,6 @@ if df is not None:
 
         total_emitidas_atual = len(df_comp_total)
 
-        # Resgata quantidade de ontem para este comprador
         qtd_ontem_comp = (
             dados_ontem.get("compradores", {}).get(comp, None)
             if dados_ontem
@@ -1341,7 +1370,7 @@ if df is not None:
         </div>
         """,
         unsafe_allow_html=True,
-      )
+    )
 
   except Exception as e:
     st.error(f"⚠️ Erro analítico no processamento. Detalhe técnico: {e}")
