@@ -1,6 +1,8 @@
 import datetime
 import json
 import os
+import io
+import requests
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
@@ -8,8 +10,8 @@ import streamlit as st
 # 1. CONFIGURAÇÃO DA PÁGINA (Wide com barra de rolagem habilitada)
 st.set_page_config(layout="wide", page_title="Panorama Executivo de Suprimentos")
 
-# Link público do Google Sheets fornecido
-GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1e7pQ512ge5XMnXxsRODEO7V48KgWo6FpKeITFqBSg1o/export?format=xlsx&gid=0"
+# URL de exportação direta otimizada para Google Sheets público
+GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1e7pQ512ge5XMnXxsRODEO7V48KgWo6FpKeITFqBSg1o/export?format=xlsx"
 
 # ==========================================
 # PAINEL DE CONFIGURAÇÕES (RETRÁTIL)
@@ -173,7 +175,7 @@ MAPA_COMPRADORES = {
 }
 
 # ==========================================
-# LEITURA AUTOMATIZADA DO GOOGLE SHEETS & HISTÓRICO
+# LEITURA ROBUSTA DO GOOGLE SHEETS & HISTÓRICO
 # ==========================================
 ARQUIVO_HISTORICO = "historico_snapshots.json"
 df = None
@@ -186,14 +188,16 @@ if os.path.exists(ARQUIVO_HISTORICO):
   except Exception:
     historico = {}
 
-# Função para carregar os dados diretamente do link do Google Sheets com cache do Streamlit
-@st.cache_data(ttl=300)  # Atualiza a cada 5 minutos automaticamente
+
+@st.cache_data(ttl=300)
 def carregar_dados_gsheets(url):
-  xls = pd.ExcelFile(url)
+  response = requests.get(url)
+  response.raise_for_status()
+  xls = pd.ExcelFile(io.BytesIO(response.content))
   sheet_name = (
       "Solicitações" if "Solicitações" in xls.sheet_names else xls.sheet_names[0]
   )
-  return pd.read_excel(url, sheet_name=sheet_name)
+  return pd.read_excel(io.BytesIO(response.content), sheet_name=sheet_name)
 
 
 try:
@@ -202,8 +206,8 @@ try:
   df = carregar_dados_gsheets(GOOGLE_SHEET_URL)
 except Exception as e:
   st.error(
-      f"⚠️ Erro ao conectar com o Google Sheets. Verifique se o link está"
-      f" público ('Qualquer pessoa com o link pode ser leitor'). Detalhe: {e}"
+      f"⚠️ Erro ao conectar com o Google Sheets. Verifique se a planilha está"
+      f" configurada como Pública ('Qualquer pessoa com o link'). Detalhe: {e}"
   )
 
 if df is not None:
@@ -1354,7 +1358,7 @@ if df is not None:
         """
         <hr style='margin: 15px 0px 8px 0px;'>
         <div style="font-size: 1.05rem; display: flex; justify-content: space-between; font-weight: 600;">
-            <span><b>→ Sincronização Google Sheets:</b> Os dados são carregados diretamente do link público da planilha na guia 'Solicitações'.</span>
+            <span><b>→ Sincronização Google Sheets:</b> Conectado diretamente à guia 'Solicitações' via link de exportação direta.</span>
             <span><b>Metodologia:</b> Limites vigentes: Rotineira (&lt;= 15 dias) | Emergencial (&lt;= 3 dias).</span>
         </div>
         """,
