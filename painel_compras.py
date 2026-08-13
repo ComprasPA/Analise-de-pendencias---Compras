@@ -1,17 +1,19 @@
 import datetime
+import io
 import json
 import os
-import io
-import requests
 import pandas as pd
 import plotly.graph_objects as go
+import requests
 import streamlit as st
 
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(layout="wide", page_title="Panorama Executivo de Suprimentos")
 
 # URL de exportação direta do Google Sheets
-GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1e7pQ512ge5XMnXxsRODEO7V48KgWo6FpKeITFqBSg1o/export?format=xlsx"
+GOOGLE_SHEET_URL = (
+    "https://docs.google.com/spreadsheets/d/1e7pQ512ge5XMnXxsRODEO7V48KgWo6FpKeITFqBSg1o/export?format=xlsx"
+)
 
 # ==========================================
 # PAINEL DE CONFIGURAÇÕES (RETRÁTIL)
@@ -288,7 +290,7 @@ if df is not None:
     unique_scs_aberto = df_aberto.drop_duplicates(subset=[col_sc]).copy()
     total_sc_unicas_aberto = int(len(unique_scs_aberto))
 
-    # Identificar itens sem pedido (pendentes de compra)
+    # Verificação robusta de itens com/sem pedido (tratando nulos com segurança)
     if col_pedido_num:
       s_ped = df[col_pedido_num].dropna().astype(str).str.strip()
       has_pedido = (
@@ -300,7 +302,9 @@ if df is not None:
     else:
       df["Tem_Pedido"] = False
 
-    sem_pedido_total = int((~df["Tem_Pedido"]).sum())
+    sem_pedido_total = int(
+        (~df["Tem_Pedido"].fillna(False).astype(bool)).sum()
+    )
 
     # --- SALVANDO SNAPSHOT PARA HISTÓRICO ---
     snapshot_atual = {
@@ -315,9 +319,13 @@ if df is not None:
       df_c = df[df["Comprador_Resp"] == comp]
       if comp == "Luiz" and col_dt_emissao in df_c.columns:
         df_c = df_c[df_c[col_dt_emissao] >= pd.to_datetime("2026-07-06")]
-      
-      sem_ped_comp = int((~df_c["Tem_Pedido"]).sum())
-      pedidos_emitidos_comp = int(df_c["Tem_Pedido"].sum())
+
+      sem_ped_comp = int(
+          (~df_c["Tem_Pedido"].fillna(False).astype(bool)).sum()
+      )
+      pedidos_emitidos_comp = int(
+          df_c["Tem_Pedido"].fillna(False).astype(bool).sum()
+      )
       snapshot_atual["compradores"][comp] = {
           "total": int(len(df_c)),
           "sem_pedido": sem_ped_comp,
@@ -912,11 +920,13 @@ if df is not None:
               df_comp_total[col_dt_emissao] >= pd.to_datetime("2026-07-06")
           ]
 
-        total_emitidas_atual = len(df_comp_total)
-        sem_ped_atual = int((~df_comp_total["Tem_Pedido"]).sum())
-        comprados_atual = int(df_comp_total["Tem_Pedido"].sum())
+        sem_ped_atual = int(
+            (~df_comp_total["Tem_Pedido"].fillna(False).astype(bool)).sum()
+        )
+        comprados_atual = int(
+            df_comp_total["Tem_Pedido"].fillna(False).astype(bool).sum()
+        )
 
-        # Recupera dados de ontem para este comprador
         comp_ontem_data = (
             dados_ontem.get("compradores", {}).get(comp, {})
             if dados_ontem
