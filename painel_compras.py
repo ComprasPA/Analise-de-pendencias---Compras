@@ -7,10 +7,10 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-# 1. CONFIGURAÇÃO DA PÁGINA (Wide com barra de rolagem habilitada)
+# 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(layout="wide", page_title="Panorama Executivo de Suprimentos")
 
-# URL de exportação direta otimizada para Google Sheets público
+# URL de exportação direta do Google Sheets
 GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1e7pQ512ge5XMnXxsRODEO7V48KgWo6FpKeITFqBSg1o/export?format=xlsx"
 
 # ==========================================
@@ -143,9 +143,6 @@ st.markdown(
 cor_texto_grafico = "#ffffff" if not is_tema_claro else "#334155"
 familia_fonte_grafico = "Arial" if is_tema_claro else "Arial Black"
 
-# ==========================================
-# MAPEAMENTO DOS COMPRADORES POR CENTRO DE CUSTO
-# ==========================================
 MAPA_COMPRADORES = {
     "1225": "Ednilson",
     "1235": "Ednilson",
@@ -174,9 +171,6 @@ MAPA_COMPRADORES = {
     "1244": "Sílvio",
 }
 
-# ==========================================
-# LEITURA ROBUSTA DO GOOGLE SHEETS & HISTÓRICO
-# ==========================================
 ARQUIVO_HISTORICO = "historico_snapshots.json"
 df = None
 
@@ -205,10 +199,7 @@ try:
     st.cache_data.clear()
   df = carregar_dados_gsheets(GOOGLE_SHEET_URL)
 except Exception as e:
-  st.error(
-      f"⚠️ Erro ao conectar com o Google Sheets. Verifique se a planilha está"
-      f" configurada como Pública ('Qualquer pessoa com o link'). Detalhe: {e}"
-  )
+  st.error(f"⚠️ Erro ao conectar com o Google Sheets: {e}")
 
 if df is not None:
   try:
@@ -222,34 +213,16 @@ if df is not None:
         else ("Cod SC. SCM" if "Cod SC. SCM" in df.columns else None)
     )
     col_cc = "Centro de Custo" if "Centro de Custo" in df.columns else None
-
     col_dt_emissao = (
-        "Data Solicitação"
-        if "Data Solicitação" in df.columns
-        else (
-            "Data emissão Solicitação"
-            if "Data emissão Solicitação" in df.columns
-            else None
-        )
+        "Data Solicitação" if "Data Solicitação" in df.columns else None
     )
-    col_dt_pedido = (
-        "Data Pedido"
-        if "Data Pedido" in df.columns
-        else ("Data emissão Pedido" if "Data emissão Pedido" in df.columns else None)
-    )
+    col_dt_pedido = "Data Pedido" if "Data Pedido" in df.columns else None
 
     col_pedido_num = None
     for c in ["Pedido", "Nº Pedido", "Num. Pedido", "Nro Pedido", "Cod Pedido"]:
       if c in df.columns:
         col_pedido_num = c
         break
-
-    if not col_sc or not col_cc or not col_dt_emissao:
-      st.error(
-          f"⚠️ Erro: Coluna de solicitação, centro de custo ou 'Data Solicitação'"
-          f" não encontrada. Colunas disponíveis: {list(df.columns)}"
-      )
-      st.stop()
 
     hoje = pd.to_datetime(data_base)
     hoje_str = hoje.strftime("%Y-%m-%d")
@@ -287,22 +260,21 @@ if df is not None:
     else:
       df["Status_Detalhado"] = "No Prazo"
 
+
     def calcular_sla(row):
       status = str(row.get(col_status, "")).strip().upper()
       dt_ini = row[col_dt_emissao]
       if pd.isna(dt_ini):
         return 0
-
       if (
           status == "FINALIZADO"
           and col_dt_pedido
           and not pd.isna(row[col_dt_pedido])
       ):
-        dias = (row[col_dt_pedido] - dt_ini).days
-        return max(dias, 0)
+        return max((row[col_dt_pedido] - dt_ini).days, 0)
       else:
-        dias = (hoje - dt_ini).days
-        return max(dias, 0)
+        return max((hoje - dt_ini).days, 0)
+
 
     df["Days"] = df.apply(calcular_sla, axis=1)
 
@@ -316,44 +288,25 @@ if df is not None:
     unique_scs_aberto = df_aberto.drop_duplicates(subset=[col_sc]).copy()
     total_sc_unicas_aberto = int(len(unique_scs_aberto))
 
-    # --- CÁLCULO DO SLA MÉDIO GERAL ---
-    df_geral_crit = df.copy()
-    if col_dt_emissao in df_geral_crit.columns:
-      mask_luiz_antigo = (df_geral_crit["Comprador_Resp"] == "Luiz") & (
-          df_geral_crit[col_dt_emissao] < pd.to_datetime("2026-07-06")
+    # Identificar itens sem pedido (pendentes de compra)
+    if col_pedido_num:
+      s_ped = df[col_pedido_num].dropna().astype(str).str.strip()
+      has_pedido = (
+          s_ped.str.contains(r"\d", regex=True)
+          & (s_ped != "")
+          & (s_ped.str.upper() != "NAN")
       )
-      df_geral_crit = df_geral_crit[~mask_luiz_antigo]
+      df["Tem_Pedido"] = has_pedido
+    else:
+      df["Tem_Pedido"] = False
 
-    if col_criticidade:
-      df_geral_crit = df_geral_crit[
-          df_geral_crit[col_criticidade]
-          .astype(str)
-          .str.upper()
-          .isin(["ROTINEIRA", "EMERGENCIAL"])
-      ]
+    sem_pedido_total = int((~df["Tem_Pedido"]).sum())
 
-    mean_rot = (
-        df_geral_crit[
-            df_geral_crit[col_criticidade].astype(str).str.upper() == "ROTINEIRA"
-        ]["Days"].mean()
-        if col_criticidade and not df_geral_crit.empty
-        else float("nan")
-    )
-    mean_emg = (
-        df_geral_crit[
-            df_geral_crit[col_criticidade].astype(str).str.upper() == "EMERGENCIAL"
-        ]["Days"].mean()
-        if col_criticidade and not df_geral_crit.empty
-        else float("nan")
-    )
-
-    sla_geral_rot = int(round(mean_rot, 0)) if not pd.isna(mean_rot) else 0
-    sla_geral_emg = int(round(mean_emg, 0)) if not pd.isna(mean_emg) else 0
-
-    # Snapshot atual para histórico
+    # --- SALVANDO SNAPSHOT PARA HISTÓRICO ---
     snapshot_atual = {
         "total_scs_aberto": total_sc_unicas_aberto,
         "total_linhas_aberto": total_linhas_aberto,
+        "sem_pedido_total": sem_pedido_total,
         "compradores": {},
     }
 
@@ -362,7 +315,14 @@ if df is not None:
       df_c = df[df["Comprador_Resp"] == comp]
       if comp == "Luiz" and col_dt_emissao in df_c.columns:
         df_c = df_c[df_c[col_dt_emissao] >= pd.to_datetime("2026-07-06")]
-      snapshot_atual["compradores"][comp] = int(len(df_c))
+      
+      sem_ped_comp = int((~df_c["Tem_Pedido"]).sum())
+      pedidos_emitidos_comp = int(df_c["Tem_Pedido"].sum())
+      snapshot_atual["compradores"][comp] = {
+          "total": int(len(df_c)),
+          "sem_pedido": sem_ped_comp,
+          "comprados": pedidos_emitidos_comp,
+      }
 
     historico[hoje_str] = snapshot_atual
     try:
@@ -386,6 +346,7 @@ if df is not None:
         """,
         unsafe_allow_html=True,
     )
+
 
     def criar_gauge(
         titulo, valor, max_val, cor_barra, sufixo="", altura=130, title_size=10
@@ -445,6 +406,7 @@ if df is not None:
       )
       return fig
 
+
     row1_c1, row1_c2, row1_c3, row1_div, row1_c4, row1_c5, row1_c6 = st.columns(
         [1.5, 1, 1, 0.2, 1, 1, 1]
     )
@@ -454,14 +416,14 @@ if df is not None:
         delta_scs = total_sc_unicas_aberto - dados_ontem.get(
             "total_scs_aberto", total_sc_unicas_aberto
         )
-        delta_itens = total_linhas_aberto - dados_ontem.get(
-            "total_linhas_aberto", total_linhas_aberto
+        delta_sem_ped = sem_pedido_total - dados_ontem.get(
+            "sem_pedido_total", sem_pedido_total
         )
-        sinal_scs = "+" if delta_scs > 0 else ""
-        sinal_itens = "+" if delta_itens > 0 else ""
-        texto_comparativo = f"Ontem: {dados_ontem.get('total_scs_aberto', '--')} SCs ({sinal_scs}{delta_scs}) | {dados_ontem.get('total_linhas_aberto', '--')} Itens ({sinal_itens}{delta_itens})"
+        s_scs = "+" if delta_scs > 0 else ""
+        s_ped = "+" if delta_sem_ped > 0 else ""
+        texto_comparativo = f"Ontem: {dados_ontem.get('total_scs_aberto', '--')} SCs ({s_scs}{delta_scs}) | {dados_ontem.get('sem_pedido_total', '--')} S/ Pedido ({s_ped}{delta_sem_ped})"
       else:
-        texto_comparativo = "Comparativo vs Ontem: Sem base anterior"
+        texto_comparativo = "Comparativo vs Ontem: Aguardando 2º dia"
 
       st.markdown(
           f"""
@@ -470,12 +432,13 @@ if df is not None:
                 <div style="font-size: 1.95rem; font-weight: bold; color: #2563eb; line-height: 1.1;">{total_sc_unicas_aberto}</div>
                 <div style="font-size: 0.85rem; font-weight: {weight_th};">Solicitações (SCs)</div>
                 <div style="border-top: 1px dashed #cbd5e1; margin: 2px 0;"></div>
-                <div style="font-size: 1.95rem; font-weight: bold; color: #d97706; line-height: 1.1;">{total_linhas_aberto}</div>
-                <div style="font-size: 0.80rem; font-weight: {weight_th}; color: #64748b; margin-top: 2px;">{texto_comparativo}</div>
+                <div style="font-size: 1.5rem; font-weight: bold; color: #d97706; line-height: 1.1;">{sem_pedido_total}</div>
+                <div style="font-size: 0.75rem; font-weight: {weight_th}; color: #64748b;">Itens Sem Pedido ({texto_comparativo})</div>
             </div>
             """,
           unsafe_allow_html=True,
       )
+
 
     def render_gauge(col, titulo, valor, max_val, cor, key_suffix):
       with col:
@@ -490,6 +453,7 @@ if df is not None:
             f"<div class='gauge-footer' style='color: {cor};'>{perc:.1f}%</div>",
             unsafe_allow_html=True,
         )
+
 
     crit_counts = (
         df_aberto[col_criticidade].astype(str).str.upper().value_counts()
@@ -914,12 +878,12 @@ if df is not None:
       )
 
     # ==========================================
-    # PASSO 4: DESEMPENHO POR COMPRADOR
+    # PASSO 4: DESEMPENHO POR COMPRADOR & PRODUTIVIDADE DIÁRIA
     # ==========================================
     st.markdown("---")
     st.markdown(
         '<div class="section-header" style="background-color: #2b4c7e;">DESEMPENHO'
-        " INDIVIDUAL POR COMPRADOR</div>",
+        " INDIVIDUAL POR COMPRADOR & PRODUTIVIDADE DIÁRIA</div>",
         unsafe_allow_html=True,
     )
 
@@ -949,20 +913,26 @@ if df is not None:
           ]
 
         total_emitidas_atual = len(df_comp_total)
+        sem_ped_atual = int((~df_comp_total["Tem_Pedido"]).sum())
+        comprados_atual = int(df_comp_total["Tem_Pedido"].sum())
 
-        qtd_ontem_comp = (
-            dados_ontem.get("compradores", {}).get(comp, None)
+        # Recupera dados de ontem para este comprador
+        comp_ontem_data = (
+            dados_ontem.get("compradores", {}).get(comp, {})
             if dados_ontem
-            else None
+            else {}
         )
-        if qtd_ontem_comp is not None:
-          delta_comp = total_emitidas_atual - qtd_ontem_comp
-          sinal_comp = "+" if delta_comp > 0 else ""
-          texto_comp_ontem = (
-              f"Ontem: {qtd_ontem_comp} ({sinal_comp}{delta_comp})"
-          )
+        sem_ped_ontem = comp_ontem_data.get("sem_pedido", None)
+        comprados_ontem = comp_ontem_data.get("comprados", None)
+
+        if sem_ped_ontem is not None and comprados_ontem is not None:
+          delta_sem_ped = sem_ped_atual - sem_ped_ontem
+          delta_comprados = comprados_atual - comprados_ontem
+          s_sp = "+" if delta_sem_ped > 0 else ""
+          s_cp = "+" if delta_comprados > 0 else ""
+          texto_produtividade = f"Ontem S/Ped: {sem_ped_ontem} ({s_sp}{delta_sem_ped}) | Pedidos Fechados: {comprados_atual} ({s_cp}{delta_comprados})"
         else:
-          texto_comp_ontem = "Ontem: --"
+          texto_produtividade = "Produtividade Ontem: Aguardando 2º dia"
 
         if not df_comp_total.empty and "Status_Detalhado" in df_comp_total.columns:
           total_emitidas = len(df_comp_total)
@@ -975,20 +945,7 @@ if df is not None:
               else 0
           )
 
-          qtd_pedidos_gerados = 0
-          if col_pedido_num and col_pedido_num in df_comp_total.columns:
-            s_ped = (
-                df_comp_total[col_pedido_num]
-                .dropna()
-                .astype(str)
-                .str.strip()
-            )
-            mask_num = (
-                s_ped.str.contains(r"\d", regex=True)
-                & (s_ped != "")
-                & (s_ped.str.upper() != "NAN")
-            )
-            qtd_pedidos_gerados = int(mask_num.sum())
+          qtd_pedidos_gerados = comprados_atual
 
           if col_criticidade:
             df_comp_crit = df_comp_total[
@@ -1043,14 +1000,14 @@ if df is not None:
               else 0
           )
 
-          # 1. Velocímetro de Rendimento com key única
+          # 1. Velocímetro de Rendimento
           cor_gauge_comp = (
               "#22c55e"
               if taxa_rendimento_comp >= 75
               else ("#f59e0b" if taxa_rendimento_comp >= 50 else "#ef4444")
           )
           fig_gauge = criar_gauge(
-              "RENDIMENTO (ATENDIDAS / TOTAL)",
+              "RENDIMENTO",
               taxa_rendimento_comp,
               100,
               cor_gauge_comp,
@@ -1065,7 +1022,7 @@ if df is not None:
               key=f"gauge_rendimento_{comp}",
           )
 
-          # 2. Gráfico de Barras do Backlog com key única
+          # 2. Gráfico de Barras do Backlog
           df_comp_aberto = df_comp_total[
               df_comp_total["Status_Detalhado"] != "Atendidas"
           ].copy()
@@ -1080,7 +1037,6 @@ if df is not None:
             comp_stats["Percentual"] = (
                 comp_stats["Quantidade"] / total_aberto * 100
             ).round(1)
-
             comp_stats["Status_Detalhado"] = pd.Categorical(
                 comp_stats["Status_Detalhado"],
                 categories=ordem_status_aberto,
@@ -1112,7 +1068,6 @@ if df is not None:
                     marker_color=cores,
                 )
             )
-
             fig_comp_ind.update_layout(
                 xaxis_title="% Backlog",
                 yaxis_title="",
@@ -1148,18 +1103,19 @@ if df is not None:
           bg_atendidos = "#f1f5f9" if is_tema_claro else "#1a202c"
           color_atendidos = "#2563eb" if is_tema_claro else "#63b3ed"
           border_atendidos = "transparent" if is_tema_claro else "#333333"
+
           st.markdown(
               f"""
-                    <div style='text-align: center; font-size: 0.82rem; font-weight: {weight_resumo}; background-color: {bg_atendidos}; color: {color_atendidos}; padding: 6px; border-radius: 4px; margin-top: 8px; margin-bottom: 0px; border: 1px solid {border_atendidos};'>
-                        ✅ {qtd_atendidas} de {total_emitidas} Itens Atendidos<br>
-                        📦 {qtd_pedidos_gerados} Pedidos Emitidos<br>
-                        <span style="font-size: 0.72rem; font-weight: 500; color: #64748b;">Tot. Solicitado: {total_emitidas} ({texto_comp_ontem})</span>
+                    <div style='text-align: center; font-size: 0.78rem; font-weight: {weight_resumo}; background-color: {bg_atendidos}; color: {color_atendidos}; padding: 6px; border-radius: 4px; margin-top: 8px; margin-bottom: 0px; border: 1px solid {border_atendidos};'>
+                        ✅ {qtd_atendidas} Atendidas | 📦 {qtd_pedidos_gerados} C/ Pedido<br>
+                        ⏳ <b>{sem_ped_atual} Itens S/ Pedido (Fila)</b><br>
+                        <span style="font-size: 0.68rem; font-weight: 500; color: #64748b;">{texto_produtividade}</span>
                     </div>
                     """,
               unsafe_allow_html=True,
           )
 
-          # 4. Velocímetros de SLA com keys únicas
+          # 4. Velocímetros de SLA
           cor_rot = (
               "#ef4444"
               if sla_rot_val > 15
@@ -1315,7 +1271,6 @@ if df is not None:
     )
 
     col_box1, col_box2 = st.columns(2)
-
     bg_box = "#f8fafc" if is_tema_claro else "#111827"
     border_box = "#cbd5e1" if is_tema_claro else "#374151"
     color_box_title = "#2563eb" if is_tema_claro else "#60a5fa"
@@ -1354,16 +1309,5 @@ if df is not None:
           unsafe_allow_html=True,
       )
 
-    st.markdown(
-        """
-        <hr style='margin: 15px 0px 8px 0px;'>
-        <div style="font-size: 1.05rem; display: flex; justify-content: space-between; font-weight: 600;">
-            <span><b>→ Sincronização Google Sheets:</b> Conectado diretamente à guia 'Solicitações' via link de exportação direta.</span>
-            <span><b>Metodologia:</b> Limites vigentes: Rotineira (&lt;= 15 dias) | Emergencial (&lt;= 3 dias).</span>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
   except Exception as e:
-    st.error(f"⚠️ Erro analítico no processamento. Detalhe técnico: {e}")
+    st.error(f"⚠️ Erro analítico no processamento: {e}")
