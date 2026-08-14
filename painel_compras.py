@@ -7,17 +7,12 @@ import plotly.graph_objects as go
 import requests
 import streamlit as st
 
-# 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(layout="wide", page_title="Panorama Executivo de Suprimentos")
 
-# URL de exportação direta do Google Sheets
 GOOGLE_SHEET_URL = (
     "https://docs.google.com/spreadsheets/d/1e7pQ512ge5XMnXxsRODEO7V48KgWo6FpKeITFqBSg1o/export?format=xlsx"
 )
 
-# ==========================================
-# PAINEL DE CONFIGURAÇÕES (RETRÁTIL)
-# ==========================================
 with st.expander(
     "⚙️ Abrir / Fechar Configurações (Sincronização, Data Base e Tema)",
     expanded=False,
@@ -35,9 +30,6 @@ with st.expander(
         index=0,
     )
 
-# ==========================================
-# CSS CUSTOMIZADO DINÂMICO
-# ==========================================
 is_tema_claro = tema_selecionado in ["Claro", "Padrão do Sistema"]
 
 if tema_selecionado == "Black (Preto Absoluto)":
