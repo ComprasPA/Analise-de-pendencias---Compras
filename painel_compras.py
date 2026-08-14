@@ -7,7 +7,9 @@ import plotly.graph_objects as go
 import requests
 import streamlit as st
 
-st.set_page_config(layout="wide", page_title="Panorama Executivo de Suprimentos")
+st.set_page_config(
+    layout="wide", page_title="Panorama Executivo de Suprimentos"
+)
 
 GOOGLE_SHEET_URL = (
     "https://docs.google.com/spreadsheets/d/1e7pQ512ge5XMnXxsRODEO7V48KgWo6FpKeITFqBSg1o/export?format=xlsx"
@@ -279,6 +281,40 @@ if df is not None:
     total_linhas_aberto = int(len(df_aberto))
     unique_scs_aberto = df_aberto.drop_duplicates(subset=[col_sc]).copy()
     total_sc_unicas_aberto = int(len(unique_scs_aberto))
+
+    # --- CÁLCULO DO SLA MÉDIO GERAL ---
+    df_geral_crit = df.copy()
+    if col_dt_emissao in df_geral_crit.columns:
+      mask_luiz_antigo = (df_geral_crit["Comprador_Resp"] == "Luiz") & (
+          df_geral_crit[col_dt_emissao] < pd.to_datetime("2026-07-06")
+      )
+      df_geral_crit = df_geral_crit[~mask_luiz_antigo]
+
+    if col_criticidade:
+      df_geral_crit = df_geral_crit[
+          df_geral_crit[col_criticidade]
+          .astype(str)
+          .str.upper()
+          .isin(["ROTINEIRA", "EMERGENCIAL"])
+      ]
+
+    mean_rot = (
+        df_geral_crit[
+            df_geral_crit[col_criticidade].astype(str).str.upper() == "ROTINEIRA"
+        ]["Days"].mean()
+        if col_criticidade and not df_geral_crit.empty
+        else float("nan")
+    )
+    mean_emg = (
+        df_geral_crit[
+            df_geral_crit[col_criticidade].astype(str).str.upper() == "EMERGENCIAL"
+        ]["Days"].mean()
+        if col_criticidade and not df_geral_crit.empty
+        else float("nan")
+    )
+
+    sla_geral_rot = int(round(mean_rot, 0)) if not pd.isna(mean_rot) else 0
+    sla_geral_emg = int(round(mean_emg, 0)) if not pd.isna(mean_emg) else 0
 
     if col_pedido_num:
       s_ped = df[col_pedido_num].dropna().astype(str).str.strip()
