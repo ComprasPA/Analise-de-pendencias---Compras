@@ -262,7 +262,6 @@ if df is not None:
     else:
       df["Status_Detalhado"] = "No Prazo"
 
-
     def calcular_sla(row):
       status = str(row.get(col_status, "")).strip().upper()
       dt_ini = row[col_dt_emissao]
@@ -277,7 +276,6 @@ if df is not None:
       else:
         return max((hoje - dt_ini).days, 0)
 
-
     df["Days"] = df.apply(calcular_sla, axis=1)
 
     df_aberto = df[df["Status_Detalhado"] != "Atendidas"].copy()
@@ -290,7 +288,6 @@ if df is not None:
     unique_scs_aberto = df_aberto.drop_duplicates(subset=[col_sc]).copy()
     total_sc_unicas_aberto = int(len(unique_scs_aberto))
 
-    # Verificação robusta de itens com/sem pedido (tratando nulos com segurança)
     if col_pedido_num:
       s_ped = df[col_pedido_num].dropna().astype(str).str.strip()
       has_pedido = (
@@ -306,7 +303,6 @@ if df is not None:
         (~df["Tem_Pedido"].fillna(False).astype(bool)).sum()
     )
 
-    # --- SALVANDO SNAPSHOT PARA HISTÓRICO ---
     snapshot_atual = {
         "total_scs_aberto": total_sc_unicas_aberto,
         "total_linhas_aberto": total_linhas_aberto,
@@ -341,9 +337,6 @@ if df is not None:
 
     dados_ontem = historico.get(ontem_str, None)
 
-    # ==========================================
-    # PASSO 1: QUADRANTE DE VOLUMETRIA E VELOCÍMETROS
-    # ==========================================
     st.markdown(
         f"""
         <div class="header-box">
@@ -354,7 +347,6 @@ if df is not None:
         """,
         unsafe_allow_html=True,
     )
-
 
     def criar_gauge(
         titulo, valor, max_val, cor_barra, sufixo="", altura=130, title_size=10
@@ -414,7 +406,6 @@ if df is not None:
       )
       return fig
 
-
     row1_c1, row1_c2, row1_c3, row1_div, row1_c4, row1_c5, row1_c6 = st.columns(
         [1.5, 1, 1, 0.2, 1, 1, 1]
     )
@@ -447,7 +438,6 @@ if df is not None:
           unsafe_allow_html=True,
       )
 
-
     def render_gauge(col, titulo, valor, max_val, cor, key_suffix):
       with col:
         st.plotly_chart(
@@ -461,7 +451,6 @@ if df is not None:
             f"<div class='gauge-footer' style='color: {cor};'>{perc:.1f}%</div>",
             unsafe_allow_html=True,
         )
-
 
     crit_counts = (
         df_aberto[col_criticidade].astype(str).str.upper().value_counts()
@@ -527,9 +516,6 @@ if df is not None:
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # ==========================================
-    # PASSO 2: PRIMEIRA LINHA DE GRÁFICOS
-    # ==========================================
     st.markdown("---")
     row2_c1, row2_c2, row2_c3 = st.columns(3)
 
@@ -738,9 +724,6 @@ if df is not None:
               key="plotly_criticidade_vs_status",
           )
 
-    # ==========================================
-    # PASSO 3: SEGUNDA LINHA DE GRÁFICOS
-    # ==========================================
     st.markdown("---")
     row3_c1, row3_c2 = st.columns([1.50, 0.50])
 
@@ -885,9 +868,6 @@ if df is not None:
           top_critical, use_container_width=True, height=270, hide_index=True
       )
 
-    # ==========================================
-    # PASSO 4: DESEMPENHO POR COMPRADOR & PRODUTIVIDADE DIÁRIA
-    # ==========================================
     st.markdown("---")
     st.markdown(
         '<div class="section-header" style="background-color: #2b4c7e;">DESEMPENHO'
@@ -1010,7 +990,6 @@ if df is not None:
               else 0
           )
 
-          # 1. Velocímetro de Rendimento
           cor_gauge_comp = (
               "#22c55e"
               if taxa_rendimento_comp >= 75
@@ -1032,7 +1011,6 @@ if df is not None:
               key=f"gauge_rendimento_{comp}",
           )
 
-          # 2. Gráfico de Barras do Backlog
           df_comp_aberto = df_comp_total[
               df_comp_total["Status_Detalhado"] != "Atendidas"
           ].copy()
@@ -1125,7 +1103,6 @@ if df is not None:
               unsafe_allow_html=True,
           )
 
-          # 4. Velocímetros de SLA
           cor_rot = (
               "#ef4444"
               if sla_rot_val > 15
@@ -1269,9 +1246,6 @@ if df is not None:
         else:
           st.info(f"Sem dados para {comp}.")
 
-    # ==========================================
-    # PASSO 5: CAIXA DE SLA MÉDIO GERAL
-    # ==========================================
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown(
         '<div class="section-header" style="background-color: #1e3a8a; border:'
