@@ -170,6 +170,10 @@ MAPA_COMPRADORES = {
 ARQUIVO_HISTORICO = "historico_snapshots.json"
 df = None
 
+# Inicialização preventiva de variáveis globais
+sla_geral_rot = 0
+sla_geral_emg = 0
+
 historico = {}
 if os.path.exists(ARQUIVO_HISTORICO):
   try:
