@@ -273,6 +273,17 @@ if df is not None:
 
     df["Days"] = df.apply(calcular_sla, axis=1)
 
+    if col_pedido_num:
+      s_ped = df[col_pedido_num].dropna().astype(str).str.strip()
+      has_pedido = (
+          s_ped.str.contains(r"\d", regex=True)
+          & (s_ped != "")
+          & (s_ped.str.upper() != "NAN")
+      )
+      df["Tem_Pedido"] = has_pedido
+    else:
+      df["Tem_Pedido"] = False
+
     df_aberto = df[df["Status_Detalhado"] != "Atendidas"].copy()
     df_aberto = df_aberto.dropna(subset=[col_sc])
     df_aberto[col_sc] = (
@@ -282,6 +293,11 @@ if df is not None:
     total_linhas_aberto = int(len(df_aberto))
     unique_scs_aberto = df_aberto.drop_duplicates(subset=[col_sc]).copy()
     total_sc_unicas_aberto = int(len(unique_scs_aberto))
+
+    # --- CORREÇÃO: Contagem de itens sem pedido restrita aos itens EM ABERTO ---
+    sem_pedido_total = int(
+        (~df_aberto["Tem_Pedido"].fillna(False).astype(bool)).sum()
+    )
 
     df_geral_crit = df.copy()
     if col_dt_emissao in df_geral_crit.columns:
@@ -315,21 +331,6 @@ if df is not None:
 
     sla_geral_rot = int(round(mean_rot, 0)) if not pd.isna(mean_rot) else 0
     sla_geral_emg = int(round(mean_emg, 0)) if not pd.isna(mean_emg) else 0
-
-    if col_pedido_num:
-      s_ped = df[col_pedido_num].dropna().astype(str).str.strip()
-      has_pedido = (
-          s_ped.str.contains(r"\d", regex=True)
-          & (s_ped != "")
-          & (s_ped.str.upper() != "NAN")
-      )
-      df["Tem_Pedido"] = has_pedido
-    else:
-      df["Tem_Pedido"] = False
-
-    sem_pedido_total = int(
-        (~df["Tem_Pedido"].fillna(False).astype(bool)).sum()
-    )
 
     snapshot_atual = {
         "total_scs_aberto": total_sc_unicas_aberto,
