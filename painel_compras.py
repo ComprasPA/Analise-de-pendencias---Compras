@@ -7,9 +7,7 @@ import plotly.graph_objects as go
 import requests
 import streamlit as st
 
-st.set_page_config(
-    layout="wide", page_title="Panorama Executivo de Suprimentos"
-)
+st.set_page_config(layout="wide", page_title="Panorama Executivo de Suprimentos")
 
 GOOGLE_SHEET_URL = (
     "https://docs.google.com/spreadsheets/d/1e7pQ512ge5XMnXxsRODEO7V48KgWo6FpKeITFqBSg1o/export?format=xlsx"
