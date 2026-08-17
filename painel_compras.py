@@ -170,7 +170,6 @@ MAPA_COMPRADORES = {
 ARQUIVO_HISTORICO = "historico_snapshots.json"
 df = None
 
-# Inicialização preventiva de variáveis globais
 sla_geral_rot = 0
 sla_geral_emg = 0
 
@@ -286,7 +285,6 @@ if df is not None:
     unique_scs_aberto = df_aberto.drop_duplicates(subset=[col_sc]).copy()
     total_sc_unicas_aberto = int(len(unique_scs_aberto))
 
-    # --- CÁLCULO DO SLA MÉDIO GERAL ---
     df_geral_crit = df.copy()
     if col_dt_emissao in df_geral_crit.columns:
       mask_luiz_antigo = (df_geral_crit["Comprador_Resp"] == "Luiz") & (
